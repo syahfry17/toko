@@ -14,7 +14,14 @@ function render() {
     let jualVal = b.jual || b.harga || 0;
     let untung = jualVal - b.modal;
     totalUntung += untung * b.stok;
-    html += `<tr><td>${b.nama}</td><td>Rp ${Number(b.modal).toLocaleString('id-ID')}</td><td>Rp ${Number(jualVal).toLocaleString('id-ID')}</td><td>Rp ${untung.toLocaleString('id-ID')}</td><td>${b.stok}</td><td><button onclick="editBarang('${b.id}')">Edit</button> <button onclick="hapus('${b.id}')">Hapus</button></td></tr>`;
+    html += `<tr class="border-b border-gray-200">
+      <td class="p-2 font-medium whitespace-nowrap">${b.nama}</td>
+      <td class="p-2 whitespace-nowrap">Rp ${Number(b.modal).toLocaleString('id-ID')}</td>
+      <td class="p-2 whitespace-nowrap">Rp ${Number(jualVal).toLocaleString('id-ID')}</td>
+      <td class="p-2 whitespace-nowrap">Rp ${untung.toLocaleString('id-ID')}</td>
+      <td class="p-2 text-center font-bold">${b.stok}</td>
+      <td class="p-2"><div class="flex flex-col gap-1"><button onclick="editBarang('${b.id}')" class="bg-green-500 text-white px-3 py-1 rounded-md text-xs font-bold">Edit</button><button onclick="hapus('${b.id}')" class="bg-red-500 text-white px-3 py-1 rounded-md text-xs font-bold">Hapus</button></div></td>
+    </tr>`;
   });
   let tabel = document.getElementById('tabel');
   if (tabel) tabel.innerHTML = html;
@@ -28,10 +35,13 @@ window.simpan = async () => {
   let jual = Number(document.getElementById('harga').value);
   let stok = Number(document.getElementById('stok').value);
   if (!nama || !modal || !jual) return alert("Isi Nama, Modal, Jual dulu!");
-  if (editId) { await updateDoc(doc(db, "barang", editId), { nama, modal, jual, harga: jual, stok }); editId = null; }
+  if (editId) { await updateDoc(doc(db, "barang", editId), { nama, modal, jual, harga: jual, stok }); editId = null; document.getElementById('btnSimpan').innerText = "SIMPAN"; }
   else { await addDoc(collection(db, "barang"), { nama, modal, jual, harga: jual, stok }); }
   document.getElementById('nama').value = ''; document.getElementById('modal').value = ''; document.getElementById('harga').value = ''; document.getElementById('stok').value = '';
 };
 window.editBarang = (id) => {
   let b = barang.find(x => x.id === id);
-  document.getElementById('nama').value = b.nama; document.getElementById('modal').value = b.modal; document.getElementById('harga').value = b.jual || b.harga; document.getElementById('stok').value = b.stok; editId = id; document.getElementById('btnSimpan').innerText = "UPDATE"; window
+  document.getElementById('nama').value = b.nama; document.getElementById('modal').value = b.modal; document.getElementById('harga').value = b.jual || b.harga; document.getElementById('stok').value = b.stok; editId = id; document.getElementById('btnSimpan').innerText = "UPDATE"; window.scrollTo(0,0);
+};
+window.hapus = async (id) => { if (confirm("Hapus?")) await deleteDoc(doc(db, "barang", id)); };
+window.batalEdit = () => { editId = null; document.getElementById('nama').value=''; document.getElementById('modal').value=''; document.getElementById('harga').value=''; document.getElementById('stok').value=''; document.getElementById('btnSimpan').innerText="SIMPAN"; };
