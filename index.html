@@ -12,22 +12,25 @@
 <p class="sub">Data Barang Sembako</p>
 
 <div class="kotak">
+  <input type="hidden" id="editIndex" value="-1">
   <input type="text" id="nama" placeholder="Nama Barang - cth: Beras">
-  <input type="number" id="harga" placeholder="Harga Jual - cth: 65000">
-  <input type="number" id="stok" placeholder="Stok - cth: 20">
-  <button onclick="simpan()">SIMPAN</button>
+  <input type="number" id="modal" placeholder="Harga Modal - cth: 160000">
+  <input type="number" id="harga" placeholder="Harga Jual - cth: 177000">
+  <input type="number" id="stok" placeholder="Stok - cth: 5">
+  <button onclick="simpan()" id="btnSimpan">SIMPAN</button>
+  <button onclick="batalEdit()" id="btnBatal" style="display:none; background:#888; margin-top:8px;">BATAL EDIT</button>
 </div>
 
 <input type="text" id="cari" placeholder="Cari barang..." onkeyup="tampil()">
 
 <table>
   <thead>
-    <tr><th>Nama</th><th>Harga</th><th>Stok</th><th>Aksi</th></tr>
+    <tr><th>Nama</th><th>Modal</th><th>Jual</th><th>Untung</th><th>Stok</th><th>Aksi</th></tr>
   </thead>
   <tbody id="tabel"></tbody>
 </table>
 
-<p class="footer">Total Barang: <span id="total">0</span></p>
+<p class="footer">Total Barang: <span id="total">0</span> | Total Untung Stok: <span id="totalUntung">Rp 0</span></p>
 
 <script src="script.js"></script>
 </body>
