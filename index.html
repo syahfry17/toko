@@ -1,2 +1,71 @@
 <!DOCTYPE html>
-<html lang="id"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>UD. BILAL - Data Barang Sembako</title><script src="https://cdn.tailwindcss.com"></script><script type="module">import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";import {getFirestore,collection,addDoc,deleteDoc,doc,updateDoc,onSnapshot,query,orderBy} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";const firebaseConfig={apiKey:"AIzaSyAhce1AyhPGe1cDkIzcBcgAFFOXC2Isxx0",authDomain:"toko-bilal.firebaseapp.com",projectId:"toko-bilal",storageBucket:"toko-bilal.firebasestorage.app",messagingSenderId:"507155195256",appId:"1:507155195256:web:39185c267b272b5672948d"};const app=initializeApp(firebaseConfig);const db=getFirestore(app);let barang=[],editId=null;onSnapshot(query(collection(db,"barang"),orderBy("nama")),(s)=>{barang=s.docs.map(d=>({id:d.id,...d.data()}));render();});function render(){let q=document.getElementById('cari').value.toLowerCase();let list=barang.filter(b=>b.nama.toLowerCase().includes(q));let totalUntung=0;document.getElementById('list').innerHTML=list.map(b=>{let untung=b.jual-b.modal;totalUntung+=untung*b.stok;return `<tr class="border-b"><td class="p-2">${b.nama}</td><td class="p-2">Rp ${Number(b.modal).toLocaleString('id-ID')}</td><td class="p-2">Rp ${Number(b.jual).toLocaleString('id-ID')}</td><td class="p-2">Rp ${untung.toLocaleString('id-ID')}</td><td class="p-2 text-center">${b.stok}</td><td class="p-2"><button onclick="window.editBarang('${b.id}')" class="bg-green-500 text-white px-2 py-1 rounded text-xs">Edit</button> <button onclick="window.hapus('${b.id}')" class="bg-red-500 text-white px-2 py-1 rounded text-xs">Hapus</button></td></tr>`}).join('');document.getElementById('total').innerText=`Total Barang: ${list.length} | Total Untung Stok: Rp ${totalUntung.toLocaleString('id-ID')}`;document.getElementById('status').innerText="● Database Firebase TERHUBUNG - Bisa dilihat di HP lain";}window.cariRender=render;window.simpan=async()=>{let nama=document.getElementById('nama').value,modal=Number(document.getElementById('modal').value),jual=Number(document.getElementById('jual').value),stok=Number(document.getElementById('stok').value);if(!nama||!modal||!jual)return alert("Isi Nama, Modal, Jual dulu!");try{if(editId){await updateDoc(doc(db,"barang",editId),{nama,modal,jual,stok});editId=null;document.getElementById('btnSimpan').innerText="SIMPAN";}else{await addDoc(collection(db,"barang"),{nama,modal,jual,stok});}document.getElementById('nama').value='';document.getElementById('modal').value='';document.getElementById('jual').value='';document.getElementById('stok').value='';}catch(e){alert("Gagal simpan: "+e.message);}};window.editBarang=(id)=>{let b=barang.find(x=>x.id===id);document.getElementById('nama').value=b.nama;document.getElementById('modal').value=b.modal;document.getElementById('jual').value=b.jual;document.getElementById('stok').value=b.stok;editId=id;document.getElementById('btnSimpan').innerText="UPDATE";window.scrollTo(0,0);};window.hapus=async(id)=>{if(confirm("Hapus?"))await deleteDoc(doc(db,"barang",id));};</script></head><body class="bg-gray-100 min-h-screen p-3"><div class="max-w-2xl mx-auto"><h1 class="text-3xl font-bold text-center text-blue-600">UD. BILAL</h1><p class="text-center text-gray-600 mb-3">Data Barang Sembako</p><p id="status" class="text-center text-xs text-green-600 font-bold mb-2">● Menghubungkan...</p><div class="bg-white p-4 rounded-xl shadow mb-3"><input id="nama" class="w-full border p-3 rounded-lg mb-2" placeholder="Nama Barang - cth: Beras"><input id="modal" type="number" class="w-full border p-3 rounded-lg mb-2" placeholder="Harga Modal - cth: 160000"><input id="jual" type="number" class="w-full border p-3 rounded-lg mb-2" placeholder="Harga Jual - cth: 177000"><input id="stok" type="number" class="w-full border p-3 rounded-lg mb-2" placeholder="Stok - cth: 5"><button id="btnSimpan" onclick="window.simpan()" class="w-full bg-blue-500 text-white p-3 rounded-lg font-bold">SIMPAN</button></div><input id="cari" oninput="window.cariRender()" class="w-full border p-3 rounded-lg mb-3 bg-white" placeholder="Cari barang..."><div class="bg-white rounded-xl overflow-hidden shadow"><table class="w-full text-sm"><tr class="bg-blue-500 text-white"><th class="p-2 text-left">Nama</th><th class="p-2">Modal</th><th class="p-2">Jual</th><th class="p-2">Untung</th><th class="p-2">Stok</th><th class="p-2">Aksi</th></tr><tbody id="list"></tbody></table></div><p id="total" class="text-center font-bold mt-3"></p><p class="text-center text-xs text-gray-400 mt-1">Data tersimpan di Firebase toko-bilal • Buka di HP mana aja tetap sama</p></div></body></html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UD. BILAL - Data Barang Sembako</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>body{background:#f0f0f0}.footer{font-weight:bold;text-align:center;padding:10px}</style>
+</head>
+<body class="p-4">
+<h1 class="text-3xl text-center text-blue-500">UD. BILAL</h1>
+<p class="text-center text-gray-600 text-lg mb-4">Data Barang Sembako</p>
+
+<div class="bg-white rounded-xl p-4 shadow mb-4 space-y-3">
+<input id="nama" placeholder="Nama Barang" class="w-full border rounded-lg p-3">
+<input id="modal" type="number" placeholder="Harga Modal" class="w-full border rounded-lg p-3">
+<input id="harga" type="number" placeholder="Harga Jual" class="w-full border rounded-lg p-3">
+<input id="stok" type="number" placeholder="Stok" class="w-full border rounded-lg p-3">
+<button id="btnSimpan" onclick="simpan()" class="w-full bg-blue-500 text-white py-3 rounded-lg font-bold">SIMPAN</button>
+<button onclick="batalEdit()" class="w-full bg-gray-300 py-2 rounded-lg text-sm">Batal Edit</button>
+</div>
+
+<div class="bg-white rounded-xl p-2 shadow mb-2">
+<input id="cari" placeholder="Cari barang..." class="w-full p-2 outline-none">
+</div>
+
+<table class="w-full bg-white">
+<thead><tr class="bg-blue-500 text-white"><th class="p-2 text-left">Nama</th><th class="p-2">Modal</th><th class="p-2">Jual</th><th class="p-2">Untung</th><th class="p-2">Stok</th><th class="p-2">Aksi</th></tr></thead>
+<tbody id="tabel"></tbody>
+</table>
+<div class="footer">Total Barang: <span id="total">0</span> | Total Untung Stok: Rp <span id="totalUntung">0</span></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, addDoc, deleteDoc, doc, updateDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+const firebaseConfig = { apiKey: "AIzaSyAhce1AyhPGe1cDkIzcBcgAFFOXC2Isxx0", authDomain: "toko-bilal.firebaseapp.com", projectId: "toko-bilal", storageBucket: "toko-bilal.firebasestorage.app", messagingSenderId: "507155195256", appId: "1:507155195256:web:39185c267b272b5672948d" };
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+let barang = [], editId = null;
+onSnapshot(query(collection(db, "barang"), orderBy("nama")), (snap) => { barang = snap.docs.map(d => ({ id: d.id, ...d.data() })); render(); });
+function render() {
+  let q = document.getElementById('cari').value.toLowerCase();
+  let list = barang.filter(b => b.nama.toLowerCase().includes(q));
+  let totalUntung = 0; let html = '';
+  list.forEach(b => {
+    let jualVal = b.jual || b.harga || 0;
+    let untung = jualVal - b.modal;
+    totalUntung += untung * b.stok;
+    html += `<tr class="border-b"><td class="p-2">${b.nama}</td><td class="p-2">Rp ${Number(b.modal).toLocaleString('id-ID')}</td><td class="p-2">Rp ${Number(jualVal).toLocaleString('id-ID')}</td><td class="p-2">Rp ${untung.toLocaleString('id-ID')}</td><td class="p-2 text-center">${b.stok}</td><td class="p-2"><button onclick="editBarang('${b.id}')" class="bg-green-500 text-white px-2 py-1 rounded text-xs">Edit</button> <button onclick="hapus('${b.id}')" class="bg-red-500 text-white px-2 py-1 rounded text-xs">Hapus</button></td></tr>`;
+  });
+  document.getElementById('tabel').innerHTML = html;
+  document.getElementById('total').innerText = list.length;
+  document.getElementById('totalUntung').innerText = totalUntung.toLocaleString('id-ID');
+}
+document.getElementById('cari').addEventListener('input', render);
+window.simpan = async () => {
+  let nama = document.getElementById('nama').value;
+  let modal = Number(document.getElementById('modal').value);
+  let jual = Number(document.getElementById('harga').value);
+  let stok = Number(document.getElementById('stok').value);
+  if (!nama || !modal || !jual) return alert("Isi Nama, Modal, Jual dulu!");
+  if (editId) { await updateDoc(doc(db, "barang", editId), { nama, modal, jual, harga: jual, stok }); editId = null; document.getElementById('btnSimpan').innerText = "SIMPAN"; }
+  else { await addDoc(collection(db, "barang"), { nama, modal, jual, harga: jual, stok }); }
+  document.getElementById('nama').value=''; document.getElementById('modal').value=''; document.getElementById('harga').value=''; document.getElementById('stok').value='';
+};
+window.editBarang = (id) => { let b = barang.find(x => x.id === id); document.getElementById('nama').value=b.nama; document.getElementById('modal').value=b.modal; document.getElementById('harga').value=b.jual||b.harga; document.getElementById('stok').value=b.stok; editId=id; document.getElementById('btnSimpan').innerText="UPDATE"; window.scrollTo(0,0); };
+window.hapus = async (id) => { if (confirm("Hapus?")) await deleteDoc(doc(db, "barang", id)); };
+window.batalEdit = () => { editId=null; document.getElementById('nama').value=''; document.getElementById('modal').value=''; document.getElementById('harga').value=''; document.getElementById('stok').value=''; document.getElementById('btnSimpan').innerText="SIMPAN"; };
+</script>
+</body>
+</html>
