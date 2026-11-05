@@ -21,6 +21,13 @@
 
 <div class="bg-white p-3 rounded-xl shadow">
 <div id="tabel" class="space-y-3"></div>
+
+<div class="flex justify-between items-center mt-4">
+<button onclick="gantiPage(-1)" id="btnPrev" class="bg-gray-200 px-4 py-2 rounded-lg font-bold text-sm">⬅ Prev</button>
+<span id="infoPage" class="font-bold text-sm">Page 1 / 1</span>
+<button onclick="gantiPage(1)" id="btnNext" class="bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm">Next ➡</button>
+</div>
+
 <div class="footer text-center font-bold mt-3 text-sm border-t pt-3">Total Barang: 0 | Total Untung Stok: Rp 0</div>
 </div>
 
@@ -31,11 +38,21 @@ const firebaseConfig = { apiKey: "AIzaSyAhce1AyhPGe1cDkIzcBcgAFFOXC2Isxx0", auth
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 let barang = [], editId = null;
+let currentPage = 1;
+const perPage = 10;
+
 onSnapshot(query(collection(db, "barang"), orderBy("nama")), (snap) => { barang = snap.docs.map(d => ({ id: d.id, ...d.data() })); render(); });
+
 function render() {
-  let totalUntung = 0; let html = '';
-  barang.forEach(b => {
-    let j = b.jual || b.harga || 0; let u = j - b.modal; totalUntung += u * b.stok;
+  let totalUntung = 0;
+  barang.forEach(b => { let j = b.jual || b.harga || 0; totalUntung += (j - b.modal) * b.stok; });
+  let totalPage = Math.max(1, Math.ceil(barang.length / perPage));
+  if (currentPage > totalPage) currentPage = totalPage;
+  let start = (currentPage - 1) * perPage;
+  let list = barang.slice(start, start + perPage);
+  let html = '';
+  list.forEach(b => {
+    let j = b.jual || b.harga || 0; let u = j - b.modal;
     html += `<div class="border-2 border-gray-300 rounded-xl overflow-hidden">
       <div class="flex justify-between items-center bg-blue-50 px-3 py-2 border-b-2 border-gray-300"><span class="font-bold text-lg">${b.nama}</span><span class="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full">STOK: ${b.stok}</span></div>
       <div class="px-3 py-2 flex justify-between border-b border-gray-200"><span class="text-gray-500">Harga Modal</span><span class="font-bold">Rp ${Number(b.modal).toLocaleString('id-ID')}</span></div>
@@ -46,8 +63,18 @@ function render() {
   });
   if(barang.length===0) html = `<p class="text-center text-gray-400 py-4">Belum ada barang</p>`;
   document.getElementById('tabel').innerHTML = html;
+  document.getElementById('infoPage').innerText = `Page ${currentPage} / ${totalPage} (Total ${barang.length} barang)`;
+  document.getElementById('btnPrev').style.opacity = currentPage===1 ? '0.4' : '1';
+  document.getElementById('btnNext').style.opacity = currentPage===totalPage ? '0.4' : '1';
   document.querySelector('.footer').innerHTML = `Total Barang: ${barang.length} | Total Untung Stok: Rp ${totalUntung.toLocaleString('id-ID')}`;
 }
+window.gantiPage = (n) => {
+  let totalPage = Math.max(1, Math.ceil(barang.length / perPage));
+  currentPage += n;
+  if (currentPage < 1) currentPage = 1;
+  if (currentPage > totalPage) currentPage = totalPage;
+  render(); window.scrollTo(0, 0);
+};
 window.simpan = async () => {
   let nama = document.getElementById('nama').value; let modal = Number(document.getElementById('modal').value); let jual = Number(document.getElementById('harga').value); let stok = Number(document.getElementById('stok').value);
   if (!nama || !modal || !jual) return alert("Isi dulu!");
