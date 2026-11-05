@@ -11,13 +11,15 @@ function render() {
   let totalUntung = 0; let html = '';
   list.forEach(b => {
     let j = b.jual || b.harga || 0; let u = j - b.modal; totalUntung += u * b.stok;
-    html += `<div class="border rounded-xl p-3 bg-gray-50">
-      <div class="flex justify-between items-center mb-2"><span class="font-bold text-lg">${b.nama}</span><span class="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded-full">Stok: ${b.stok}</span></div>
-      <div class="text-sm text-gray-600 space-y-1"><div class="flex justify-between"><span>Modal</span><span class="font-bold text-black">Rp ${Number(b.modal).toLocaleString('id-ID')}</span></div><div class="flex justify-between"><span>Jual</span><span class="font-bold text-black">Rp ${Number(j).toLocaleString('id-ID')}</span></div><div class="flex justify-between"><span>Untung / pcs</span><span class="font-bold text-green-600">Rp ${u.toLocaleString('id-ID')}</span></div></div>
-      <div class="flex gap-2 mt-3"><button onclick="editBarang('${b.id}')" class="flex-1 bg-green-500 text-white py-2 rounded-lg font-bold text-sm">Edit</button><button onclick="hapus('${b.id}')" class="flex-1 bg-red-500 text-white py-2 rounded-lg font-bold text-sm">Hapus</button></div>
+    html += `<div class="border-2 border-gray-200 rounded-xl p-3 bg-white mb-3">
+      <div class="flex justify-between items-center pb-2 border-b-2 border-gray-200"><span class="font-bold text-lg">${b.nama}</span><span class="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full">Stok: ${b.stok}</span></div>
+      <div class="py-1 border-b border-gray-100 flex justify-between text-sm"><span class="text-gray-500">Harga Modal</span><span class="font-bold">Rp ${Number(b.modal).toLocaleString('id-ID')}</span></div>
+      <div class="py-1 border-b border-gray-100 flex justify-between text-sm"><span class="text-gray-500">Harga Jual</span><span class="font-bold">Rp ${Number(j).toLocaleString('id-ID')}</span></div>
+      <div class="py-1 flex justify-between text-sm"><span class="text-gray-500">Untung / pcs</span><span class="font-bold text-green-600">Rp ${u.toLocaleString('id-ID')}</span></div>
+      <div class="flex gap-2 mt-2"><button onclick="editBarang('${b.id}')" class="flex-1 bg-green-500 text-white py-2 rounded-lg font-bold text-sm">Edit</button><button onclick="hapus('${b.id}')" class="flex-1 bg-red-500 text-white py-2 rounded-lg font-bold text-sm">Hapus</button></div>
     </div>`;
   });
-  if(list.length===0) html = `<p class="text-center text-gray-400 py-4">Belum ada barang, input di atas dulu</p>`;
+  if(list.length===0) html = `<p class="text-center text-gray-400 py-4">Belum ada barang</p>`;
   document.getElementById('tabel').innerHTML = html;
   document.querySelector('.footer').innerHTML = `Total Barang: ${list.length} | Total Untung Stok: Rp ${totalUntung.toLocaleString('id-ID')}`;
 }
