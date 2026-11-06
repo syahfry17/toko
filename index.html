@@ -23,17 +23,11 @@
   <button onclick="toggleLogin()" class="w-full bg-gray-300 p-3 rounded-lg">Batal</button>
 </div>
 
-<!-- FORM FINAL -->
 <div id="boxForm" class="bg-white p-4 rounded-xl shadow mb-3 space-y-3 opacity-40 pointer-events-none">
-  <!-- BEBAS KETIK -->
   <input id="nama" type="text" placeholder="Nama Barang" class="w-full border p-3 rounded-lg">
-  <!-- WAJIB ANGKA -->
   <input id="modal" type="number" placeholder="Harga Modal - wajib angka" class="w-full border p-3 rounded-lg">
-  <!-- WAJIB ANGKA -->
   <input id="harga" type="number" placeholder="Harga Jual - wajib angka" class="w-full border p-3 rounded-lg">
-  <!-- BEBAS KETIK -->
-  <input id="keterangan" type="text" placeholder="Keterangan - bebas (kg, pcs, kaleng, Botol)" class="w-full border p-3 rounded-lg">
-  <!-- BEBAS KETIK - UDAH GAK DIPAKSA ANGKA -->
+  <input id="keterangan" type="text" placeholder="Keterangan - boleh kosong (kg, pcs, kaleng, Botol)" class="w-full border p-3 rounded-lg">
   <input id="stok" type="text" placeholder="Stok - bebas (12, 12 Botol, 1 Dus)" class="w-full border p-3 rounded-lg">
   <button id="btnSimpan" onclick="simpan()" class="w-full bg-blue-500 text-white p-3 rounded-lg font-bold">SIMPAN</button>
   <button onclick="batalEdit()" class="w-full bg-gray-300 p-3 rounded-lg">Batal Edit</button>
@@ -71,12 +65,12 @@ const perPage = 10;
 const PASSWORD_ADMIN = "bilal123";
 let isLogin = localStorage.getItem('bilal_login') === 'ya';
 
+// BERSIHIN KETERANGAN - KALO KOSONG YA KOSONG, GAK DIPAKSA BUNGKUS LAGI
 function bersihKet(teks) {
-  if (!teks) return 'bungkus';
-  return teks.toString().replace(/^\s*\/\s*/, '').trim() || 'bungkus';
+  if (!teks) return '';
+  return teks.toString().replace(/^\s*\/\s*/, '').trim();
 }
 
-// AMBIL ANGKA DARI STOK BEBAS BUAT HITUNG TOTAL UNTUNG
 function angkaStok(stok) {
   if (!stok) return 0;
   let m = stok.toString().replace(',', '.').match(/[\d.]+/);
@@ -86,8 +80,8 @@ function angkaStok(stok) {
 function tampilStok(b) {
   let ket = bersihKet(b.keterangan);
   let s = (b.stok ?? '').toString().trim();
-  if (!s) return '0 ' + ket;
-  if (/^[\d.,\s]+$/.test(s)) return s + ' ' + ket;
+  if (!s) return ket ? '0 ' + ket : '0';
+  if (/^[\d.,\s]+$/.test(s)) return ket ? s + ' ' + ket : s;
   return s;
 }
 
@@ -135,6 +129,7 @@ function render() {
     let j = b.jual || b.harga || 0;
     let u = j - b.modal;
     let ket = bersihKet(b.keterangan);
+    let labelUntung = ket ? 'Untung / ' + ket : 'Untung';
     let tombol = isLogin
       ? `<div class="flex"><button onclick="editBarang('${b.id}')" class="flex-1 bg-green-500 text-white py-2 font-bold text-sm">EDIT</button><button onclick="hapus('${b.id}')" class="flex-1 bg-red-500 text-white py-2 font-bold text-sm">HAPUS</button></div>`
       : `<div class="bg-gray-100 text-center py-2 text-sm font-bold text-gray-500">🔒 Login untuk Edit / Hapus</div>`;
@@ -142,8 +137,8 @@ function render() {
       <div class="flex justify-between items-center bg-blue-50 px-3 py-2 border-b-2 border-gray-300"><span class="font-bold text-lg">${b.nama}</span><span class="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full">STOK: ${tampilStok(b)}</span></div>
       <div class="px-3 py-2 flex justify-between border-b border-gray-200"><span class="text-gray-500">Harga Modal</span><span class="font-bold">Rp ${Number(b.modal).toLocaleString('id-ID')}</span></div>
       <div class="px-3 py-2 flex justify-between border-b border-gray-200"><span class="text-gray-500">Harga Jual</span><span class="font-bold">Rp ${Number(j).toLocaleString('id-ID')}</span></div>
-      <div class="px-3 py-2 flex justify-between border-b border-gray-200"><span class="text-gray-500">Keterangan</span><span class="font-bold">${ket}</span></div>
-      <div class="px-3 py-2 flex justify-between"><span class="text-gray-500">Untung / ${ket}</span><span class="font-bold ${u>=0?'text-green-600':'text-red-600'}">Rp ${u.toLocaleString('id-ID')}</span></div>
+      <div class="px-3 py-2 flex justify-between border-b border-gray-200"><span class="text-gray-500">Keterangan</span><span class="font-bold">${ket ? ket : '-'}</span></div>
+      <div class="px-3 py-2 flex justify-between"><span class="text-gray-500">${labelUntung}</span><span class="font-bold ${u>=0?'text-green-600':'text-red-600'}">Rp ${u.toLocaleString('id-ID')}</span></div>
       ${tombol}
     </div>`;
   });
