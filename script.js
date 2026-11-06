@@ -86,19 +86,25 @@ function render() {
     let ket = bersihKet(b.keterangan);
     let labelUntung = 'Untung';
     let tombol = isLogin ? `<div class="flex"><button onclick="editBarang('${b.id}')" class="flex-1 bg-green-500 text-white py-2 font-bold text-sm">EDIT</button><button onclick="hapus('${b.id}')" class="flex-1 bg-red-500 text-white py-2 font-bold text-sm">HAPUS</button></div>` : `<div class="bg-gray-100 text-center py-2 text-sm font-bold text-gray-500">🔒 Login untuk Edit / Hapus</div>`;
+
+    // INI KUNCINYA BANG: Modal + Untung cuma muncul kalo udah login
+    let barisModal = isLogin ? `<div class="px-3 py-2 flex justify-between border-b border-gray-200"><span class="text-gray-500">Harga Modal</span><span class="font-bold">Rp ${Number(b.modal).toLocaleString('id-ID')}</span></div>` : '';
+    let barisUntung = isLogin ? `<div class="px-3 py-2 flex justify-between"><span class="text-gray-500">${labelUntung}</span><span class="font-bold ${u>=0?'text-green-600':'text-red-600'}">Rp ${u.toLocaleString('id-ID')}</span></div>` : '';
+
     html += `<div class="border-2 border-gray-300 rounded-xl overflow-hidden">
       <div class="flex justify-between items-center bg-blue-50 px-3 py-2 border-b-2 border-gray-300"><span class="font-bold text-lg">${b.nama}</span><span class="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full">STOK: ${tampilStok(b)}</span></div>
-      <div class="px-3 py-2 flex justify-between border-b border-gray-200"><span class="text-gray-500">Harga Modal</span><span class="font-bold">Rp ${Number(b.modal).toLocaleString('id-ID')}</span></div>
+      ${barisModal}
       <div class="px-3 py-2 flex justify-between border-b border-gray-200"><span class="text-gray-500">Harga Jual</span><span class="font-bold">Rp ${Number(j).toLocaleString('id-ID')}</span></div>
       <div class="px-3 py-2 flex justify-between border-b border-gray-200"><span class="text-gray-500">Keterangan</span><span class="font-bold">${ket ? ket : '-'}</span></div>
-      <div class="px-3 py-2 flex justify-between"><span class="text-gray-500">${labelUntung}</span><span class="font-bold ${u>=0?'text-green-600':'text-red-600'}">Rp ${u.toLocaleString('id-ID')}</span></div>
+      ${barisUntung}
       ${tombol}
     </div>`;
   });
   if (barang.length===0) html = `<p class="text-center text-gray-400 py-4">Belum ada barang</p>`;
   document.getElementById('tabel').innerHTML = html;
   document.getElementById('infoPage').innerText = `Page ${currentPage} / ${totalPage} (Total ${barang.length} barang)`;
-  document.querySelector('.footer').innerHTML = `Total Jenis Produk: ${barang.length} | Total Untung: Rp ${totalUntung.toLocaleString('id-ID')}`;
+  // Footer juga disembunyiin untungnya kalo belum login
+  document.querySelector('.footer').innerHTML = isLogin ? `Total Jenis Produk: ${barang.length} | Total Untung: Rp ${totalUntung.toLocaleString('id-ID')}` : `Total Jenis Produk: ${barang.length}`;
 }
 
 window.gantiPage = (n) => {
