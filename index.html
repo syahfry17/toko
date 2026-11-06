@@ -8,8 +8,13 @@
 </head>
 <body class="bg-gray-100 p-3">
 
-<h1 class="text-3xl text-center text-blue-500">UD. BILAL</h1>
-<p class="text-center text-gray-600 mb-3">Data Barang Sembako</p>
+<!-- LOGO BARU DI ATAS -->
+<div class="text-center mb-3">
+  <img src="logo.png" alt="UD. BILAL" class="w-48 h-48 object-contain mx-auto rounded-2xl bg-white shadow">
+  <h1 class="text-3xl font-bold text-green-800 mt-2">UD. BILAL</h1>
+  <p class="text-center text-green-700 font-bold text-sm tracking-wide">GROCERY & SEMBAKO STORE</p>
+  <p class="text-center text-gray-500 text-sm">Data Barang Sembako</p>
+</div>
 
 <div class="bg-white p-3 rounded-xl shadow mb-3 flex justify-between items-center">
   <span id="statusLogin" class="text-sm font-bold text-red-500">🔒 Mode Lihat Saja</span>
@@ -22,7 +27,6 @@
   <input id="inputPass" type="password" placeholder="Password" class="w-full border p-3 rounded-lg">
   <button onclick="doLogin()" class="w-full bg-green-500 text-white p-3 rounded-lg font-bold">MASUK</button>
   <button onclick="toggleLogin()" class="w-full bg-gray-300 p-3 rounded-lg">Batal</button>
-  <p class="text-xs text-gray-500 text-center">Password tersimpan aman di Server Google, bukan di kode.</p>
 </div>
 
 <div id="boxForm" class="bg-white p-4 rounded-xl shadow mb-3 space-y-3 opacity-40 pointer-events-none">
@@ -72,7 +76,6 @@ function bersihKet(teks) {
   if (!teks) return '';
   return teks.toString().replace(/^\s*\/\s*/, '').trim();
 }
-
 function tampilStok(b) {
   let ket = bersihKet(b.keterangan);
   let s = (b.stok ?? '').toString().trim();
@@ -80,20 +83,15 @@ function tampilStok(b) {
   if (/^[\d.,\s]+$/.test(s)) return ket ? s + ' ' + ket : s;
   return s;
 }
-
 onSnapshot(query(collection(db, "barang"), orderBy("nama")), (snap) => {
   barang = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   render();
 });
-
-// INI KUNCINYA - AUTH BENERAN
 onAuthStateChanged(auth, (user) => {
   isLogin = !!user;
   updateUI();
   render();
-  if (user) console.log("Login sebagai:", user.email);
 });
-
 function updateUI() {
   document.getElementById('statusLogin').innerText = isLogin ? '✅ Login Admin - ' + (auth.currentUser ? auth.currentUser.email : '') : '🔒 Mode Lihat Saja';
   document.getElementById('statusLogin').className = isLogin ? 'text-sm font-bold text-green-600' : 'text-sm font-bold text-red-500';
@@ -102,16 +100,10 @@ function updateUI() {
   if (isLogin) form.classList.remove('opacity-40', 'pointer-events-none');
   else form.classList.add('opacity-40', 'pointer-events-none');
 }
-
 window.toggleLogin = async () => {
-  if (isLogin) {
-    await signOut(auth);
-    alert("Berhasil Logout");
-    return;
-  }
+  if (isLogin) { await signOut(auth); alert("Berhasil Logout"); return; }
   document.getElementById('boxLogin').classList.toggle('hidden');
 };
-
 window.doLogin = async () => {
   let email = document.getElementById('inputEmail').value.trim();
   let pass = document.getElementById('inputPass').value;
@@ -120,19 +112,13 @@ window.doLogin = async () => {
     await signInWithEmailAndPassword(auth, email, pass);
     document.getElementById('boxLogin').classList.add('hidden');
     document.getElementById('inputPass').value='';
-    alert('Login Berhasil! Selamat datang Admin');
-  } catch (e) {
-    alert('Gagal Login: ' + e.message);
-  }
+    alert('Login Berhasil!');
+  } catch (e) { alert('Gagal Login: ' + e.message); }
 };
-
 function render() {
   updateUI();
   let totalUntung = 0;
-  barang.forEach(b => {
-    let j = b.jual || b.harga || 0;
-    totalUntung += (j - b.modal);
-  });
+  barang.forEach(b => { let j = b.jual || b.harga || 0; totalUntung += (j - b.modal); });
   let totalPage = Math.max(1, Math.ceil(barang.length / perPage));
   if (currentPage > totalPage) currentPage = totalPage;
   let list = barang.slice((currentPage-1)*perPage, currentPage*perPage);
@@ -142,9 +128,7 @@ function render() {
     let u = j - b.modal;
     let ket = bersihKet(b.keterangan);
     let labelUntung = ket ? 'Untung / ' + ket : 'Untung';
-    let tombol = isLogin
-      ? `<div class="flex"><button onclick="editBarang('${b.id}')" class="flex-1 bg-green-500 text-white py-2 font-bold text-sm">EDIT</button><button onclick="hapus('${b.id}')" class="flex-1 bg-red-500 text-white py-2 font-bold text-sm">HAPUS</button></div>`
-      : `<div class="bg-gray-100 text-center py-2 text-sm font-bold text-gray-500">🔒 Login untuk Edit / Hapus</div>`;
+    let tombol = isLogin ? `<div class="flex"><button onclick="editBarang('${b.id}')" class="flex-1 bg-green-500 text-white py-2 font-bold text-sm">EDIT</button><button onclick="hapus('${b.id}')" class="flex-1 bg-red-500 text-white py-2 font-bold text-sm">HAPUS</button></div>` : `<div class="bg-gray-100 text-center py-2 text-sm font-bold text-gray-500">🔒 Login untuk Edit / Hapus</div>`;
     html += `<div class="border-2 border-gray-300 rounded-xl overflow-hidden">
       <div class="flex justify-between items-center bg-blue-50 px-3 py-2 border-b-2 border-gray-300"><span class="font-bold text-lg">${b.nama}</span><span class="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full">STOK: ${tampilStok(b)}</span></div>
       <div class="px-3 py-2 flex justify-between border-b border-gray-200"><span class="text-gray-500">Harga Modal</span><span class="font-bold">Rp ${Number(b.modal).toLocaleString('id-ID')}</span></div>
@@ -159,13 +143,11 @@ function render() {
   document.getElementById('infoPage').innerText = `Page ${currentPage} / ${totalPage} (Total ${barang.length} barang)`;
   document.querySelector('.footer').innerHTML = `Total Jenis Produk: ${barang.length} | Total Untung: Rp ${totalUntung.toLocaleString('id-ID')}`;
 }
-
 window.gantiPage = (n) => {
   let tp = Math.max(1, Math.ceil(barang.length / perPage));
   currentPage += n; if(currentPage<1) currentPage=1; if(currentPage>tp) currentPage=tp;
   render(); window.scrollTo(0,0);
 };
-
 window.simpan = async () => {
   if(!isLogin) return alert("Harus Login dulu!");
   let nama = document.getElementById('nama').value;
@@ -175,16 +157,11 @@ window.simpan = async () => {
   let stok = document.getElementById('stok').value.trim();
   if(!nama || !modal || !jual || !stok) return alert("Isi dulu!");
   try {
-    if(editId){
-      await updateDoc(doc(db,"barang",editId), { nama, modal, jual, harga:jual, keterangan, stok });
-      editId=null; document.getElementById('btnSimpan').innerText="SIMPAN";
-    } else {
-      await addDoc(collection(db,"barang"), { nama, modal, jual, harga:jual, keterangan, stok });
-    }
+    if(editId){ await updateDoc(doc(db,"barang",editId), { nama, modal, jual, harga:jual, keterangan, stok }); editId=null; document.getElementById('btnSimpan').innerText="SIMPAN"; }
+    else { await addDoc(collection(db,"barang"), { nama, modal, jual, harga:jual, keterangan, stok }); }
     document.getElementById('nama').value=''; document.getElementById('modal').value=''; document.getElementById('harga').value=''; document.getElementById('keterangan').value=''; document.getElementById('stok').value='';
-  } catch(e){ alert("Gagal simpan, harus login dulu! " + e.message); }
+  } catch(e){ alert("Gagal simpan: " + e.message); }
 };
-
 window.editBarang = (id) => {
   if(!isLogin) return alert("Harus Login dulu!");
   let b = barang.find(x=>x.id===id);
@@ -195,12 +172,10 @@ window.editBarang = (id) => {
   document.getElementById('stok').value=b.stok;
   editId=id; document.getElementById('btnSimpan').innerText="UPDATE"; window.scrollTo(0,0);
 };
-
 window.hapus = async (id) => {
   if(!isLogin) return alert("Harus Login dulu!");
   if(confirm("Hapus?")) await deleteDoc(doc(db,"barang",id));
 };
-
 window.batalEdit = () => {
   editId=null;
   document.getElementById('nama').value=''; document.getElementById('modal').value=''; document.getElementById('harga').value=''; document.getElementById('keterangan').value=''; document.getElementById('stok').value='';
