@@ -10,11 +10,14 @@ function render() {
   let list = barang.filter(b => b.nama.toLowerCase().includes(q));
   let totalUntung = 0; let html = '';
   list.forEach(b => {
-    let j = b.jual || b.harga || 0; let u = j - b.modal; totalUntung += u * b.stok;
+    let j = b.jual || b.harga || 0; let u = j - b.modal;
+    let stokAngka = parseFloat(String(b.stok).replace(',','.')) || 0;
+    totalUntung += u * stokAngka;
     html += `<div class="border-2 border-gray-200 rounded-xl p-3 bg-white mb-3">
       <div class="flex justify-between items-center pb-2 border-b-2 border-gray-200"><span class="font-bold text-lg">${b.nama}</span><span class="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full">Stok: ${b.stok}</span></div>
       <div class="py-1 border-b border-gray-100 flex justify-between text-sm"><span class="text-gray-500">Harga Modal</span><span class="font-bold">Rp ${Number(b.modal).toLocaleString('id-ID')}</span></div>
       <div class="py-1 border-b border-gray-100 flex justify-between text-sm"><span class="text-gray-500">Harga Jual</span><span class="font-bold">Rp ${Number(j).toLocaleString('id-ID')}</span></div>
+      <div class="py-1 border-b border-gray-100 flex justify-between text-sm"><span class="text-gray-500">Keterangan</span><span class="font-bold">${b.keterangan || '-'}</span></div>
       <div class="py-1 flex justify-between text-sm"><span class="text-gray-500">Untung / pcs</span><span class="font-bold text-green-600">Rp ${u.toLocaleString('id-ID')}</span></div>
       <div class="flex gap-2 mt-2"><button onclick="editBarang('${b.id}')" class="flex-1 bg-green-500 text-white py-2 rounded-lg font-bold text-sm">Edit</button><button onclick="hapus('${b.id}')" class="flex-1 bg-red-500 text-white py-2 rounded-lg font-bold text-sm">Hapus</button></div>
     </div>`;
@@ -25,12 +28,12 @@ function render() {
 }
 document.getElementById('cari')?.addEventListener('input', render);
 window.simpan = async () => {
-  let nama = document.getElementById('nama').value; let modal = Number(document.getElementById('modal').value); let jual = Number(document.getElementById('harga').value); let stok = Number(document.getElementById('stok').value);
+  let nama = document.getElementById('nama').value; let modal = Number(document.getElementById('modal').value); let jual = Number(document.getElementById('harga').value); let stok = document.getElementById('stok').value.trim(); let keterangan = document.getElementById('keterangan') ? document.getElementById('keterangan').value.trim() : '';
   if (!nama || !modal || !jual) return alert("Isi dulu!");
-  if (editId) { await updateDoc(doc(db, "barang", editId), { nama, modal, jual, harga: jual, stok }); editId = null; document.getElementById('btnSimpan').innerText = "SIMPAN"; }
-  else { await addDoc(collection(db, "barang"), { nama, modal, jual, harga: jual, stok }); }
-  document.getElementById('nama').value=''; document.getElementById('modal').value=''; document.getElementById('harga').value=''; document.getElementById('stok').value='';
+  if (editId) { await updateDoc(doc(db, "barang", editId), { nama, modal, jual, harga: jual, stok, keterangan }); editId = null; document.getElementById('btnSimpan').innerText = "SIMPAN"; }
+  else { await addDoc(collection(db, "barang"), { nama, modal, jual, harga: jual, stok, keterangan }); }
+  document.getElementById('nama').value=''; document.getElementById('modal').value=''; document.getElementById('harga').value=''; document.getElementById('stok').value=''; if(document.getElementById('keterangan')) document.getElementById('keterangan').value='';
 };
-window.editBarang = (id) => { let b = barang.find(x => x.id === id); document.getElementById('nama').value = b.nama; document.getElementById('modal').value = b.modal; document.getElementById('harga').value = b.jual || b.harga; document.getElementById('stok').value = b.stok; editId = id; document.getElementById('btnSimpan').innerText = "UPDATE"; window.scrollTo(0,0); };
+window.editBarang = (id) => { let b = barang.find(x => x.id === id); document.getElementById('nama').value = b.nama; document.getElementById('modal').value = b.modal; document.getElementById('harga').value = b.jual || b.harga; document.getElementById('stok').value = b.stok; if(document.getElementById('keterangan')) document.getElementById('keterangan').value = b.keterangan || ''; editId = id; document.getElementById('btnSimpan').innerText = "UPDATE"; window.scrollTo(0,0); };
 window.hapus = async (id) => { if (confirm("Hapus?")) await deleteDoc(doc(db, "barang", id)); };
-window.batalEdit = () => { editId = null; document.getElementById('nama').value=''; document.getElementById('modal').value=''; document.getElementById('harga').value=''; document.getElementById('stok').value=''; document.getElementById('btnSimpan').innerText="SIMPAN"; };
+window.batalEdit = () => { editId = null; document.getElementById('nama').value=''; document.getElementById('modal').value=''; document.getElementById('harga').value=''; document.getElementById('stok').value=''; if(document.getElementById('keterangan')) document.getElementById('keterangan').value=''; document.getElementById('btnSimpan').innerText="SIMPAN"; };
