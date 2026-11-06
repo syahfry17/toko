@@ -17,10 +17,12 @@
 </div>
 
 <div id="boxLogin" class="bg-yellow-50 border-2 border-yellow-300 p-4 rounded-xl shadow mb-3 space-y-3 hidden">
-  <p class="font-bold text-center">Login Admin</p>
-  <input id="inputPass" type="password" placeholder="Masukkan Password" class="w-full border p-3 rounded-lg">
+  <p class="font-bold text-center">Login Admin - Firebase Auth</p>
+  <input id="inputEmail" type="email" placeholder="Email Admin" value="admin@bilal.com" class="w-full border p-3 rounded-lg">
+  <input id="inputPass" type="password" placeholder="Password" class="w-full border p-3 rounded-lg">
   <button onclick="doLogin()" class="w-full bg-green-500 text-white p-3 rounded-lg font-bold">MASUK</button>
   <button onclick="toggleLogin()" class="w-full bg-gray-300 p-3 rounded-lg">Batal</button>
+  <p class="text-xs text-gray-500 text-center">Password tersimpan aman di Server Google, bukan di kode.</p>
 </div>
 
 <div id="boxForm" class="bg-white p-4 rounded-xl shadow mb-3 space-y-3 opacity-40 pointer-events-none">
@@ -40,13 +42,13 @@
     <span id="infoPage" class="font-bold text-sm">Page 1 / 1</span>
     <button onclick="gantiPage(1)" class="bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm">Next ➡</button>
   </div>
-  <!-- FOOTER BARU - CUMA 2, GAK PAKE STOK LAGI -->
   <div class="footer text-center font-bold mt-3 text-sm border-t pt-3">Total Jenis Produk: 0 | Total Untung: Rp 0</div>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, deleteDoc, doc, updateDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAhce1AyhPGe1cDkIzcBcgAFFOXC2Isxx0",
@@ -58,13 +60,13 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
 
 let barang = [];
 let editId = null;
 let currentPage = 1;
 const perPage = 10;
-const PASSWORD_ADMIN = "bilal123";
-let isLogin = localStorage.getItem('bilal_login') === 'ya';
+let isLogin = false;
 
 function bersihKet(teks) {
   if (!teks) return '';
@@ -84,8 +86,16 @@ onSnapshot(query(collection(db, "barang"), orderBy("nama")), (snap) => {
   render();
 });
 
+// INI KUNCINYA - AUTH BENERAN
+onAuthStateChanged(auth, (user) => {
+  isLogin = !!user;
+  updateUI();
+  render();
+  if (user) console.log("Login sebagai:", user.email);
+});
+
 function updateUI() {
-  document.getElementById('statusLogin').innerText = isLogin ? '✅ Login Admin' : '🔒 Mode Lihat Saja';
+  document.getElementById('statusLogin').innerText = isLogin ? '✅ Login Admin - ' + (auth.currentUser ? auth.currentUser.email : '') : '🔒 Mode Lihat Saja';
   document.getElementById('statusLogin').className = isLogin ? 'text-sm font-bold text-green-600' : 'text-sm font-bold text-red-500';
   document.getElementById('btnLogin').innerText = isLogin ? 'LOGOUT' : 'LOGIN';
   let form = document.getElementById('boxForm');
@@ -93,24 +103,31 @@ function updateUI() {
   else form.classList.add('opacity-40', 'pointer-events-none');
 }
 
-window.toggleLogin = () => {
-  if (isLogin) { isLogin=false; localStorage.removeItem('bilal_login'); updateUI(); render(); return; }
+window.toggleLogin = async () => {
+  if (isLogin) {
+    await signOut(auth);
+    alert("Berhasil Logout");
+    return;
+  }
   document.getElementById('boxLogin').classList.toggle('hidden');
 };
 
-window.doLogin = () => {
-  let p = document.getElementById('inputPass').value;
-  if (p === PASSWORD_ADMIN) {
-    isLogin=true; localStorage.setItem('bilal_login','ya');
+window.doLogin = async () => {
+  let email = document.getElementById('inputEmail').value.trim();
+  let pass = document.getElementById('inputPass').value;
+  if (!email || !pass) return alert("Isi Email & Password dulu!");
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
     document.getElementById('boxLogin').classList.add('hidden');
     document.getElementById('inputPass').value='';
-    updateUI(); render(); alert('Login Berhasil!');
-  } else alert('Password Salah!');
+    alert('Login Berhasil! Selamat datang Admin');
+  } catch (e) {
+    alert('Gagal Login: ' + e.message);
+  }
 };
 
 function render() {
   updateUI();
-  // TOTAL UNTUNG BARU - CUMA JUMLAHIN UNTUNG PER JENIS, GAK DIKALI STOK LAGI
   let totalUntung = 0;
   barang.forEach(b => {
     let j = b.jual || b.harga || 0;
@@ -157,13 +174,15 @@ window.simpan = async () => {
   let keterangan = bersihKet(document.getElementById('keterangan').value);
   let stok = document.getElementById('stok').value.trim();
   if(!nama || !modal || !jual || !stok) return alert("Isi dulu!");
-  if(editId){
-    await updateDoc(doc(db,"barang",editId), { nama, modal, jual, harga:jual, keterangan, stok });
-    editId=null; document.getElementById('btnSimpan').innerText="SIMPAN";
-  } else {
-    await addDoc(collection(db,"barang"), { nama, modal, jual, harga:jual, keterangan, stok });
-  }
-  document.getElementById('nama').value=''; document.getElementById('modal').value=''; document.getElementById('harga').value=''; document.getElementById('keterangan').value=''; document.getElementById('stok').value='';
+  try {
+    if(editId){
+      await updateDoc(doc(db,"barang",editId), { nama, modal, jual, harga:jual, keterangan, stok });
+      editId=null; document.getElementById('btnSimpan').innerText="SIMPAN";
+    } else {
+      await addDoc(collection(db,"barang"), { nama, modal, jual, harga:jual, keterangan, stok });
+    }
+    document.getElementById('nama').value=''; document.getElementById('modal').value=''; document.getElementById('harga').value=''; document.getElementById('keterangan').value=''; document.getElementById('stok').value='';
+  } catch(e){ alert("Gagal simpan, harus login dulu! " + e.message); }
 };
 
 window.editBarang = (id) => {
