@@ -26,16 +26,197 @@
   <button onclick="toggleLogin()" class="w-full bg-gray-300 p-3 rounded-lg">Batal</button>
 </div>
 
-<!-- FORM INPUT - CUMA 4 KOLOM -->
+<!-- FORM INPUT -->
 <div id="boxForm" class="bg-white p-4 rounded-xl shadow mb-3 space-y-3 opacity-40 pointer-events-none">
   <input id="nama" placeholder="Nama Barang" class="w-full border p-3 rounded-lg">
-  <input id="modal" type="number" placeholder="Harga Modal / bungkus" class="w-full border p-3 rounded-lg">
-  <input id="harga" type="number" placeholder="Harga Jual / bungkus" class="w-full border p-3 rounded-lg">
-  <input id="stok" type="number" placeholder="Stok (bungkus)" class="w-full border p-3 rounded-lg">
+  <input id="modal" type="number" placeholder="Harga Modal" class="w-full border p-3 rounded-lg">
+  <input id="harga" type="number" placeholder="Harga Jual" class="w-full border p-3 rounded-lg">
+  <input id="keterangan" placeholder="Keterangan (kg, pcs, kaleng, bungkus, dll)" class="w-full border p-3 rounded-lg">
+  <input id="stok" type="number" placeholder="Stok" class="w-full border p-3 rounded-lg">
   <button id="btnSimpan" onclick="simpan()" class="w-full bg-blue-500 text-white p-3 rounded-lg font-bold">SIMPAN</button>
   <button onclick="batalEdit()" class="w-full bg-gray-300 p-3 rounded-lg">Batal Edit</button>
 </div>
 
-<!-- DAFTAR BARANG + PAGE -->
+<!-- DAFTAR BARANG -->
 <div class="bg-white p-3 rounded-xl shadow">
-  <div id="tabel
+  <div id="tabel" class="space-y-3"></div>
+
+  <div class="flex justify-between items-center mt-4">
+    <button onclick="gantiPage(-1)" class="bg-gray-200 px-4 py-2 rounded-lg font-bold text-sm">⬅ Prev</button>
+    <span id="infoPage" class="font-bold text-sm">Page 1 / 1</span>
+    <button onclick="gantiPage(1)" class="bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm">Next ➡</button>
+  </div>
+
+  <div class="footer text-center font-bold mt-3 text-sm border-t pt-3">Total Barang: 0 | Total Untung Stok: Rp 0</div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, addDoc, deleteDoc, doc, updateDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// CONFIG FIREBASE
+const firebaseConfig = {
+  apiKey: "AIzaSyAhce1AyhPGe1cDkIzcBcgAFFOXC2Isxx0",
+  authDomain: "toko-bilal.firebaseapp.com",
+  projectId: "toko-bilal",
+  storageBucket: "toko-bilal.firebasestorage.app",
+  messagingSenderId: "507155195256",
+  appId: "1:507155195256:web:39185c267b272b5672948d"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// VARIABLE
+let barang = [];
+let editId = null;
+let currentPage = 1;
+const perPage = 10;
+const PASSWORD_ADMIN = "bilal123";
+let isLogin = localStorage.getItem('bilal_login') === 'ya';
+
+// AMBIL DATA
+onSnapshot(query(collection(db, "barang"), orderBy("nama")), (snap) => {
+  barang = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  render();
+});
+
+// UI LOGIN
+function updateUI() {
+  document.getElementById('statusLogin').innerText = isLogin ? '✅ Login Admin' : '🔒 Mode Lihat Saja';
+  document.getElementById('statusLogin').className = isLogin ? 'text-sm font-bold text-green-600' : 'text-sm font-bold text-red-500';
+  document.getElementById('btnLogin').innerText = isLogin ? 'LOGOUT' : 'LOGIN';
+  let form = document.getElementById('boxForm');
+  if (isLogin) form.classList.remove('opacity-40', 'pointer-events-none');
+  else form.classList.add('opacity-40', 'pointer-events-none');
+}
+
+// LOGIN
+window.toggleLogin = () => {
+  if (isLogin) {
+    isLogin = false;
+    localStorage.removeItem('bilal_login');
+    updateUI(); render(); return;
+  }
+  document.getElementById('boxLogin').classList.toggle('hidden');
+};
+
+window.doLogin = () => {
+  let p = document.getElementById('inputPass').value;
+  if (p === PASSWORD_ADMIN) {
+    isLogin = true;
+    localStorage.setItem('bilal_login', 'ya');
+    document.getElementById('boxLogin').classList.add('hidden');
+    document.getElementById('inputPass').value = '';
+    updateUI(); render();
+    alert('Login Berhasil!');
+  } else {
+    alert('Password Salah!');
+  }
+};
+
+// TAMPILKAN BARANG
+function render() {
+  updateUI();
+  let totalUntung = 0;
+  barang.forEach(b => {
+    let j = b.jual || b.harga || 0;
+    totalUntung += (j - b.modal) * b.stok;
+  });
+
+  let totalPage = Math.max(1, Math.ceil(barang.length / perPage));
+  if (currentPage > totalPage) currentPage = totalPage;
+  let list = barang.slice((currentPage - 1) * perPage, currentPage * perPage);
+
+  let html = '';
+  list.forEach(b => {
+    let j = b.jual || b.harga || 0;
+    let u = j - b.modal;
+    let ket = b.keterangan || 'bungkus';
+    let tombol = isLogin
+      ? `<div class="flex"><button onclick="editBarang('${b.id}')" class="flex-1 bg-green-500 text-white py-2 font-bold text-sm">EDIT</button><button onclick="hapus('${b.id}')" class="flex-1 bg-red-500 text-white py-2 font-bold text-sm">HAPUS</button></div>`
+      : `<div class="bg-gray-100 text-center py-2 text-sm font-bold text-gray-500">🔒 Login untuk Edit / Hapus</div>`;
+
+    html += `<div class="border-2 border-gray-300 rounded-xl overflow-hidden">
+      <div class="flex justify-between items-center bg-blue-50 px-3 py-2 border-b-2 border-gray-300">
+        <span class="font-bold text-lg">${b.nama}</span>
+        <span class="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full">STOK: ${b.stok} ${ket}</span>
+      </div>
+      <div class="px-3 py-2 flex justify-between border-b border-gray-200"><span class="text-gray-500">Harga Modal</span><span class="font-bold">Rp ${Number(b.modal).toLocaleString('id-ID')}</span></div>
+      <div class="px-3 py-2 flex justify-between border-b border-gray-200"><span class="text-gray-500">Harga Jual</span><span class="font-bold">Rp ${Number(j).toLocaleString('id-ID')}</span></div>
+      <div class="px-3 py-2 flex justify-between border-b border-gray-200"><span class="text-gray-500">Keterangan</span><span class="font-bold">${ket}</span></div>
+      <div class="px-3 py-2 flex justify-between"><span class="text-gray-500">Untung / ${ket}</span><span class="font-bold ${u >= 0 ? 'text-green-600' : 'text-red-600'}">Rp ${u.toLocaleString('id-ID')}</span></div>
+      ${tombol}
+    </div>`;
+  });
+
+  if (barang.length === 0) html = `<p class="text-center text-gray-400 py-4">Belum ada barang</p>`;
+  document.getElementById('tabel').innerHTML = html;
+  document.getElementById('infoPage').innerText = `Page ${currentPage} / ${totalPage} (Total ${barang.length} barang)`;
+  document.querySelector('.footer').innerHTML = `Total Barang: ${barang.length} | Total Untung Stok: Rp ${totalUntung.toLocaleString('id-ID')}`;
+}
+
+// GANTI PAGE
+window.gantiPage = (n) => {
+  let tp = Math.max(1, Math.ceil(barang.length / perPage));
+  currentPage += n;
+  if (currentPage < 1) currentPage = 1;
+  if (currentPage > tp) currentPage = tp;
+  render(); window.scrollTo(0, 0);
+};
+
+// SIMPAN / UPDATE
+window.simpan = async () => {
+  if (!isLogin) return alert("Harus Login dulu!");
+  let nama = document.getElementById('nama').value;
+  let modal = Number(document.getElementById('modal').value);
+  let jual = Number(document.getElementById('harga').value);
+  let keterangan = document.getElementById('keterangan').value || 'bungkus';
+  let stok = Number(document.getElementById('stok').value);
+  if (!nama || !modal || !jual) return alert("Isi dulu!");
+  if (editId) {
+    await updateDoc(doc(db, "barang", editId), { nama, modal, jual, harga: jual, keterangan, stok });
+    editId = null;
+    document.getElementById('btnSimpan').innerText = "SIMPAN";
+  } else {
+    await addDoc(collection(db, "barang"), { nama, modal, jual, harga: jual, keterangan, stok });
+  }
+  document.getElementById('nama').value = '';
+  document.getElementById('modal').value = '';
+  document.getElementById('harga').value = '';
+  document.getElementById('keterangan').value = '';
+  document.getElementById('stok').value = '';
+};
+
+// EDIT
+window.editBarang = (id) => {
+  if (!isLogin) return alert("Harus Login dulu!");
+  let b = barang.find(x => x.id === id);
+  document.getElementById('nama').value = b.nama;
+  document.getElementById('modal').value = b.modal;
+  document.getElementById('harga').value = b.jual || b.harga;
+  document.getElementById('keterangan').value = b.keterangan || '';
+  document.getElementById('stok').value = b.stok;
+  editId = id;
+  document.getElementById('btnSimpan').innerText = "UPDATE";
+  window.scrollTo(0, 0);
+};
+
+// HAPUS
+window.hapus = async (id) => {
+  if (!isLogin) return alert("Harus Login dulu!");
+  if (confirm("Hapus?")) await deleteDoc(doc(db, "barang", id));
+};
+
+// BATAL EDIT
+window.batalEdit = () => {
+  editId = null;
+  document.getElementById('nama').value = '';
+  document.getElementById('modal').value = '';
+  document.getElementById('harga').value = '';
+  document.getElementById('keterangan').value = '';
+  document.getElementById('stok').value = '';
+  document.getElementById('btnSimpan').innerText = "SIMPAN";
+};
+</script>
+</body>
+</html>
