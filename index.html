@@ -8,7 +8,6 @@
 </head>
 <body class="bg-gray-100 p-3">
 
-<!-- HEADER LOGO SAMPING -->
 <div class="flex items-center gap-3 mb-4">
   <img src="logo.jpg" alt="UD. BILAL" class="w-14 h-14 md:w-16 md:h-16 object-cover">
   <div class="text-left">
@@ -78,10 +77,8 @@ function bersihKet(teks) {
   return teks.toString().replace(/^\s*\/\s*/, '').trim();
 }
 function tampilStok(b) {
-  let ket = bersihKet(b.keterangan);
   let s = (b.stok ?? '').toString().trim();
-  if (!s) return ket ? '0 ' + ket : '0';
-  if (/^[\d.,\s]+$/.test(s)) return ket ? s + ' ' + ket : s;
+  if (!s) return '0';
   return s;
 }
 onSnapshot(query(collection(db, "barang"), orderBy("nama")), (snap) => {
@@ -119,7 +116,11 @@ window.doLogin = async () => {
 function render() {
   updateUI();
   let totalUntung = 0;
-  barang.forEach(b => { let j = b.jual || b.harga || 0; totalUntung += (j - b.modal); });
+  barang.forEach(b => {
+    let j = b.jual || b.harga || 0;
+    let stokAngka = parseFloat(String(b.stok ?? '').replace(',','.')) || 0;
+    totalUntung += (j - b.modal) * stokAngka;
+  });
   let totalPage = Math.max(1, Math.ceil(barang.length / perPage));
   if (currentPage > totalPage) currentPage = totalPage;
   let list = barang.slice((currentPage-1)*perPage, currentPage*perPage);
@@ -128,7 +129,7 @@ function render() {
     let j = b.jual || b.harga || 0;
     let u = j - b.modal;
     let ket = bersihKet(b.keterangan);
-    let labelUntung = ket ? 'Untung / ' + ket : 'Untung';
+    let labelUntung = 'Untung';
     let tombol = isLogin ? `<div class="flex"><button onclick="editBarang('${b.id}')" class="flex-1 bg-green-500 text-white py-2 font-bold text-sm">EDIT</button><button onclick="hapus('${b.id}')" class="flex-1 bg-red-500 text-white py-2 font-bold text-sm">HAPUS</button></div>` : `<div class="bg-gray-100 text-center py-2 text-sm font-bold text-gray-500">🔒 Login untuk Edit / Hapus</div>`;
     html += `<div class="border-2 border-gray-300 rounded-xl overflow-hidden">
       <div class="flex justify-between items-center bg-blue-50 px-3 py-2 border-b-2 border-gray-300"><span class="font-bold text-lg">${b.nama}</span><span class="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full">STOK: ${tampilStok(b)}</span></div>
