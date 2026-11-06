@@ -40,7 +40,8 @@
     <span id="infoPage" class="font-bold text-sm">Page 1 / 1</span>
     <button onclick="gantiPage(1)" class="bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm">Next ➡</button>
   </div>
-  <div class="footer text-center font-bold mt-3 text-sm border-t pt-3">Total Barang: 0 | Total Untung Stok: Rp 0</div>
+  <!-- FOOTER BARU - CUMA 2, GAK PAKE STOK LAGI -->
+  <div class="footer text-center font-bold mt-3 text-sm border-t pt-3">Total Jenis Produk: 0 | Total Untung: Rp 0</div>
 </div>
 
 <script type="module">
@@ -65,16 +66,9 @@ const perPage = 10;
 const PASSWORD_ADMIN = "bilal123";
 let isLogin = localStorage.getItem('bilal_login') === 'ya';
 
-// BERSIHIN KETERANGAN - KALO KOSONG YA KOSONG, GAK DIPAKSA BUNGKUS LAGI
 function bersihKet(teks) {
   if (!teks) return '';
   return teks.toString().replace(/^\s*\/\s*/, '').trim();
-}
-
-function angkaStok(stok) {
-  if (!stok) return 0;
-  let m = stok.toString().replace(',', '.').match(/[\d.]+/);
-  return m ? Number(m[0]) : 0;
 }
 
 function tampilStok(b) {
@@ -116,10 +110,11 @@ window.doLogin = () => {
 
 function render() {
   updateUI();
+  // TOTAL UNTUNG BARU - CUMA JUMLAHIN UNTUNG PER JENIS, GAK DIKALI STOK LAGI
   let totalUntung = 0;
   barang.forEach(b => {
     let j = b.jual || b.harga || 0;
-    totalUntung += (j - b.modal) * angkaStok(b.stok);
+    totalUntung += (j - b.modal);
   });
   let totalPage = Math.max(1, Math.ceil(barang.length / perPage));
   if (currentPage > totalPage) currentPage = totalPage;
@@ -145,7 +140,7 @@ function render() {
   if (barang.length===0) html = `<p class="text-center text-gray-400 py-4">Belum ada barang</p>`;
   document.getElementById('tabel').innerHTML = html;
   document.getElementById('infoPage').innerText = `Page ${currentPage} / ${totalPage} (Total ${barang.length} barang)`;
-  document.querySelector('.footer').innerHTML = `Total Barang: ${barang.length} | Total Untung Stok: Rp ${totalUntung.toLocaleString('id-ID')}`;
+  document.querySelector('.footer').innerHTML = `Total Jenis Produk: ${barang.length} | Total Untung: Rp ${totalUntung.toLocaleString('id-ID')}`;
 }
 
 window.gantiPage = (n) => {
