@@ -146,7 +146,7 @@ function render() {
            <button onclick="editBarang('${b.id}')" title="Edit" class="flex-1 bg-green-500 text-white py-2 btn-icon">✏️</button>
            <button onclick="hapus('${b.id}')" title="Hapus" class="flex-1 bg-red-500 text-white py-2 btn-icon">🗑️</button>
          </div>`
-      : `<div class="bg-gray-100 text-center py-2 text-sm font-bold text-gray-500">🔒 Login untuk Edit / Hapus</div>`;
+      : ``;
 
     let barisModal = isLogin
       ? `<div class="px-3 py-2 flex justify-between border-b border-gray-200"><span class="text-gray-500">Harga Modal</span><span class="font-bold">Rp ${Number(b.modal).toLocaleString('id-ID')}</span></div>`
