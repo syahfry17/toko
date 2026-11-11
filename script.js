@@ -123,8 +123,11 @@ function render() {
       : '';
 
     let tombol = isLogin
-      ? `<div class="flex"><button onclick="editBarang('${b.id}')" class="flex-1 bg-green-500 text-white py-2 font-bold text-sm">EDIT</button><button onclick="hapus('${b.id}')" class="flex-1 bg-red-500 text-white py-2 font-bold text-sm">HAPUS</button></div>`
-      : `<div class="bg-gray-100 text-center py-2 text-sm font-bold text-gray-500">🔒 Login untuk Edit / Hapus</div>`;
+  ? `<div class="flex">
+       <button onclick="editBarang('${b.id}')" title="Edit" class="flex-1 bg-green-500 text-white py-3 text-2xl">✏️</button>
+       <button onclick="hapus('${b.id}')" title="Hapus" class="flex-1 bg-red-500 text-white py-3 text-2xl">🗑️</button>
+     </div>`
+  : `<div class="bg-gray-100 text-center py-2 text-sm font-bold text-gray-500">🔒 Login untuk Edit / Hapus</div>`;
 
     // Modal + Untung cuma muncul kalo udah login - TETAP KAYAK PUNYA ABANG
     let barisModal = isLogin
