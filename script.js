@@ -1,6 +1,5 @@
 // ==========================================
-// UD. BILAL - script.js (RAPI)
-// Firebase + Tampilan Admin / Pengunjung
+// UD. BILAL - script.js (RAPI + POP UP)
 // ==========================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, deleteDoc, doc, updateDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -27,20 +26,15 @@ let currentPage = 1;
 const perPage = 10;
 let isLogin = false;
 
-// ---------- HELPER TANGGAL (BARU) ----------
-// Biar tanggalnya otomatis ke-update pas abang simpan
+// ---------- HELPER TANGGAL ----------
 function getTanggalHariIni() {
-  return new Date().toLocaleDateString('id-ID', {
-    day: '2-digit', month: 'short', year: 'numeric'
-  });
+  return new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
 }
-
 function isHariIni(tgl) {
   if (!tgl) return false;
   return tgl === getTanggalHariIni();
 }
 
-// ---------- HELPER LAMA ABANG - TETAP ----------
 function bersihKet(teks) {
   if (!teks) return '';
   return teks.toString().replace(/^\s*\/\s*/, '').trim();
@@ -52,7 +46,7 @@ function tampilStok(b) {
   return s;
 }
 
-// ---------- AMBIL DATA DARI FIREBASE ----------
+// ---------- AMBIL DATA ----------
 onSnapshot(query(collection(db, "barang"), orderBy("nama")), (snap) => {
   barang = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   render();
@@ -74,9 +68,16 @@ function updateUI() {
     : 'text-sm font-bold text-red-500';
   document.getElementById('btnLogin').innerText = isLogin ? 'LOGOUT' : 'LOGIN';
 
-  let form = document.getElementById('boxForm');
-  if (isLogin) form.classList.remove('opacity-40', 'pointer-events-none');
-  else form.classList.add('opacity-40', 'pointer-events-none');
+  let btnTambah = document.getElementById('btnTambah');
+  if (btnTambah) {
+    if (isLogin) btnTambah.classList.remove('hidden');
+    else btnTambah.classList.add('hidden');
+  }
+  let btnSemua = document.getElementById('btnUpdateSemua');
+  if (btnSemua) {
+    if (isLogin) btnSemua.classList.remove('hidden');
+    else btnSemua.classList.add('hidden');
+  }
 }
 
 window.toggleLogin = async () => {
@@ -96,7 +97,18 @@ window.doLogin = async () => {
   } catch (e) { alert('Gagal Login: ' + e.message); }
 };
 
-// ---------- RENDER KARTU ----------
+// ---------- POP UP FORM ----------
+window.bukaForm = () => {
+  if (!isLogin) return alert("Harus Login dulu!");
+  document.getElementById('judulForm').innerText = editId ? 'Edit Barang' : 'Tambah Barang';
+  document.getElementById('popupForm').classList.remove('hidden');
+};
+
+window.tutupForm = () => {
+  document.getElementById('popupForm').classList.add('hidden');
+};
+
+// ---------- RENDER ----------
 function render() {
   updateUI();
 
@@ -118,23 +130,16 @@ function render() {
     let u = j - b.modal;
     let ket = bersihKet(b.keterangan);
     let tgl = b.tanggalUpdate || '-';
-    let badgeBaru = isHariIni(b.tanggalUpdate)
-      ? `<span class="badge-baru">BARU</span>`
-      : '';
+    let badgeBaru = isHariIni(b.tanggalUpdate) ? `<span class="badge-baru">BARU</span>` : '';
 
+    // TOMBOL EDIT / HAPUS - KECIL, RAPI
     let tombol = isLogin
-  ? `<div class="flex">
-       <button onclick="editBarang('${b.id}')" title="Edit" class="flex-1 bg-green-500 text-white py-2 flex justify-center items-center gap-1">
-         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
-         <span class="text-sm font-bold">Edit</span>
-       </button>
-       <button onclick="hapus('${b.id}')" title="Hapus" class="flex-1 bg-red-500 text-white py-2 flex justify-center items-center gap-1">
-         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
-         <span class="text-sm font-bold">Hapus</span>
-       </button>
-     </div>`
-  : `<div class="bg-gray-100 text-center py-2 text-sm font-bold text-gray-500">🔒 Login untuk Edit / Hapus</div>`;
-    // Modal + Untung cuma muncul kalo udah login - TETAP KAYAK PUNYA ABANG
+      ? `<div class="flex">
+           <button onclick="editBarang('${b.id}')" title="Edit" class="flex-1 bg-green-500 text-white py-2 btn-icon">✏️</button>
+           <button onclick="hapus('${b.id}')" title="Hapus" class="flex-1 bg-red-500 text-white py-2 btn-icon">🗑️</button>
+         </div>`
+      : `<div class="bg-gray-100 text-center py-2 text-sm font-bold text-gray-500">🔒 Login untuk Edit / Hapus</div>`;
+
     let barisModal = isLogin
       ? `<div class="px-3 py-2 flex justify-between border-b border-gray-200"><span class="text-gray-500">Harga Modal</span><span class="font-bold">Rp ${Number(b.modal).toLocaleString('id-ID')}</span></div>`
       : '';
@@ -142,9 +147,6 @@ function render() {
       ? `<div class="px-3 py-2 flex justify-between"><span class="text-gray-500">Untung</span><span class="font-bold ${u >= 0 ? 'text-green-600' : 'text-red-600'}">Rp ${u.toLocaleString('id-ID')}</span></div>`
       : '';
 
-    // ===== INI YANG BARU: TANGGAL =====
-    // Admin -> Terakhir Update lengkap di bawah nama
-    // Pengunjung -> Harga terbaru + badge BARU
     let barisTanggal = isLogin
       ? `<div class="px-3 pt-2"><span class="last-update">Terakhir Update: ${tgl}</span></div>`
       : `<div class="px-3 pt-2"><span class="harga-terbaru">✅ Harga terbaru: ${tgl}</span></div>`;
@@ -181,7 +183,7 @@ window.gantiPage = (n) => {
   window.scrollTo(0, 0);
 };
 
-// ---------- SIMPAN / UPDATE ----------
+// ---------- SIMPAN ----------
 window.simpan = async () => {
   if (!isLogin) return alert("Harus Login dulu!");
   let nama = document.getElementById('nama').value;
@@ -191,7 +193,6 @@ window.simpan = async () => {
   let stok = document.getElementById('stok').value.trim();
   if (!nama || !modal || !jual || !stok) return alert("Isi dulu!");
 
-  // OTOMATIS: tanggal ke-update tiap abang simpan / edit harga
   let tanggalUpdate = getTanggalHariIni();
 
   try {
@@ -207,6 +208,7 @@ window.simpan = async () => {
     document.getElementById('harga').value = '';
     document.getElementById('keterangan').value = '';
     document.getElementById('stok').value = '';
+    document.getElementById('popupForm').classList.add('hidden');
   } catch (e) { alert("Gagal simpan: " + e.message); }
 };
 
@@ -221,7 +223,8 @@ window.editBarang = (id) => {
   document.getElementById('stok').value = b.stok;
   editId = id;
   document.getElementById('btnSimpan').innerText = "UPDATE";
-  window.scrollTo(0, 0);
+  document.getElementById('judulForm').innerText = 'Edit Barang';
+  document.getElementById('popupForm').classList.remove('hidden');
 };
 
 window.hapus = async (id) => {
@@ -237,4 +240,17 @@ window.batalEdit = () => {
   document.getElementById('keterangan').value = '';
   document.getElementById('stok').value = '';
   document.getElementById('btnSimpan').innerText = "SIMPAN";
+  document.getElementById('popupForm').classList.add('hidden');
+};
+
+// ---------- UPDATE SEMUA TANGGAL ----------
+window.updateSemuaTanggal = async () => {
+  if (!isLogin) return alert("Harus Login dulu!");
+  if (!confirm("Update semua yang masih '-' jadi hari ini?")) return;
+  let tgl = getTanggalHariIni();
+  let yangKosong = barang.filter(b => !b.tanggalUpdate);
+  for (let b of yangKosong) {
+    await updateDoc(doc(db, "barang", b.id), { tanggalUpdate: tgl });
+  }
+  alert("Beres! " + yangKosong.length + " barang udah ke-update jadi " + tgl);
 };
