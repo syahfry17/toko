@@ -6,16 +6,10 @@
   <title>UD. BILAL</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* Tambahan kecil untuk tanggal - tidak ganggu Tailwind */
     .last-update { font-size: 12px; color: #888; }
-    .harga-terbaru {
-      font-size: 12px; color: #2e7d32; background: #e8f5e9;
-      padding: 4px 8px; border-radius: 20px; display: inline-block;
-    }
-    .badge-baru {
-      font-size: 11px; background: #ff3b30; color: #fff;
-      padding: 3px 7px; border-radius: 20px; font-weight: 700;
-    }
+    .harga-terbaru { font-size: 12px; color: #2e7d32; background: #e8f5e9; padding: 4px 8px; border-radius: 20px; display: inline-block; }
+    .badge-baru { font-size: 11px; background: #ff3b30; color: #fff; padding: 3px 7px; border-radius: 20px; font-weight: 700; }
+    .btn-icon { font-size: 18px; line-height: 1; }
   </style>
 </head>
 
@@ -45,16 +39,11 @@
     <button onclick="toggleLogin()" class="w-full bg-gray-300 p-3 rounded-lg">Batal</button>
   </div>
 
-  <!-- FORM INPUT - ID TETAP SAMA -->
-  <div id="boxForm" class="bg-white p-4 rounded-xl shadow mb-3 space-y-3 opacity-40 pointer-events-none">
-    <input id="nama" type="text" placeholder="Nama Barang" class="w-full border p-3 rounded-lg">
-    <input id="modal" type="number" placeholder="Harga Modal - wajib angka" class="w-full border p-3 rounded-lg">
-    <input id="harga" type="number" placeholder="Harga Jual - wajib angka" class="w-full border p-3 rounded-lg">
-    <input id="keterangan" type="text" placeholder="Keterangan - boleh kosong (misal: Habis, Gudang)" class="w-full border p-3 rounded-lg">
-    <input id="stok" type="text" placeholder="Stok - bebas (12, 12 Botol, 1 Dus)" class="w-full border p-3 rounded-lg">
-    <button id="btnSimpan" onclick="simpan()" class="w-full bg-blue-500 text-white p-3 rounded-lg font-bold">SIMPAN</button>
-    <button onclick="batalEdit()" class="w-full bg-gray-300 p-3 rounded-lg">Batal Edit</button>
-  </div>
+  <!-- TOMBOL TAMBAH - CUMA MUNCUL KALO ADMIN -->
+  <button id="btnTambah" onclick="bukaForm()" class="w-full bg-blue-500 text-white p-3 rounded-xl font-bold mb-3 hidden">+ Tambah Barang</button>
+
+  <!-- TOMBOL UPDATE SEMUA TANGGAL - CUMA MUNCUL KALO ADMIN -->
+  <button id="btnUpdateSemua" onclick="updateSemuaTanggal()" class="w-full bg-orange-500 text-white p-3 rounded-xl font-bold mb-3 hidden">🔥 Update Semua Tanggal Jadi Hari Ini</button>
 
   <!-- LIST BARANG -->
   <div class="bg-white p-3 rounded-xl shadow">
@@ -67,6 +56,25 @@
     </div>
 
     <div class="footer text-center font-bold mt-3 text-sm border-t pt-3">Total Jenis Produk: 0 | Total Untung: Rp 0</div>
+  </div>
+
+  <!-- POP UP FORM -->
+  <div id="popupForm" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-start justify-center p-3 pt-10" onclick="tutupForm()">
+    <div class="bg-white p-4 rounded-xl shadow w-full max-w-md space-y-3" onclick="event.stopPropagation()">
+      <div class="flex justify-between items-center">
+        <h2 id="judulForm" class="font-bold text-lg">Tambah Barang</h2>
+        <button onclick="tutupForm()" class="bg-gray-200 w-8 h-8 rounded-full font-bold">✕</button>
+      </div>
+      <div id="boxForm" class="space-y-3">
+        <input id="nama" type="text" placeholder="Nama Barang" class="w-full border p-3 rounded-lg">
+        <input id="modal" type="number" placeholder="Harga Modal - wajib angka" class="w-full border p-3 rounded-lg">
+        <input id="harga" type="number" placeholder="Harga Jual - wajib angka" class="w-full border p-3 rounded-lg">
+        <input id="keterangan" type="text" placeholder="Keterangan - boleh kosong (misal: Habis, Gudang)" class="w-full border p-3 rounded-lg">
+        <input id="stok" type="text" placeholder="Stok - bebas (12, 12 Botol, 1 Dus)" class="w-full border p-3 rounded-lg">
+        <button id="btnSimpan" onclick="simpan()" class="w-full bg-blue-500 text-white p-3 rounded-lg font-bold">SIMPAN</button>
+        <button onclick="batalEdit()" class="w-full bg-gray-300 p-3 rounded-lg">Batal Edit</button>
+      </div>
+    </div>
   </div>
 
   <script type="module" src="script.js"></script>
