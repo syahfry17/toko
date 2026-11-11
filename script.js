@@ -1,5 +1,5 @@
 // ==========================================
-// UD. BILAL - script.js (RAPI + POP UP)
+// UD. BILAL - script.js (RAPI + POP UP + CARI)
 // ==========================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, deleteDoc, doc, updateDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -25,6 +25,7 @@ let editId = null;
 let currentPage = 1;
 const perPage = 10;
 let isLogin = false;
+let kataCari = '';
 
 // ---------- HELPER TANGGAL ----------
 function getTanggalHariIni() {
@@ -73,11 +74,6 @@ function updateUI() {
     if (isLogin) btnTambah.classList.remove('hidden');
     else btnTambah.classList.add('hidden');
   }
-  let btnSemua = document.getElementById('btnUpdateSemua');
-  if (btnSemua) {
-    if (isLogin) btnSemua.classList.remove('hidden');
-    else btnSemua.classList.add('hidden');
-  }
 }
 
 window.toggleLogin = async () => {
@@ -108,6 +104,13 @@ window.tutupForm = () => {
   document.getElementById('popupForm').classList.add('hidden');
 };
 
+// ---------- CARI ----------
+window.cariBarang = (teks) => {
+  kataCari = teks.toLowerCase().trim();
+  currentPage = 1;
+  render();
+};
+
 // ---------- RENDER ----------
 function render() {
   updateUI();
@@ -119,9 +122,15 @@ function render() {
     totalUntung += (j - b.modal) * stokAngka;
   });
 
-  let totalPage = Math.max(1, Math.ceil(barang.length / perPage));
+  // FILTER SESUAI PENCARIAN
+  let hasilCari = barang.filter(b =>
+    b.nama.toLowerCase().includes(kataCari) ||
+    (b.keterangan || '').toLowerCase().includes(kataCari)
+  );
+
+  let totalPage = Math.max(1, Math.ceil(hasilCari.length / perPage));
   if (currentPage > totalPage) currentPage = totalPage;
-  let list = barang.slice((currentPage - 1) * perPage, currentPage * perPage);
+  let list = hasilCari.slice((currentPage - 1) * perPage, currentPage * perPage);
 
   let html = '';
 
@@ -132,7 +141,6 @@ function render() {
     let tgl = b.tanggalUpdate || '-';
     let badgeBaru = isHariIni(b.tanggalUpdate) ? `<span class="badge-baru">BARU</span>` : '';
 
-    // TOMBOL EDIT / HAPUS - KECIL, RAPI
     let tombol = isLogin
       ? `<div class="flex">
            <button onclick="editBarang('${b.id}')" title="Edit" class="flex-1 bg-green-500 text-white py-2 btn-icon">✏️</button>
@@ -165,9 +173,9 @@ function render() {
     </div>`;
   });
 
-  if (barang.length === 0) html = `<p class="text-center text-gray-400 py-4">Belum ada barang</p>`;
+  if (hasilCari.length === 0) html = `<p class="text-center text-gray-400 py-4">Barang gak ketemu, coba kata lain</p>`;
   document.getElementById('tabel').innerHTML = html;
-  document.getElementById('infoPage').innerText = `Page ${currentPage} / ${totalPage} (Total ${barang.length} barang)`;
+  document.getElementById('infoPage').innerText = `Page ${currentPage} / ${totalPage} (Total ${hasilCari.length} barang)`;
   document.querySelector('.footer').innerHTML = isLogin
     ? `Total Jenis Produk: ${barang.length} | Total Untung: Rp ${totalUntung.toLocaleString('id-ID')}`
     : `Total Jenis Produk: ${barang.length}`;
@@ -241,16 +249,4 @@ window.batalEdit = () => {
   document.getElementById('stok').value = '';
   document.getElementById('btnSimpan').innerText = "SIMPAN";
   document.getElementById('popupForm').classList.add('hidden');
-};
-
-// ---------- UPDATE SEMUA TANGGAL ----------
-window.updateSemuaTanggal = async () => {
-  if (!isLogin) return alert("Harus Login dulu!");
-  if (!confirm("Update semua yang masih '-' jadi hari ini?")) return;
-  let tgl = getTanggalHariIni();
-  let yangKosong = barang.filter(b => !b.tanggalUpdate);
-  for (let b of yangKosong) {
-    await updateDoc(doc(db, "barang", b.id), { tanggalUpdate: tgl });
-  }
-  alert("Beres! " + yangKosong.length + " barang udah ke-update jadi " + tgl);
 };
