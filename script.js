@@ -101,6 +101,11 @@ function updateUI() {
     : 'text-sm font-bold text-red-500';
   document.getElementById('btnLogin').innerText = isLogin ? 'LOGOUT' : 'LOGIN';
   let btnTambah = document.getElementById('btnTambah');
+  let btnMigrasi = document.getElementById('btnMigrasi');
+if (btnMigrasi) {
+  if (isLogin) btnMigrasi.classList.remove('hidden');
+  else btnMigrasi.classList.add('hidden');
+}
   if (btnTambah) {
     if (isLogin) btnTambah.classList.remove('hidden');
     else btnTambah.classList.add('hidden');
