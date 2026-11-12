@@ -11,12 +11,12 @@
   .stok { background: green; color: white; padding: 4px 10px; border-radius: 20px; float: right; }
   input { margin: 10px 0; width: 100%; }
 
-  /* LAYAR CROP - PERSIS KAYAK VIDEO ABANG */
-  #cropModal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:999; flex-direction:column; }
-  #cropArea { flex:1; position:relative; overflow:hidden; touch-action:none; }
-  #cropImg { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); max-width:none; }
-  /* Kotak putihnya */
-  #cropBox { position:absolute; left:50%; top:50%; width:90%; height:200px; transform:translate(-50%,-50%); border:2px solid white; box-shadow:0 0 0 9999px rgba(0,0,0,0.6); pointer-events:none; }
+  /* LAYAR CROP - UDAH DIBENERIN, GAK GELAP LAGI */
+  #cropModal { display:none; position:fixed; inset:0; background:#000; z-index:999; flex-direction:column; }
+  #cropArea { flex:1; position:relative; overflow:hidden; touch-action:none; background:#000; }
+  #cropImg { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); max-width:none; z-index:1; }
+  /* Kotak putihnya - CUMA GARIS, GAK ADA BAYANGAN GELAP */
+  #cropBox { position:absolute; left:5%; right:5%; top:50%; height:210px; transform:translateY(-50%); border:2px solid white; z-index:2; pointer-events:none; }
   #cropFooter { display:flex; justify-content:space-between; padding:15px 20px; background:#111; }
   #cropFooter button { background:none; border:none; color:#4CAF50; font-size:16px; font-weight:bold; padding:10px; }
   #zoomBar { padding:10px 20px; background:#111; color:white; font-size:12px; }
@@ -38,7 +38,6 @@
 </div>
 <p style="text-align:center; font-size:12px; color:#666;">Pilih foto -> Seret fotonya di dalam kotak putih -> Pencet Selesai</p>
 
-<!-- MODAL CROP -->
 <div id="cropModal">
   <div id="cropArea">
     <img id="cropImg">
@@ -57,24 +56,25 @@
   const cropImg = document.getElementById("cropImg");
   const cropArea = document.getElementById("cropArea");
   const cropBox = document.getElementById("cropBox");
-  let imgX=0, imgY=0, startX=0, startY=0, startImgX=0, startImgY=0, lagiSeret=false, scale=1, imgW=0, imgH=0;
+  let imgX=0, imgY=0, startX=0, startY=0, startImgX=0, startImgY=0, lagiSeret=false, scale=1;
 
   document.getElementById("pilihFoto").addEventListener("change", function(e){
     const file = e.target.files[0];
     if(!file) return;
     const url = URL.createObjectURL(file);
     cropImg.onload = function(){
-      // pasin foto ke layar
-      const areaW = cropArea.clientWidth, areaH = cropArea.clientHeight;
-      const rasio = Math.max(areaW / cropImg.naturalWidth, cropBox.clientHeight / cropImg.naturalHeight);
-      imgW = cropImg.naturalWidth * rasio;
-      imgH = cropImg.naturalHeight * rasio;
-      cropImg.style.width = imgW + "px";
-      cropImg.style.height = imgH + "px";
-      imgX=0; imgY=0; scale=1;
-      document.getElementById("zoom").value = 100;
-      updateCropImg();
       modal.style.display = "flex";
+      // Tunggu modal kebuka dulu biar ukuran kebaca
+      setTimeout(function(){
+        const areaW = cropArea.clientWidth, areaH = cropArea.clientHeight;
+        const boxH = cropBox.clientHeight;
+        const rasio = Math.max(areaW / cropImg.naturalWidth, boxH / cropImg.naturalHeight);
+        cropImg.style.width = (cropImg.naturalWidth * rasio) + "px";
+        cropImg.style.height = (cropImg.naturalHeight * rasio) + "px";
+        imgX=0; imgY=0; scale=1;
+        document.getElementById("zoom").value = 100;
+        updateCropImg();
+      }, 50);
     };
     cropImg.src = url;
   });
@@ -83,7 +83,6 @@
     cropImg.style.transform = `translate(calc(-50% + ${imgX}px), calc(-50% + ${imgY}px)) scale(${scale})`;
   }
 
-  // SERET FOTO PAKE JARI - DI DALAM KOTAK
   function mulai(e){ lagiSeret=true; const p=e.touches?e.touches[0]:e; startX=p.clientX; startY=p.clientY; startImgX=imgX; startImgY=imgY; }
   function jalan(e){ if(!lagiSeret) return; e.preventDefault(); const p=e.touches?e.touches[0]:e; imgX=startImgX+(p.clientX-startX); imgY=startImgY+(p.clientY-startY); updateCropImg(); }
   function selesai(){ lagiSeret=false; }
@@ -94,18 +93,13 @@
   window.addEventListener("mousemove", jalan);
   window.addEventListener("mouseup", selesai);
 
-  document.getElementById("zoom").addEventListener("input", function(){
-    scale = this.value / 100; updateCropImg();
-  });
-
+  document.getElementById("zoom").addEventListener("input", function(){ scale = this.value / 100; updateCropImg(); });
   document.getElementById("btnBatal").onclick = function(){ modal.style.display="none"; document.getElementById("pilihFoto").value=""; };
 
   document.getElementById("btnSelesai").onclick = function(){
-    // POTONG SESUAI KOTAK PUTIH
     const canvas = document.createElement("canvas");
     const box = cropBox.getBoundingClientRect();
     const imgRect = cropImg.getBoundingClientRect();
-    // hitung posisi kotak terhadap foto asli
     const scaleX = cropImg.naturalWidth / imgRect.width;
     const scaleY = cropImg.naturalHeight / imgRect.height;
     const sx = Math.max(0, (box.left - imgRect.left) * scaleX);
