@@ -141,6 +141,8 @@ function render() {
     let tgl = b.tanggalUpdate || '-';
     let badgeBaru = isHariIni(b.tanggalUpdate) ? `<span class="badge-baru">BARU</span>` : '';
 
+    let tombolWA = `<a href="https://wa.me/6281919194295?text=${encodeURIComponent(`Halo UD. BILAL, saya mau pesan ${b.nama} - Rp ${Number(j).toLocaleString('id-ID')}`)}" target="_blank" class="block text-center bg-green-500 hover:bg-green-600 text-white font-bold py-2.5">💬 Pesan via WhatsApp</a>`;
+
     let tombol = isLogin
       ? `<div class="flex">
            <button onclick="editBarang('${b.id}')" title="Edit" class="flex-1 bg-green-500 text-white py-2 btn-icon">✏️</button>
@@ -155,10 +157,8 @@ function render() {
       ? `<div class="px-3 py-2 flex justify-between"><span class="text-gray-500">Untung</span><span class="font-bold ${u >= 0 ? 'text-green-600' : 'text-red-600'}">Rp ${u.toLocaleString('id-ID')}</span></div>`
       : '';
 
-    let barisTanggal = isLogin
-      ? `<div class="px-3 pt-2"><span class="last-update">Terakhir Update: ${tgl}</span></div>`
-      : `<div class="px-3 pt-2"><span class="harga-terbaru">✅ Harga terbaru: ${tgl}</span></div>`;
-
+    let barisTanggal = `<div class="px-3 pt-2"><span class="last-update">Terakhir Update: ${tgl}</span></div>`;
+    
     html += `<div class="border-2 border-gray-300 rounded-xl overflow-hidden">
       <div class="flex justify-between items-center bg-blue-50 px-3 py-2 border-b-2 border-gray-300">
         <span class="font-bold text-lg">${b.nama} ${badgeBaru}</span>
@@ -169,6 +169,7 @@ function render() {
       <div class="px-3 py-2 flex justify-between border-b border-gray-200"><span class="text-gray-500">Harga Jual</span><span class="font-bold">Rp ${Number(j).toLocaleString('id-ID')}</span></div>
       <div class="px-3 py-2 flex justify-between border-b border-gray-200"><span class="text-gray-500">Keterangan</span><span class="font-bold">${ket ? ket : '-'}</span></div>
       ${barisUntung}
+      ${tombolWA}
       ${tombol}
     </div>`;
   });
