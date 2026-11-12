@@ -141,12 +141,12 @@ function render() {
     let tgl = b.tanggalUpdate || '-';
     let badgeBaru = isHariIni(b.tanggalUpdate) ? `<span class="badge-baru">BARU</span>` : '';
 
-    let tombolWA = `<a href="https://wa.me/6281919194295?text=${encodeURIComponent(`Halo UD. BILAL, saya mau pesan ${b.nama} - Rp ${Number(j).toLocaleString('id-ID')}`)}" target="_blank" class="block text-center bg-green-500 hover:bg-green-600 text-white font-bold py-2.5">💬 Pesan via WhatsApp</a>`;
-
+    let tombolWA = `<div class="px-3 pb-3"><a href="https://wa.me/6281919194295?text=${encodeURIComponent(`Halo UD. BILAL, saya mau pesan ${b.nama} - Rp ${Number(j).toLocaleString('id-ID')}`)}" target="_blank" class="block text-center bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl">💬 PESAN VIA WHATSAPP</a></div>`;
+    
     let tombol = isLogin
-      ? `<div class="flex">
-           <button onclick="editBarang('${b.id}')" title="Edit" class="flex-1 bg-green-500 text-white py-2 btn-icon">✏️</button>
-           <button onclick="hapus('${b.id}')" title="Hapus" class="flex-1 bg-red-500 text-white py-2 btn-icon">🗑️</button>
+      ? `<div class="flex gap-2 px-3 pb-3">
+           <button onclick="editBarang('${b.id}')" class="flex-1 bg-green-500 text-white py-2.5 rounded-xl font-bold flex flex-col items-center gap-1"><span class="text-lg">✏️</span><span class="text-xs">EDIT</span></button>
+           <button onclick="hapus('${b.id}')" class="flex-1 bg-red-500 text-white py-2.5 rounded-xl font-bold flex flex-col items-center gap-1"><span class="text-lg">🗑️</span><span class="text-xs">HAPUS</span></button>
          </div>`
       : ``;
 
