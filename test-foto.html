@@ -4,18 +4,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <style>
   body { font-family: sans-serif; background: #f0f0f0; padding: 15px; margin:0; }
-  .kartu { background: white; border-radius: 12px; overflow: hidden; max-width: 350px; margin: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+  .kartu { background: white; border-radius: 12px; overflow: hidden; max-width: 350px; margin: auto; }
   .foto-barang { width: 100%; height: 180px; object-fit: cover; display: block; background: #ddd; }
   .isi { padding: 12px; }
   .nama { font-weight: bold; font-size: 18px; }
   .stok { background: green; color: white; padding: 4px 10px; border-radius: 20px; float: right; }
   input { margin: 10px 0; width: 100%; }
 
-  /* LAYAR CROP - UDAH DIBENERIN, GAK GELAP LAGI */
   #cropModal { display:none; position:fixed; inset:0; background:#000; z-index:999; flex-direction:column; }
   #cropArea { flex:1; position:relative; overflow:hidden; touch-action:none; background:#000; }
-  #cropImg { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); max-width:none; z-index:1; }
-  /* Kotak putihnya - CUMA GARIS, GAK ADA BAYANGAN GELAP */
+  #cropImg { position:absolute; left:0; top:0; width:100%; height:auto; will-change:transform; }
   #cropBox { position:absolute; left:5%; right:5%; top:50%; height:210px; transform:translateY(-50%); border:2px solid white; z-index:2; pointer-events:none; }
   #cropFooter { display:flex; justify-content:space-between; padding:15px 20px; background:#111; }
   #cropFooter button { background:none; border:none; color:#4CAF50; font-size:16px; font-weight:bold; padding:10px; }
@@ -36,14 +34,13 @@
     <div>Modal: Rp 5.000 | Jual: Rp 6.000<br><b style="color:green">Untung: Rp 1.000</b></div>
   </div>
 </div>
-<p style="text-align:center; font-size:12px; color:#666;">Pilih foto -> Seret fotonya di dalam kotak putih -> Pencet Selesai</p>
 
 <div id="cropModal">
   <div id="cropArea">
     <img id="cropImg">
     <div id="cropBox"></div>
   </div>
-  <div id="zoomBar">Zoom: <input type="range" id="zoom" min="100" max="300" value="100"></div>
+  <div id="zoomBar">Zoom: <input type="range" id="zoom" min="100" max="250" value="100"></div>
   <div id="cropFooter">
     <button id="btnBatal">Batal</button>
     <button id="btnSelesai">Selesai</button>
@@ -56,35 +53,65 @@
   const cropImg = document.getElementById("cropImg");
   const cropArea = document.getElementById("cropArea");
   const cropBox = document.getElementById("cropBox");
-  let imgX=0, imgY=0, startX=0, startY=0, startImgX=0, startImgY=0, lagiSeret=false, scale=1;
+  let imgX=0, imgY=0, startX=0, startY=0, sX=0, sY=0, lagiSeret=false, scale=1;
+  let baseW=0, baseH=0;
+
+  function kunciPosisi(){
+    // Biar foto GAK BISA KABUR dari kotak - ini kuncinya
+    const box = cropBox.getBoundingClientRect();
+    const area = cropArea.getBoundingClientRect();
+    const w = baseW * scale, h = baseH * scale;
+    // Batas kiri-kanan
+    const minX = Math.min(0, box.left - area.left - (w - (box.right - box.left)) / 2 - 50);
+    // Simpel: jangan biarin foto keluar jauh
+    // Kita kunci: foto harus selalu nutupin kotak
+    const maxX = area.left + 20;
+    // Hitung batas Y biar kotak selalu ketutup foto
+    // Foto posisi relatif ke area
+    let batasAtas = (box.top - area.top) - h + box.height; // paling bawah
+    let batasBawah = box.top - area.top; // paling atas
+    if(imgY < batasAtas) imgY = batasAtas;
+    if(imgY > batasBawah) imgY = batasBawah;
+    if(imgX < -(w - (box.right - box.left)) - 20) imgX = -(w - (box.right - box.left)) - 20;
+    if(imgX > 20) imgX = 20;
+  }
+
+  function updateImg(){ kunciPosisi(); cropImg.style.transform = `translate(${imgX}px, ${imgY}px) scale(${scale})`; cropImg.style.transformOrigin = "0 0"; }
 
   document.getElementById("pilihFoto").addEventListener("change", function(e){
-    const file = e.target.files[0];
-    if(!file) return;
+    const file = e.target.files[0]; if(!file) return;
     const url = URL.createObjectURL(file);
     cropImg.onload = function(){
       modal.style.display = "flex";
-      // Tunggu modal kebuka dulu biar ukuran kebaca
       setTimeout(function(){
-        const areaW = cropArea.clientWidth, areaH = cropArea.clientHeight;
+        const areaW = cropArea.clientWidth;
+        // Foto lebarnya = lebar layar, tinggi ngikutin asli
+        baseW = areaW;
+        baseH = areaW * (cropImg.naturalHeight / cropImg.naturalWidth);
+        cropImg.style.width = baseW + "px";
+        cropImg.style.height = baseH + "px";
+        // Kalau foto terlalu pendek, gedein biar nutupin kotak
         const boxH = cropBox.clientHeight;
-        const rasio = Math.max(areaW / cropImg.naturalWidth, boxH / cropImg.naturalHeight);
-        cropImg.style.width = (cropImg.naturalWidth * rasio) + "px";
-        cropImg.style.height = (cropImg.naturalHeight * rasio) + "px";
-        imgX=0; imgY=0; scale=1;
-        document.getElementById("zoom").value = 100;
-        updateCropImg();
+        if(baseH < boxH){
+          const r = boxH / baseH;
+          baseW *= r; baseH *= r;
+          cropImg.style.width = baseW + "px";
+          cropImg.style.height = baseH + "px";
+        }
+        scale = 1; document.getElementById("zoom").value = 100;
+        // Pasin tengah kotak
+        const areaH = cropArea.clientHeight;
+        const boxTop = cropBox.getBoundingClientRect().top - cropArea.getBoundingClientRect().top;
+        imgX = (areaW - baseW) / 2;
+        imgY = boxTop + (boxH - baseH) / 2;
+        updateImg();
       }, 50);
     };
     cropImg.src = url;
   });
 
-  function updateCropImg(){
-    cropImg.style.transform = `translate(calc(-50% + ${imgX}px), calc(-50% + ${imgY}px)) scale(${scale})`;
-  }
-
-  function mulai(e){ lagiSeret=true; const p=e.touches?e.touches[0]:e; startX=p.clientX; startY=p.clientY; startImgX=imgX; startImgY=imgY; }
-  function jalan(e){ if(!lagiSeret) return; e.preventDefault(); const p=e.touches?e.touches[0]:e; imgX=startImgX+(p.clientX-startX); imgY=startImgY+(p.clientY-startY); updateCropImg(); }
+  function mulai(e){ lagiSeret=true; const p=e.touches?e.touches[0]:e; startX=p.clientX; startY=p.clientY; sX=imgX; sY=imgY; }
+  function jalan(e){ if(!lagiSeret) return; e.preventDefault(); const p=e.touches?e.touches[0]:e; imgX=sX+(p.clientX-startX); imgY=sY+(p.clientY-startY); updateImg(); }
   function selesai(){ lagiSeret=false; }
   cropArea.addEventListener("touchstart", mulai, {passive:true});
   cropArea.addEventListener("touchmove", jalan, {passive:false});
@@ -93,19 +120,16 @@
   window.addEventListener("mousemove", jalan);
   window.addEventListener("mouseup", selesai);
 
-  document.getElementById("zoom").addEventListener("input", function(){ scale = this.value / 100; updateCropImg(); });
+  document.getElementById("zoom").addEventListener("input", function(){ scale = this.value/100; updateImg(); });
   document.getElementById("btnBatal").onclick = function(){ modal.style.display="none"; document.getElementById("pilihFoto").value=""; };
-
   document.getElementById("btnSelesai").onclick = function(){
     const canvas = document.createElement("canvas");
     const box = cropBox.getBoundingClientRect();
     const imgRect = cropImg.getBoundingClientRect();
-    const scaleX = cropImg.naturalWidth / imgRect.width;
-    const scaleY = cropImg.naturalHeight / imgRect.height;
-    const sx = Math.max(0, (box.left - imgRect.left) * scaleX);
-    const sy = Math.max(0, (box.top - imgRect.top) * scaleY);
-    const sw = box.width * scaleX;
-    const sh = box.height * scaleY;
+    const sx = Math.max(0, (box.left - imgRect.left) * (cropImg.naturalWidth / imgRect.width));
+    const sy = Math.max(0, (box.top - imgRect.top) * (cropImg.naturalHeight / imgRect.height));
+    const sw = box.width * (cropImg.naturalWidth / imgRect.width);
+    const sh = box.height * (cropImg.naturalHeight / imgRect.height);
     canvas.width = 700; canvas.height = 400;
     const ctx = canvas.getContext("2d");
     ctx.drawImage(cropImg, sx, sy, sw, sh, 0, 0, 700, 400);
