@@ -19,7 +19,7 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 // ---------- KUNCI ADMIN - GANTI DISINI! ----------
-const ADMIN_UID = "GANTI_DENGAN_UID_ABANG_YANG_PANJANG";
+const ADMIN_UID = "spaWNW7l2YSqBvhC7hkK6Sd3d7A3";
 
 // ---------- STATE ----------
 let barangPublic = [];
