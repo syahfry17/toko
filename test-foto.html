@@ -3,98 +3,121 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <style>
-  body { font-family: sans-serif; background: #f0f0f0; padding: 15px; }
-  .kartu {
-    background: white; border-radius: 12px;
-    overflow: hidden; max-width: 350px; margin: auto;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  }
-  /* KOTAK FOTO - BISA DISERET */
-  .kotak-foto {
-    width: 100%; height: 200px;
-    overflow: hidden; background: #ddd;
-    position: relative; touch-action: none;
-  }
-  .kotak-foto img {
-    position: absolute; left: 0; top: 0;
-    width: 100%; height: 100%;
-    object-fit: cover;
-    cursor: grab;
-  }
-  .kotak-foto img:active { cursor: grabbing; }
+  body { font-family: sans-serif; background: #f0f0f0; padding: 15px; margin:0; }
+  .kartu { background: white; border-radius: 12px; overflow: hidden; max-width: 350px; margin: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+  .foto-barang { width: 100%; height: 180px; object-fit: cover; display: block; background: #ddd; }
   .isi { padding: 12px; }
   .nama { font-weight: bold; font-size: 18px; }
-  .harga { margin-top: 8px; }
   .stok { background: green; color: white; padding: 4px 10px; border-radius: 20px; float: right; }
-  .petunjuk { text-align:center; font-size:12px; color:#666; margin-top:10px; }
+  input { margin: 10px 0; width: 100%; }
+
+  /* LAYAR CROP - PERSIS KAYAK VIDEO ABANG */
+  #cropModal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:999; flex-direction:column; }
+  #cropArea { flex:1; position:relative; overflow:hidden; touch-action:none; }
+  #cropImg { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); max-width:none; }
+  /* Kotak putihnya */
+  #cropBox { position:absolute; left:50%; top:50%; width:90%; height:200px; transform:translate(-50%,-50%); border:2px solid white; box-shadow:0 0 0 9999px rgba(0,0,0,0.6); pointer-events:none; }
+  #cropFooter { display:flex; justify-content:space-between; padding:15px 20px; background:#111; }
+  #cropFooter button { background:none; border:none; color:#4CAF50; font-size:16px; font-weight:bold; padding:10px; }
+  #zoomBar { padding:10px 20px; background:#111; color:white; font-size:12px; }
+  #zoomBar input { width:100%; }
 </style>
 </head>
 <body>
 
 <h3 style="text-align:center">TES FOTO - Adam Sari</h3>
-<p style="text-align:center; font-size:13px;">Pilih foto, terus seret fotonya pake jari:</p>
-<input type="file" id="pilihFoto" accept="image/*" style="width:100%; margin:10px 0;">
+<p style="text-align:center; font-size:13px;">Pilih foto dari galeri HP abang:</p>
+<input type="file" id="pilihFoto" accept="image/*">
 
 <div class="kartu">
-  <div class="kotak-foto" id="kotak">
-    <img id="fotoTampil" src="https://via.placeholder.com/350x200?text=Belum+Ada+Foto">
-  </div>
+  <img id="fotoTampil" class="foto-barang" src="https://via.placeholder.com/350x180?text=Belum+Ada+Foto">
   <div class="isi">
     <div class="nama">Adam Sari - Jeruk <span class="stok">STOK 12</span></div>
-    <div class="harga">
-      Modal: Rp 5.000 | Jual: Rp 6.000<br>
-      <b style="color:green">Untung: Rp 1.000</b>
-    </div>
+    <div>Modal: Rp 5.000 | Jual: Rp 6.000<br><b style="color:green">Untung: Rp 1.000</b></div>
+  </div>
+</div>
+<p style="text-align:center; font-size:12px; color:#666;">Pilih foto -> Seret fotonya di dalam kotak putih -> Pencet Selesai</p>
+
+<!-- MODAL CROP -->
+<div id="cropModal">
+  <div id="cropArea">
+    <img id="cropImg">
+    <div id="cropBox"></div>
+  </div>
+  <div id="zoomBar">Zoom: <input type="range" id="zoom" min="100" max="300" value="100"></div>
+  <div id="cropFooter">
+    <button id="btnBatal">Batal</button>
+    <button id="btnSelesai">Selesai</button>
   </div>
 </div>
 
-<p class="petunjuk">👆 Seret fotonya ke atas / bawah / kiri / kanan pake jari<br>kayak ngatur foto profil WA</p>
-
 <script>
-  const foto = document.getElementById("fotoTampil");
-  const kotak = document.getElementById("kotak");
-  let posX = 50, posY = 50;
-  let startX = 0, startY = 0, startPosX = 50, startPosY = 50;
-  let lagiSeret = false;
-
-  function updateFoto(){
-    foto.style.objectPosition = posX + "% " + posY + "%";
-  }
+  const fotoTampil = document.getElementById("fotoTampil");
+  const modal = document.getElementById("cropModal");
+  const cropImg = document.getElementById("cropImg");
+  const cropArea = document.getElementById("cropArea");
+  const cropBox = document.getElementById("cropBox");
+  let imgX=0, imgY=0, startX=0, startY=0, startImgX=0, startImgY=0, lagiSeret=false, scale=1, imgW=0, imgH=0;
 
   document.getElementById("pilihFoto").addEventListener("change", function(e){
     const file = e.target.files[0];
     if(!file) return;
-    foto.src = URL.createObjectURL(file);
-    posX = 50; posY = 50; updateFoto();
+    const url = URL.createObjectURL(file);
+    cropImg.onload = function(){
+      // pasin foto ke layar
+      const areaW = cropArea.clientWidth, areaH = cropArea.clientHeight;
+      const rasio = Math.max(areaW / cropImg.naturalWidth, cropBox.clientHeight / cropImg.naturalHeight);
+      imgW = cropImg.naturalWidth * rasio;
+      imgH = cropImg.naturalHeight * rasio;
+      cropImg.style.width = imgW + "px";
+      cropImg.style.height = imgH + "px";
+      imgX=0; imgY=0; scale=1;
+      document.getElementById("zoom").value = 100;
+      updateCropImg();
+      modal.style.display = "flex";
+    };
+    cropImg.src = url;
   });
 
-  // SERET PAKE JARI / MOUSE
-  function mulaiSeret(e){
-    lagiSeret = true;
-    const p = e.touches ? e.touches[0] : e;
-    startX = p.clientX; startY = p.clientY;
-    startPosX = posX; startPosY = posY;
+  function updateCropImg(){
+    cropImg.style.transform = `translate(calc(-50% + ${imgX}px), calc(-50% + ${imgY}px)) scale(${scale})`;
   }
-  function jalanSeret(e){
-    if(!lagiSeret) return;
-    e.preventDefault();
-    const p = e.touches ? e.touches[0] : e;
-    let dx = p.clientX - startX;
-    let dy = p.clientY - startY;
-    // Geser lawan arah biar natural kayak IG
-    posX = Math.max(0, Math.min(100, startPosX - dx / 3));
-    posY = Math.max(0, Math.min(100, startPosY - dy / 3));
-    updateFoto();
-  }
-  function selesaiSeret(){ lagiSeret = false; }
 
-  kotak.addEventListener("touchstart", mulaiSeret, {passive:true});
-  kotak.addEventListener("touchmove", jalanSeret, {passive:false});
-  kotak.addEventListener("touchend", selesaiSeret);
-  kotak.addEventListener("mousedown", mulaiSeret);
-  window.addEventListener("mousemove", jalanSeret);
-  window.addEventListener("mouseup", selesaiSeret);
+  // SERET FOTO PAKE JARI - DI DALAM KOTAK
+  function mulai(e){ lagiSeret=true; const p=e.touches?e.touches[0]:e; startX=p.clientX; startY=p.clientY; startImgX=imgX; startImgY=imgY; }
+  function jalan(e){ if(!lagiSeret) return; e.preventDefault(); const p=e.touches?e.touches[0]:e; imgX=startImgX+(p.clientX-startX); imgY=startImgY+(p.clientY-startY); updateCropImg(); }
+  function selesai(){ lagiSeret=false; }
+  cropArea.addEventListener("touchstart", mulai, {passive:true});
+  cropArea.addEventListener("touchmove", jalan, {passive:false});
+  cropArea.addEventListener("touchend", selesai);
+  cropArea.addEventListener("mousedown", mulai);
+  window.addEventListener("mousemove", jalan);
+  window.addEventListener("mouseup", selesai);
+
+  document.getElementById("zoom").addEventListener("input", function(){
+    scale = this.value / 100; updateCropImg();
+  });
+
+  document.getElementById("btnBatal").onclick = function(){ modal.style.display="none"; document.getElementById("pilihFoto").value=""; };
+
+  document.getElementById("btnSelesai").onclick = function(){
+    // POTONG SESUAI KOTAK PUTIH
+    const canvas = document.createElement("canvas");
+    const box = cropBox.getBoundingClientRect();
+    const imgRect = cropImg.getBoundingClientRect();
+    // hitung posisi kotak terhadap foto asli
+    const scaleX = cropImg.naturalWidth / imgRect.width;
+    const scaleY = cropImg.naturalHeight / imgRect.height;
+    const sx = Math.max(0, (box.left - imgRect.left) * scaleX);
+    const sy = Math.max(0, (box.top - imgRect.top) * scaleY);
+    const sw = box.width * scaleX;
+    const sh = box.height * scaleY;
+    canvas.width = 700; canvas.height = 400;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(cropImg, sx, sy, sw, sh, 0, 0, 700, 400);
+    fotoTampil.src = canvas.toDataURL("image/jpeg", 0.9);
+    modal.style.display = "none";
+  };
 </script>
-
 </body>
 </html>
