@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <style>
   body { font-family: sans-serif; background: #f0f0f0; padding: 15px; }
   .kartu {
@@ -9,30 +9,36 @@
     overflow: hidden; max-width: 350px; margin: auto;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
   }
-  .foto-barang {
-    width: 100%;
-    height: 180px;
-    object-fit: cover;
-    object-position: 50% 50%;
-    display: block;
-    background: #ddd;
+  /* KOTAK FOTO - BISA DISERET */
+  .kotak-foto {
+    width: 100%; height: 200px;
+    overflow: hidden; background: #ddd;
+    position: relative; touch-action: none;
   }
+  .kotak-foto img {
+    position: absolute; left: 0; top: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    cursor: grab;
+  }
+  .kotak-foto img:active { cursor: grabbing; }
   .isi { padding: 12px; }
   .nama { font-weight: bold; font-size: 18px; }
   .harga { margin-top: 8px; }
   .stok { background: green; color: white; padding: 4px 10px; border-radius: 20px; float: right; }
-  input { margin: 10px 0; width: 100%; }
-  .geser-box { max-width: 350px; margin: 15px auto; background: white; padding: 12px; border-radius: 10px; font-size: 13px; }
+  .petunjuk { text-align:center; font-size:12px; color:#666; margin-top:10px; }
 </style>
 </head>
 <body>
 
 <h3 style="text-align:center">TES FOTO - Adam Sari</h3>
-<p style="text-align:center; font-size:13px;">Pilih foto dari galeri HP abang:</p>
-<input type="file" id="pilihFoto" accept="image/*">
+<p style="text-align:center; font-size:13px;">Pilih foto, terus seret fotonya pake jari:</p>
+<input type="file" id="pilihFoto" accept="image/*" style="width:100%; margin:10px 0;">
 
 <div class="kartu">
-  <img id="fotoTampil" class="foto-barang" src="https://via.placeholder.com/350x180?text=Belum+Ada+Foto">
+  <div class="kotak-foto" id="kotak">
+    <img id="fotoTampil" src="https://via.placeholder.com/350x200?text=Belum+Ada+Foto">
+  </div>
   <div class="isi">
     <div class="nama">Adam Sari - Jeruk <span class="stok">STOK 12</span></div>
     <div class="harga">
@@ -42,21 +48,53 @@
   </div>
 </div>
 
-<div class="geser-box">
-  Geser Kiri - Kanan:<br>
-  <input type="range" id="geserX" min="0" max="100" value="50"><br>
-  Geser Atas - Bawah:<br>
-  <input type="range" id="geserY" min="0" max="100" value="50">
-</div>
-
-<p style="text-align:center; font-size:12px; color:#666;">
-Pilih foto, terus geser slidernya.<br>
-Fotonya harusnya bisa digeser kiri-kanan atas-bawah.
-</p>
+<p class="petunjuk">👆 Seret fotonya ke atas / bawah / kiri / kanan pake jari<br>kayak ngatur foto profil WA</p>
 
 <script>
   const foto = document.getElementById("fotoTampil");
+  const kotak = document.getElementById("kotak");
+  let posX = 50, posY = 50;
+  let startX = 0, startY = 0, startPosX = 50, startPosY = 50;
+  let lagiSeret = false;
+
+  function updateFoto(){
+    foto.style.objectPosition = posX + "% " + posY + "%";
+  }
+
   document.getElementById("pilihFoto").addEventListener("change", function(e){
     const file = e.target.files[0];
     if(!file) return;
-    const reader = new File
+    foto.src = URL.createObjectURL(file);
+    posX = 50; posY = 50; updateFoto();
+  });
+
+  // SERET PAKE JARI / MOUSE
+  function mulaiSeret(e){
+    lagiSeret = true;
+    const p = e.touches ? e.touches[0] : e;
+    startX = p.clientX; startY = p.clientY;
+    startPosX = posX; startPosY = posY;
+  }
+  function jalanSeret(e){
+    if(!lagiSeret) return;
+    e.preventDefault();
+    const p = e.touches ? e.touches[0] : e;
+    let dx = p.clientX - startX;
+    let dy = p.clientY - startY;
+    // Geser lawan arah biar natural kayak IG
+    posX = Math.max(0, Math.min(100, startPosX - dx / 3));
+    posY = Math.max(0, Math.min(100, startPosY - dy / 3));
+    updateFoto();
+  }
+  function selesaiSeret(){ lagiSeret = false; }
+
+  kotak.addEventListener("touchstart", mulaiSeret, {passive:true});
+  kotak.addEventListener("touchmove", jalanSeret, {passive:false});
+  kotak.addEventListener("touchend", selesaiSeret);
+  kotak.addEventListener("mousedown", mulaiSeret);
+  window.addEventListener("mousemove", jalanSeret);
+  window.addEventListener("mouseup", selesaiSeret);
+</script>
+
+</body>
+</html>
