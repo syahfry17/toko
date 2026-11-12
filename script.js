@@ -141,8 +141,10 @@ function render() {
     let tgl = b.tanggalUpdate || '-';
     let badgeBaru = isHariIni(b.tanggalUpdate) ? `<span class="badge-baru">BARU</span>` : '';
 
+    // TOMBOL WA - MODEL BARU: Full, melengkung, ada jarak
     let tombolWA = `<div class="px-3 pb-3"><a href="https://wa.me/6281919194295?text=${encodeURIComponent(`Halo UD. BILAL, saya mau pesan ${b.nama} - Rp ${Number(j).toLocaleString('id-ID')}`)}" target="_blank" class="block text-center bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl">💬 PESAN VIA WHATSAPP</a></div>`;
-    
+
+    // TOMBOL EDIT / HAPUS - DIPISAH, ada jarak, ada tulisan
     let tombol = isLogin
       ? `<div class="flex gap-2 px-3 pb-3">
            <button onclick="editBarang('${b.id}')" class="flex-1 bg-green-500 text-white py-2.5 rounded-xl font-bold flex flex-col items-center gap-1"><span class="text-lg">✏️</span><span class="text-xs">EDIT</span></button>
@@ -150,15 +152,16 @@ function render() {
          </div>`
       : ``;
 
+    // BARIS ABU-ABU PILL + IKON - Tanpa garis kolom
     let barisModal = isLogin
-      ? `<div class="px-3 py-2 flex justify-between border-b border-gray-200"><span class="text-gray-500">Harga Modal</span><span class="font-bold">Rp ${Number(b.modal).toLocaleString('id-ID')}</span></div>`
+      ? `<div class="mx-3 my-2 bg-gray-100 rounded-xl px-3 py-2.5 flex justify-between items-center"><span>💵 Harga Modal</span><span class="font-bold">Rp ${Number(b.modal).toLocaleString('id-ID')}</span></div>`
       : '';
     let barisUntung = isLogin
-      ? `<div class="px-3 py-2 flex justify-between"><span class="text-gray-500">Untung</span><span class="font-bold ${u >= 0 ? 'text-green-600' : 'text-red-600'}">Rp ${u.toLocaleString('id-ID')}</span></div>`
+      ? `<div class="mx-3 my-2 bg-gray-100 rounded-xl px-3 py-2.5 flex justify-between items-center"><span>↕️ Untung</span><span class="font-bold ${u >= 0 ? 'text-green-600' : 'text-red-600'}">Rp ${u.toLocaleString('id-ID')}</span></div>`
       : '';
 
     let barisTanggal = `<div class="px-3 pt-2"><span class="last-update">Terakhir Update: ${tgl}</span></div>`;
-    
+
     html += `<div class="border-2 border-gray-300 rounded-xl overflow-hidden">
       <div class="flex justify-between items-center bg-blue-50 px-3 py-2 border-b-2 border-gray-300">
         <span class="font-bold text-lg">${b.nama} ${badgeBaru}</span>
@@ -166,8 +169,8 @@ function render() {
       </div>
       ${barisTanggal}
       ${barisModal}
-      <div class="px-3 py-2 flex justify-between border-b border-gray-200"><span class="text-gray-500">Harga Jual</span><span class="font-bold">Rp ${Number(j).toLocaleString('id-ID')}</span></div>
-      <div class="px-3 py-2 flex justify-between border-b border-gray-200"><span class="text-gray-500">Keterangan</span><span class="font-bold">${ket ? ket : '-'}</span></div>
+      <div class="mx-3 my-2 bg-gray-100 rounded-xl px-3 py-2.5 flex justify-between items-center"><span>🏷️ Harga Jual</span><span class="font-bold">Rp ${Number(j).toLocaleString('id-ID')}</span></div>
+      <div class="mx-3 my-2 bg-gray-100 rounded-xl px-3 py-2.5 flex justify-between items-center"><span>ℹ️ Keterangan</span><span class="font-bold">${ket ? ket : '-'}</span></div>
       ${barisUntung}
       ${tombolWA}
       ${tombol}
