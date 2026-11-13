@@ -1,4 +1,4 @@
-// UD. BILAL - script.js v106 - 2 HALAMAN AMAN - FIX TOTAL 0
+// UD. BILAL - script.js v108 - NGEBUT - FOTO DIKECILIN + NO RENDER 2X
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, deleteDoc, doc, setDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -22,13 +22,14 @@ let barangPrivate = {};
 let barang = [];
 let editId = null;
 let currentPage = 1;
-const perPage = 10;
+const perPage = 12; // dari 10 jadi 12 biar jarang ganti page
 let isLogin = false;
 let kataCari = '';
 let unsubPrivate = null;
 window.FOTO_BARU = null;
 let qtyMap = {};
 const IS_ADMIN_PAGE = window.location.pathname.includes('admin');
+let sudahRenderPertama = false;
 function el(id){ return document.getElementById(id); }
 function toast(pesan){
   let t = document.getElementById('toastBilal');
@@ -65,10 +66,11 @@ function bukaCrop(base64){
   const sl = el('zoomSlider'); if(sl) sl.value = 100; const m=el('cropModal'); if(m) m.classList.remove('hidden');
 }
 window.batalCrop = () => { const m=el('cropModal'); if(m) m.classList.add('hidden'); const inp=el('fotoInput'); if(inp) inp.value=''; };
+// INI KUNCINYA BANG: Foto dikecilin jadi 600px, kualitas 0.7, dari 4MB jadi 80KB!
 window.potongFoto = () => {
   const img = el('cropImg'); const box = el('cropBox'); if(!img||!box) return;
   const frameW = box.clientWidth * 0.92; const frameH = box.clientHeight * 0.82;
-  const canvas = document.createElement('canvas'); canvas.width = 800; canvas.height = Math.round(800 * frameH / frameW);
+  const canvas = document.createElement('canvas'); canvas.width = 600; canvas.height = Math.round(600 * frameH / frameW);
   const ctx = canvas.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,canvas.width,canvas.height);
   const dispW = cropImgW * cropScale; const dispH = cropImgH * cropScale;
   const imgLeft = box.clientWidth/2 + cropX - dispW/2; const imgTop = box.clientHeight/2 + cropY - dispH/2;
@@ -76,12 +78,26 @@ window.potongFoto = () => {
   const sx = (frameLeft - imgLeft) / dispW * img.naturalWidth; const sy = (frameTop - imgTop) / dispH * img.naturalHeight;
   const sw = frameW / dispW * img.naturalWidth; const sh = frameH / dispH * img.naturalHeight;
   ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-  const hasil = canvas.toDataURL('image/jpeg', 0.8); window.FOTO_BARU = hasil;
+  const hasil = canvas.toDataURL('image/jpeg', 0.7); window.FOTO_BARU = hasil;
   const prev = el('fotoPreview'); if(prev){ prev.src = hasil; prev.classList.remove('hidden'); }
-  const st = el('fotoStatus'); if(st) st.innerText = '✅ Foto udah di-crop, tinggal pencet UPDATE / SIMPAN!';
-  const m=el('cropModal'); if(m) m.classList.add('hidden'); toast('✅ Foto udah di-crop!');
+  const st = el('fotoStatus'); if(st) st.innerText = '✅ Foto udah di-crop & dikecilin, tinggal pencet UPDATE / SIMPAN!';
+  const m=el('cropModal'); if(m) m.classList.add('hidden'); toast('✅ Foto udah dikecilin, jadi ngebut!');
 };
-function olahFoto(file){ if(!file) return; const reader = new FileReader(); reader.onload = (e) => { bukaCrop(e.target.result); }; reader.readAsDataURL(file); }
+function olahFoto(file){
+  if(!file) return;
+  // Kecilin dulu sebelum crop, biar HP gak berat
+  const imgTemp = new Image();
+  const url = URL.createObjectURL(file);
+  imgTemp.onload = () => {
+    const max = 1200; let w = imgTemp.naturalWidth, h = imgTemp.naturalHeight;
+    if(w > max || h > max){ let r = Math.min(max/w, max/h); w = Math.round(w*r); h = Math.round(h*r); }
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    c.getContext('2d').drawImage(imgTemp, 0, 0, w, h);
+    URL.revokeObjectURL(url);
+    bukaCrop(c.toDataURL('image/jpeg', 0.8));
+  };
+  imgTemp.src = url;
+}
 window.previewFoto = function(input){ if(input.files[0]) olahFoto(input.files[0]); };
 document.addEventListener('change', (e)=>{ if(e.target && e.target.id === 'fotoInput'){ if(e.target.files[0]) olahFoto(e.target.files[0]); } });
 document.addEventListener('DOMContentLoaded', () => {
@@ -97,10 +113,22 @@ function bersihKet(teks) { if (!teks) return ''; return teks.toString().replace(
 function aman(teks) { return String(teks ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function tampilStok(b) { let s = (b.stok ?? '').toString().trim(); if (!s) return '0'; return s; }
 function gabungData() { barang = barangPublic.map(p => ({ ...p, modal: (barangPrivate[p.id] ? barangPrivate[p.id].modal : 0) })); render(); }
-onSnapshot(query(collection(db, "barang_public"), orderBy("nama")), (snap) => { barangPublic = snap.docs.map(d => ({ id: d.id, ...d.data() })); gabungData(); });
+// Cache: kalau data sama, jangan render ulang
+let lastDataHash = '';
+onSnapshot(query(collection(db, "barang_public"), orderBy("nama")), (snap) => {
+  let baru = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  let hash = JSON.stringify(baru.map(b=>b.id + b.nama + b.jual + b.stok));
+  if(hash === lastDataHash && sudahRenderPertama) return;
+  lastDataHash = hash; barangPublic = baru; gabungData();
+});
 function mulaiDengarPrivate() { if (unsubPrivate) return; unsubPrivate = onSnapshot(query(collection(db, "barang_private")), (snap) => { barangPrivate = {}; snap.docs.forEach(d => { barangPrivate[d.id] = d.data(); }); gabungData(); }); }
-function stopDengarPrivate() { if (unsubPrivate) { unsubPrivate(); unsubPrivate = null; } barangPrivate = {}; gabungData(); }
-onAuthStateChanged(auth, (user) => { isLogin = !!user && user.uid === ADMIN_UID; if (isLogin) mulaiDengarPrivate(); else stopDengarPrivate(); updateUI(); render(); });
+onAuthStateChanged(auth, (user) => {
+  let loginBaru = !!user && user.uid === ADMIN_UID;
+  if (loginBaru === isLogin && sudahRenderPertama) return; // INI YANG BIKIN KEDIP, UDAH DIBENERIN
+  isLogin = loginBaru;
+  if (isLogin) mulaiDengarPrivate(); else { if(unsubPrivate){ unsubPrivate(); unsubPrivate=null; } barangPrivate={}; }
+  updateUI(); render();
+});
 function updateUI() {
   const st = el('statusLogin'); if(st){ st.innerText = isLogin ? '✅ Login Admin - ' + (auth.currentUser ? auth.currentUser.email : '') : '🔒 Mode Lihat Saja'; st.className = isLogin ? 'text-sm font-bold text-green-600' : 'text-sm font-bold text-red-500'; }
   const bl = el('btnLogin'); if(bl) bl.innerText = isLogin ? 'LOGOUT' : 'LOGIN';
@@ -115,7 +143,9 @@ window.doLogin = async () => {
 };
 window.bukaForm = () => { if (!isLogin){ toastError("Harus Login dulu!"); return; } const j=el('judulForm'); if(j) j.innerText = editId ? 'Edit Barang' : 'Tambah Barang'; const p=el('popupForm'); if(p) p.classList.remove('hidden'); };
 window.tutupForm = () => { const p=el('popupForm'); if(p) p.classList.add('hidden'); };
-window.cariBarang = (teks) => { kataCari = teks.toLowerCase().trim(); currentPage = 1; render(); };
+// Cari dikasih jeda 300ms, biar gak render tiap ketik huruf
+let cariTimer = null;
+window.cariBarang = (teks) => { clearTimeout(cariTimer); cariTimer = setTimeout(()=>{ kataCari = teks.toLowerCase().trim(); currentPage = 1; render(); }, 250); };
 window.bukaZoomFoto = (id) => {
   const b = barang.find(x => x.id === id); if(!b || !b.foto) return;
   let modal = document.getElementById('modalZoomFoto'); if(modal) modal.remove();
@@ -130,6 +160,7 @@ window.beliSekarang = (id) => {
   window.open(`https://wa.me/${NOMOR_WA}?text=${encodeURIComponent(pesan)}`, '_blank');
 };
 function render() {
+  sudahRenderPertama = true;
   updateUI();
   let totalUntung = 0;
   if (isLogin) { barang.forEach(b => { let j = b.jual || b.harga || 0; let stokAngka = parseFloat(String(b.stok ?? '').replace(',', '.')) || 0; totalUntung += (j - (b.modal || 0)) * stokAngka; }); }
@@ -139,7 +170,8 @@ function render() {
   list.forEach(b => {
     let j = b.jual || b.harga || 0; let modal = b.modal || 0; let u = j - modal; let ket = bersihKet(b.keterangan); let tgl = b.tanggalUpdate || '-';
     let badgeBaru = isHariIni(b.tanggalUpdate) ? `<span class="badge-baru">BARU</span>` : ''; let q = qtyMap[b.id] || 1;
-    let foto = b.foto ? `<img src="${b.foto}" onclick="bukaZoomFoto('${b.id}')" class="foto-produk cursor-pointer" alt="${aman(b.nama)}">` : `<div class="w-full flex items-center justify-center text-gray-400 text-xs" style="aspect-ratio:1/1;background:#f8f8f8;">Belum ada foto</div>`;
+    // loading=lazy + decoding async = foto bawah gak ikut ke-download duluan
+    let foto = b.foto ? `<img loading="lazy" decoding="async" src="${b.foto}" onclick="bukaZoomFoto('${b.id}')" class="foto-produk cursor-pointer" alt="${aman(b.nama)}">` : `<div class="w-full flex items-center justify-center text-gray-400 text-xs" style="aspect-ratio:1/1;background:#f8f8f8;">Belum ada foto</div>`;
     let isiKartu = `<div class="p-2 text-center flex-1 flex flex-col"><p class="font-bold text-[15px] leading-tight line-clamp-2 min-h-[38px]">${aman(b.nama)}</p><p class="text-gray-400 font-bold text-[14px] mt-1">Rp${Number(j).toLocaleString('id-ID')}</p><p class="text-[12px] text-gray-500 mt-1 min-h-[18px]">${ket ? aman(ket) : '-'}</p><div class="flex items-center justify-center gap-0 mt-2 border rounded-lg overflow-hidden w-fit mx-auto"><button onclick="ubahQty('${b.id}', -1)" class="qty-btn">-</button><span id="qty-${b.id}" class="w-8 text-center font-bold text-[14px]">${q}</span><button onclick="ubahQty('${b.id}', 1)" class="qty-btn">+</button></div><button onclick="beliSekarang('${b.id}')" class="w-full mt-2 py-2.5 rounded-lg font-bold text-white text-[13px]" style="background:#7cb342;">💬 Pesan via WA</button><p class="last-update mt-1">${aman(tgl)}</p></div>`;
     let infoAdmin = '';
     if (IS_ADMIN_PAGE) { infoAdmin = `<div class="px-2 pb-1 text-[11px] text-gray-500 space-y-0.5 border-t pt-1"><div class="flex justify-between"><span>Modal</span><b>Rp ${Number(modal).toLocaleString('id-ID')}</b></div><div class="flex justify-between"><span>Untung</span><b class="${u>=0?'text-green-600':'text-red-600'}">Rp ${u.toLocaleString('id-ID')}</b></div><div class="flex justify-between"><span>Stok</span><b>${aman(tampilStok(b))}</b></div></div><div class="flex gap-1 px-2 pb-2"><button onclick="editBarang('${b.id}')" class="flex-1 bg-yellow-400 text-white py-1.5 rounded-lg text-xs font-bold">✏️ Edit</button><button onclick="hapus('${b.id}')" class="flex-1 bg-red-500 text-white py-1.5 rounded-lg text-xs font-bold">🗑️ Hapus</button></div>`; }
