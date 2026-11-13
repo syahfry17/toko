@@ -1,4 +1,4 @@
-// UD. BILAL - script.js VERSI TANPA POPUP + CROP TOMBOL
+// UD. BILAL - script.js VERSI CROP ANTI LONCAT v102 - TANPA POPUP
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, deleteDoc, doc, setDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -28,7 +28,7 @@ let kataCari = '';
 let unsubPrivate = null;
 window.FOTO_BARU = null;
 
-// ===== TOAST PENGGANTI ALERT - GAK ADA POPUP LAGI =====
+// ===== TOAST, BUKAN ALERT =====
 function toast(pesan){
   let t = document.getElementById('toastBilal');
   if(!t){
@@ -37,6 +37,7 @@ function toast(pesan){
     t.style.cssText = 'position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#16a34a;color:#fff;padding:12px 18px;border-radius:99px;font-weight:700;font-size:14px;z-index:9999;box-shadow:0 4px 15px rgba(0,0,0,0.3);max-width:90%;text-align:center;';
     document.body.appendChild(t);
   }
+  t.style.background = '#16a34a';
   t.innerText = pesan;
   t.style.display = 'block';
   clearTimeout(t._timer);
@@ -52,23 +53,43 @@ function toastError(pesan){
   t._timer = setTimeout(()=>{ t.style.display='none'; t.style.background='#16a34a'; }, 2500);
 }
 
-// ===== CROP - GESER 1 JARI + TOMBOL ZOOM, TANPA CUBIT =====
-let cropScale = 1, cropX = 0, cropY = 0, cropImgW = 0, cropImgH = 0, cropStartX = 0, cropStartY = 0, cropStartPX = 0, cropStartPY = 0, cropDragging = false;
-let cropOriginal = null;
+// ===== CROP BARU - POINTER EVENT, DIKUNCI BIAR GAK LONCAT =====
+let cropScale = 1, cropX = 0, cropY = 0, cropImgW = 0, cropImgH = 0;
+let cropStartX = 0, cropStartY = 0, cropStartPX = 0, cropStartPY = 0, cropDragging = false, cropPointerId = null;
 
+function clampCrop(){
+  const box = document.getElementById('cropBox');
+  if(!box) return;
+  const dispW = cropImgW * cropScale;
+  const dispH = cropImgH * cropScale;
+  // Batas biar foto gak keluar dari kotak crop (frame 92% x 82%)
+  const frameW = box.clientWidth * 0.92;
+  const frameH = box.clientHeight * 0.82;
+  // Foto harus nutupin frame, jadi max geser = (disp - frame)/2
+  const maxX = Math.max(0, (dispW - frameW) / 2);
+  const maxY = Math.max(0, (dispH - frameH) / 2);
+  cropX = Math.max(-maxX, Math.min(maxX, cropX));
+  cropY = Math.max(-maxY, Math.min(maxY, cropY));
+}
 function updateCropTransform(){
+  clampCrop();
   const img = document.getElementById('cropImg');
   if(!img) return;
-  img.style.transform = `translate(-50%,-50%) translate(${cropX}px, ${cropY}px) scale(${cropScale})`;
+  // Pakai calc biar -50% gak ikut ke-scale, ini yang bikin hasil geser kemarin!
+  img.style.transform = `translate(calc(-50% + ${cropX}px), calc(-50% + ${cropY}px)) scale(${cropScale})`;
   const lbl = document.getElementById('zoomLabel'); if(lbl) lbl.innerText = Math.round(cropScale*100) + '%';
-  const sl = document.getElementById('zoomSlider'); if(sl) sl.value = Math.round(cropScale*100);
 }
-window.aturZoom = (v) => { cropScale = Number(v)/100; if(cropScale<1) cropScale=1; if(cropScale>3) cropScale=3; updateCropTransform(); };
-window.zoomTambah = () => { cropScale = Math.min(3, cropScale + 0.2); updateCropTransform(); };
-window.zoomKurang = () => { cropScale = Math.max(1, cropScale - 0.2); updateCropTransform(); };
+window.aturZoom = (v) => {
+  cropScale = Number(v)/100;
+  if(cropScale<1) cropScale=1; if(cropScale>3) cropScale=3;
+  updateCropTransform();
+  const sl = document.getElementById('zoomSlider'); if(sl && Number(sl.value)!==Math.round(cropScale*100)) sl.value = Math.round(cropScale*100);
+};
+window.zoomTambah = () => { cropScale = Math.min(3, cropScale + 0.2); const sl=document.getElementById('zoomSlider'); if(sl) sl.value=Math.round(cropScale*100); updateCropTransform(); };
+window.zoomKurang = () => { cropScale = Math.max(1, cropScale - 0.2); const sl=document.getElementById('zoomSlider'); if(sl) sl.value=Math.round(cropScale*100); updateCropTransform(); };
+window.resetCrop = () => { cropScale=1; cropX=0; cropY=0; const sl=document.getElementById('zoomSlider'); if(sl) sl.value=100; updateCropTransform(); };
 
 function bukaCrop(base64){
-  cropOriginal = base64;
   cropScale = 1; cropX = 0; cropY = 0;
   const img = document.getElementById('cropImg');
   img.src = base64;
@@ -131,20 +152,28 @@ document.addEventListener('change', (e)=>{
     if(e.target.files[0]) olahFoto(e.target.files[0]);
   }
 });
-// Geser 1 jari aja, cubit DIMATIIN biar gak ke-zoom sendiri
+// Geser pakai Pointer Event - ini yang bikin gak loncat & gak rebutan scroll
 document.addEventListener('DOMContentLoaded', () => {
   const box = document.getElementById('cropBox');
   if(!box) return;
-  const mulai = (x,y) => { cropDragging=true; cropStartX=x; cropStartY=y; cropStartPX=cropX; cropStartPY=cropY; };
-  const gerak = (x,y) => { if(!cropDragging) return; cropX = cropStartPX + (x-cropStartX); cropY = cropStartPY + (y-cropStartY); updateCropTransform(); };
-  box.addEventListener('touchstart', (e)=>{ if(e.touches.length===1) mulai(e.touches[0].clientX, e.touches[0].clientY); }, {passive:true});
-  box.addEventListener('touchmove', (e)=>{ if(e.touches.length===1){ e.preventDefault(); gerak(e.touches[0].clientX, e.touches[0].clientY); } }, {passive:false});
-  box.addEventListener('touchend', ()=>{ cropDragging=false; });
-  box.addEventListener('mousedown', (e)=> mulai(e.clientX, e.clientY));
-  window.addEventListener('mousemove', (e)=> gerak(e.clientX, e.clientY));
-  window.addEventListener('mouseup', ()=> cropDragging=false);
+  box.addEventListener('pointerdown', (e)=>{
+    cropDragging = true; cropPointerId = e.pointerId;
+    cropStartX = e.clientX; cropStartY = e.clientY;
+    cropStartPX = cropX; cropStartPY = cropY;
+    box.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  box.addEventListener('pointermove', (e)=>{
+    if(!cropDragging || e.pointerId !== cropPointerId) return;
+    cropX = cropStartPX + (e.clientX - cropStartX);
+    cropY = cropStartPY + (e.clientY - cropStartY);
+    updateCropTransform();
+    e.preventDefault();
+  });
+  const endDrag = (e)=>{ if(e.pointerId===cropPointerId){ cropDragging=false; cropPointerId=null; } };
+  box.addEventListener('pointerup', endDrag);
+  box.addEventListener('pointercancel', endDrag);
 });
-// ===== END CROP =====
 
 function getTanggalHariIni() { return new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }); }
 function isHariIni(tgl) { if (!tgl) return false; return tgl === getTanggalHariIni(); }
@@ -202,7 +231,6 @@ window.bukaForm = () => {
 };
 window.tutupForm = () => { document.getElementById('popupForm').classList.add('hidden'); };
 window.cariBarang = (teks) => { kataCari = teks.toLowerCase().trim(); currentPage = 1; render(); };
-
 window.bukaZoomFoto = (id) => {
   const b = barang.find(x => x.id === id);
   if(!b || !b.foto) return;
@@ -211,11 +239,10 @@ window.bukaZoomFoto = (id) => {
   modal = document.createElement('div');
   modal.id = 'modalZoomFoto';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:100;display:flex;align-items:center;justify-content:center;';
-  modal.innerHTML = `<img id="imgZoom" src="${b.foto}" style="max-width:95%;max-height:90%;touch-action:none;"><button onclick="document.getElementById('modalZoomFoto').remove()" style="position:absolute;top:15px;right:15px;background:white;width:36px;height:36px;border-radius:50%;font-weight:bold;">✕</button>`;
+  modal.innerHTML = `<img src="${b.foto}" style="max-width:95%;max-height:90%;"><button onclick="document.getElementById('modalZoomFoto').remove()" style="position:absolute;top:15px;right:15px;background:white;width:36px;height:36px;border-radius:50%;font-weight:bold;">✕</button>`;
   modal.addEventListener('click', (e)=>{ if(e.target === modal) modal.remove(); });
   document.body.appendChild(modal);
 };
-
 function render() {
   updateUI();
   let totalUntung = 0;
@@ -239,41 +266,23 @@ function render() {
     let tgl = b.tanggalUpdate || '-';
     let badgeBaru = isHariIni(b.tanggalUpdate) ? `<span class="badge-baru">BARU</span>` : '';
     let tombolWA = `<div class="px-3 pb-3"><a href="https://wa.me/${NOMOR_WA}?text=${encodeURIComponent(`Halo UD. BILAL, saya mau pesan ${b.nama} - Rp ${Number(j).toLocaleString('id-ID')}`)}" target="_blank" class="block text-center bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl">💬 PESAN VIA WHATSAPP</a></div>`;
-    let tombol = isLogin ? `<div class="flex gap-2 px-3 pb-3">
-           <button onclick="editBarang('${b.id}')" class="flex-1 bg-green-500 text-white py-3 rounded-xl flex items-center justify-center">✏️</button>
-           <button onclick="hapus('${b.id}')" class="flex-1 bg-red-500 text-white py-3 rounded-xl flex items-center justify-center">🗑️</button>
-         </div>` : ``;
+    let tombol = isLogin ? `<div class="flex gap-2 px-3 pb-3"><button onclick="editBarang('${b.id}')" class="flex-1 bg-green-500 text-white py-3 rounded-xl flex items-center justify-center">✏️</button><button onclick="hapus('${b.id}')" class="flex-1 bg-red-500 text-white py-3 rounded-xl flex items-center justify-center">🗑️</button></div>` : ``;
     let barisModal = isLogin ? `<div class="mx-3 my-2 bg-gray-100 rounded-xl px-3 py-2.5 flex justify-between items-center"><span>💵 Harga Modal</span><span class="font-bold">Rp ${Number(modal).toLocaleString('id-ID')}</span></div>` : '';
     let barisUntung = isLogin ? `<div class="mx-3 my-2 bg-gray-100 rounded-xl px-3 py-2.5 flex justify-between items-center"><span>↕️ Untung</span><span class="font-bold ${u >= 0 ? 'text-green-600' : 'text-red-600'}">Rp ${u.toLocaleString('id-ID')}</span></div>` : '';
     let barisTanggal = `<div class="px-3 pt-2"><span class="last-update">Terakhir Update: ${aman(tgl)}</span></div>`;
     let blokFoto = b.foto ? `<div class="px-3 pt-3"><img src="${b.foto}" onclick="bukaZoomFoto('${b.id}')" class="w-full h-44 object-cover rounded-xl cursor-pointer" style="background:#eee;" alt="${aman(b.nama)}"><p class="text-center text-xs text-gray-400 mt-1">Klik foto untuk zoom</p></div>` : `<div class="px-3 pt-3"><div class="w-full h-20 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 text-sm">Belum ada foto</div></div>`;
-    html += `<div class="border-2 border-gray-300 rounded-xl overflow-hidden">
-      <div class="flex justify-between items-center bg-blue-50 px-3 py-2 border-b-2 border-gray-300">
-        <span class="font-bold text-lg">${aman(b.nama)} ${badgeBaru}</span>
-        <span class="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full">STOK: ${aman(tampilStok(b))}</span>
-      </div>
-      ${blokFoto}
-      ${barisTanggal}
-      ${barisModal}
-      <div class="mx-3 my-2 bg-gray-100 rounded-xl px-3 py-2.5 flex justify-between items-center"><span>🏷️ Harga Jual</span><span class="font-bold">Rp ${Number(j).toLocaleString('id-ID')}</span></div>
-      <div class="mx-3 my-2 bg-gray-100 rounded-xl px-3 py-2.5 flex justify-between items-center"><span>ℹ️ Keterangan</span><span class="font-bold">${ket ? aman(ket) : '-'}</span></div>
-      ${barisUntung}
-      ${tombolWA}
-      ${tombol}
-    </div>`;
+    html += `<div class="border-2 border-gray-300 rounded-xl overflow-hidden"><div class="flex justify-between items-center bg-blue-50 px-3 py-2 border-b-2 border-gray-300"><span class="font-bold text-lg">${aman(b.nama)} ${badgeBaru}</span><span class="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full">STOK: ${aman(tampilStok(b))}</span></div>${blokFoto}${barisTanggal}${barisModal}<div class="mx-3 my-2 bg-gray-100 rounded-xl px-3 py-2.5 flex justify-between items-center"><span>🏷️ Harga Jual</span><span class="font-bold">Rp ${Number(j).toLocaleString('id-ID')}</span></div><div class="mx-3 my-2 bg-gray-100 rounded-xl px-3 py-2.5 flex justify-between items-center"><span>ℹ️ Keterangan</span><span class="font-bold">${ket ? aman(ket) : '-'}</span></div>${barisUntung}${tombolWA}${tombol}</div>`;
   });
   if (hasilCari.length === 0) html = `<p class="text-center text-gray-400 py-4">Barang gak ketemu, coba kata lain</p>`;
   document.getElementById('tabel').innerHTML = html;
   document.getElementById('infoPage').innerText = `Page ${currentPage} / ${totalPage} (Total ${hasilCari.length} barang)`;
   document.querySelector('.footer').innerHTML = isLogin ? `Total Jenis Produk: ${barang.length} | Total Untung: Rp ${totalUntung.toLocaleString('id-ID')}` : `Total Jenis Produk: ${barang.length}`;
 }
-
 window.gantiPage = (n) => {
   let tp = Math.max(1, Math.ceil(barang.length / perPage));
   currentPage += n; if (currentPage < 1) currentPage = 1; if (currentPage > tp) currentPage = tp;
   render(); window.scrollTo(0, 0);
 };
-
 window.simpan = async () => {
   if (!isLogin){ toastError("Harus Login dulu!"); return; }
   let nama = document.getElementById('nama').value.trim();
@@ -288,10 +297,7 @@ window.simpan = async () => {
     if (editId) {
       let dataPublic = { nama, jual, harga: jual, keterangan, stok, tanggalUpdate };
       if (fotoBaru) dataPublic.foto = fotoBaru;
-      else {
-        let lama = barang.find(x => x.id === editId);
-        if(lama && lama.foto) dataPublic.foto = lama.foto;
-      }
+      else { let lama = barang.find(x => x.id === editId); if(lama && lama.foto) dataPublic.foto = lama.foto; }
       await setDoc(doc(db, "barang_public", editId), dataPublic);
       await setDoc(doc(db, "barang_private", editId), { modal });
       editId = null; document.getElementById('btnSimpan').innerText = "SIMPAN";
@@ -308,9 +314,8 @@ window.simpan = async () => {
     document.getElementById('nama').value = ''; document.getElementById('modal').value = ''; document.getElementById('harga').value = ''; document.getElementById('keterangan').value = ''; document.getElementById('stok').value = '';
     document.getElementById('popupForm').classList.add('hidden');
     toast('✅ Berhasil disimpan!');
-  } catch (e) { toastError("Gagal simpan! Foto kegedean, coba foto lain. " + e.message); }
+  } catch (e) { toastError("Gagal simpan! Foto kegedean, coba foto lain."); }
 };
-
 window.editBarang = (id) => {
   if (!isLogin){ toastError("Harus Login dulu!"); return; }
   let b = barang.find(x => x.id === id);
