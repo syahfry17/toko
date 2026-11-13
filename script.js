@@ -1,6 +1,6 @@
-// UD. BILAL - script.js VERSI KEBAL (JALAN DI INDEX LAMA / BARU)
+// UD. BILAL - script.js VERSI CROP + GESER
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, addDoc, deleteDoc, doc, setDoc, getDocs, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, addDoc, deleteDoc, doc, setDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
@@ -28,40 +28,106 @@ let kataCari = '';
 let unsubPrivate = null;
 window.FOTO_BARU = null;
 
-// ===== INI KUNCINYA BANG, DITARO DI SINI BIAR PASTI JALAN =====
+// ===== CROP =====
+let cropScale = 1, cropX = 0, cropY = 0, cropImgW = 0, cropImgH = 0, cropStartX = 0, cropStartY = 0, cropStartPX = 0, cropStartPY = 0, cropDragging = false, cropLastDist = 0;
+let cropOriginal = null;
+
+function updateCropTransform(){
+  const img = document.getElementById('cropImg');
+  if(!img) return;
+  img.style.transform = `translate(-50%,-50%) translate(${cropX}px, ${cropY}px) scale(${cropScale})`;
+  document.getElementById('zoomLabel').innerText = Math.round(cropScale*100) + '%';
+}
+window.aturZoom = (v) => { cropScale = Number(v)/100; updateCropTransform(); };
+
+function bukaCrop(base64){
+  cropOriginal = base64;
+  cropScale = 1; cropX = 0; cropY = 0;
+  const img = document.getElementById('cropImg');
+  img.src = base64;
+  img.onload = () => {
+    const box = document.getElementById('cropBox');
+    const bw = box.clientWidth, bh = box.clientHeight;
+    const scaleFit = Math.max(bw / img.naturalWidth, bh / img.naturalHeight);
+    cropImgW = img.naturalWidth * scaleFit;
+    cropImgH = img.naturalHeight * scaleFit;
+    img.style.width = cropImgW + 'px';
+    img.style.height = cropImgH + 'px';
+    updateCropTransform();
+  };
+  document.getElementById('zoomSlider').value = 100;
+  document.getElementById('cropModal').classList.remove('hidden');
+}
+window.batalCrop = () => {
+  document.getElementById('cropModal').classList.add('hidden');
+  const inp = document.getElementById('fotoInput'); if(inp) inp.value='';
+};
+window.potongFoto = () => {
+  const img = document.getElementById('cropImg');
+  const box = document.getElementById('cropBox');
+  const frameW = box.clientWidth * 0.92;
+  const frameH = box.clientHeight * 0.82;
+  const canvas = document.createElement('canvas');
+  canvas.width = 800; canvas.height = Math.round(800 * frameH / frameW);
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  // Hitung posisi crop di foto asli
+  const dispW = cropImgW * cropScale;
+  const dispH = cropImgH * cropScale;
+  const imgLeft = box.clientWidth/2 + cropX - dispW/2;
+  const imgTop = box.clientHeight/2 + cropY - dispH/2;
+  const frameLeft = box.clientWidth/2 - frameW/2;
+  const frameTop = box.clientHeight/2 - frameH/2;
+  const sx = (frameLeft - imgLeft) / dispW * img.naturalWidth;
+  const sy = (frameTop - imgTop) / dispH * img.naturalHeight;
+  const sw = frameW / dispW * img.naturalWidth;
+  const sh = frameH / dispH * img.naturalHeight;
+  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+  const hasil = canvas.toDataURL('image/jpeg', 0.8);
+  window.FOTO_BARU = hasil;
+  const prev = document.getElementById('fotoPreview');
+  if(prev){ prev.src = hasil; prev.classList.remove('hidden'); }
+  const st = document.getElementById('fotoStatus');
+  if(st) st.innerText = '✅ Foto udah di-crop, tinggal pencet UPDATE!';
+  document.getElementById('cropModal').classList.add('hidden');
+};
+
 function olahFoto(file){
   if(!file) return;
   const reader = new FileReader();
-  reader.onload = function(e){
-    const img = new Image();
-    img.onload = function(){
-      const canvas = document.createElement('canvas');
-      const max = 800;
-      let w = img.width, h = img.height;
-      if(w > h && w > max){ h = h * max / w; w = max; }
-      else if(h > max){ w = w * max / h; h = max; }
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      const base64 = canvas.toDataURL('image/jpeg', 0.7);
-      window.FOTO_BARU = base64;
-      const prev = document.getElementById('fotoPreview');
-      if(prev){ prev.src = base64; prev.classList.remove('hidden'); }
-      const st = document.getElementById('fotoStatus');
-      if(st) st.innerText = '✅ Foto udah kepilih, tinggal pencet UPDATE!';
-      alert('✅ Foto udah kepilih! Tinggal pencet UPDATE ya bang!');
-    };
-    img.src = e.target.result;
-  };
+  reader.onload = (e) => { bukaCrop(e.target.result); };
   reader.readAsDataURL(file);
 }
 window.previewFoto = function(input){ if(input.files[0]) olahFoto(input.files[0]); };
-// Tangkap pilih file walau index.html masih lama (gak ada onchange)
 document.addEventListener('change', (e)=>{
   if(e.target && e.target.id === 'fotoInput'){
     if(e.target.files[0]) olahFoto(e.target.files[0]);
   }
 });
-// ============================================================
+// Geser + Cubit di Crop
+document.addEventListener('DOMContentLoaded', () => {
+  const box = document.getElementById('cropBox');
+  if(!box) return;
+  const mulai = (x,y) => { cropDragging=true; cropStartX=x; cropStartY=y; cropStartPX=cropX; cropStartPY=cropY; };
+  const gerak = (x,y) => { if(!cropDragging) return; cropX = cropStartPX + (x-cropStartX); cropY = cropStartPY + (y-cropStartY); updateCropTransform(); };
+  box.addEventListener('touchstart', (e)=>{
+    if(e.touches.length===2){ cropLastDist = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY); cropDragging=false; }
+    else if(e.touches.length===1) mulai(e.touches[0].clientX, e.touches[0].clientY);
+  }, {passive:true});
+  box.addEventListener('touchmove', (e)=>{
+    e.preventDefault();
+    if(e.touches.length===2){
+      let d = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+      if(cropLastDist>0){ cropScale = Math.min(3, Math.max(1, cropScale*(d/cropLastDist))); document.getElementById('zoomSlider').value = cropScale*100; updateCropTransform(); }
+      cropLastDist=d;
+    } else if(e.touches.length===1) gerak(e.touches[0].clientX, e.touches[0].clientY);
+  }, {passive:false});
+  box.addEventListener('touchend', ()=>{ cropDragging=false; cropLastDist=0; });
+  box.addEventListener('mousedown', (e)=> mulai(e.clientX, e.clientY));
+  window.addEventListener('mousemove', (e)=> gerak(e.clientX, e.clientY));
+  window.addEventListener('mouseup', ()=> cropDragging=false);
+});
+// ===== END CROP =====
 
 function getTanggalHariIni() { return new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }); }
 function isHariIni(tgl) { if (!tgl) return false; return tgl === getTanggalHariIni(); }
