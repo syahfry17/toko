@@ -1,4 +1,4 @@
-// UD. BILAL - script.js FIX FINAL (FOTO DI INDEX.HTML)
+// UD. BILAL - script.js VERSI KEBAL (JALAN DI INDEX LAMA / BARU)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, deleteDoc, doc, setDoc, getDocs, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -26,6 +26,42 @@ const perPage = 10;
 let isLogin = false;
 let kataCari = '';
 let unsubPrivate = null;
+window.FOTO_BARU = null;
+
+// ===== INI KUNCINYA BANG, DITARO DI SINI BIAR PASTI JALAN =====
+function olahFoto(file){
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const img = new Image();
+    img.onload = function(){
+      const canvas = document.createElement('canvas');
+      const max = 800;
+      let w = img.width, h = img.height;
+      if(w > h && w > max){ h = h * max / w; w = max; }
+      else if(h > max){ w = w * max / h; h = max; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const base64 = canvas.toDataURL('image/jpeg', 0.7);
+      window.FOTO_BARU = base64;
+      const prev = document.getElementById('fotoPreview');
+      if(prev){ prev.src = base64; prev.classList.remove('hidden'); }
+      const st = document.getElementById('fotoStatus');
+      if(st) st.innerText = '✅ Foto udah kepilih, tinggal pencet UPDATE!';
+      alert('✅ Foto udah kepilih! Tinggal pencet UPDATE ya bang!');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+window.previewFoto = function(input){ if(input.files[0]) olahFoto(input.files[0]); };
+// Tangkap pilih file walau index.html masih lama (gak ada onchange)
+document.addEventListener('change', (e)=>{
+  if(e.target && e.target.id === 'fotoInput'){
+    if(e.target.files[0]) olahFoto(e.target.files[0]);
+  }
+});
+// ============================================================
 
 function getTanggalHariIni() { return new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }); }
 function isHariIni(tgl) { if (!tgl) return false; return tgl === getTanggalHariIni(); }
@@ -206,6 +242,7 @@ window.simpan = async () => {
     const st = document.getElementById('fotoStatus'); if(st) st.innerText='';
     document.getElementById('nama').value = ''; document.getElementById('modal').value = ''; document.getElementById('harga').value = ''; document.getElementById('keterangan').value = ''; document.getElementById('stok').value = '';
     document.getElementById('popupForm').classList.add('hidden');
+    alert('✅ Berhasil disimpan!');
   } catch (e) { alert("Gagal simpan! Foto mungkin kegedean, coba foto lain yang lebih kecil. " + e.message); }
 };
 
