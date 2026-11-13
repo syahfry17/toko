@@ -1,4 +1,4 @@
-// UD. BILAL - script.js VERSI CROP ANTI LONCAT v102 - TANPA POPUP
+// UD. BILAL - script.js v105 - 2 HALAMAN: PENGUNJUNG + ADMIN - TANPA POPUP - CROP ANTI LONCAT
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, deleteDoc, doc, setDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -22,11 +22,15 @@ let barangPrivate = {};
 let barang = [];
 let editId = null;
 let currentPage = 1;
-const perPage = 10;
+const perPage = 10; // 2 kolom x 5 baris
 let isLogin = false;
 let kataCari = '';
 let unsubPrivate = null;
 window.FOTO_BARU = null;
+let qtyMap = {};
+
+// DETEKSI HALAMAN: kalau URL-nya ada kata "admin", berarti halaman admin
+const IS_ADMIN_PAGE = window.location.pathname.includes('admin');
 
 // ===== TOAST, BUKAN ALERT =====
 function toast(pesan){
@@ -37,142 +41,76 @@ function toast(pesan){
     t.style.cssText = 'position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#16a34a;color:#fff;padding:12px 18px;border-radius:99px;font-weight:700;font-size:14px;z-index:9999;box-shadow:0 4px 15px rgba(0,0,0,0.3);max-width:90%;text-align:center;';
     document.body.appendChild(t);
   }
-  t.style.background = '#16a34a';
-  t.innerText = pesan;
-  t.style.display = 'block';
-  clearTimeout(t._timer);
-  t._timer = setTimeout(()=>{ t.style.display='none'; }, 2000);
+  t.style.background = '#16a34a'; t.innerText = pesan; t.style.display = 'block';
+  clearTimeout(t._timer); t._timer = setTimeout(()=>{ t.style.display='none'; }, 2000);
 }
 function toastError(pesan){
   let t = document.getElementById('toastBilal');
   if(!t){ toast(pesan); return; }
-  t.style.background = '#ef4444';
-  t.innerText = pesan;
-  t.style.display = 'block';
-  clearTimeout(t._timer);
-  t._timer = setTimeout(()=>{ t.style.display='none'; t.style.background='#16a34a'; }, 2500);
+  t.style.background = '#ef4444'; t.innerText = pesan; t.style.display = 'block';
+  clearTimeout(t._timer); t._timer = setTimeout(()=>{ t.style.display='none'; t.style.background='#16a34a'; }, 2500);
 }
+function el(id){ return document.getElementById(id); }
 
-// ===== CROP BARU - POINTER EVENT, DIKUNCI BIAR GAK LONCAT =====
+// ===== CROP ANTI LONCAT =====
 let cropScale = 1, cropX = 0, cropY = 0, cropImgW = 0, cropImgH = 0;
 let cropStartX = 0, cropStartY = 0, cropStartPX = 0, cropStartPY = 0, cropDragging = false, cropPointerId = null;
-
 function clampCrop(){
-  const box = document.getElementById('cropBox');
-  if(!box) return;
-  const dispW = cropImgW * cropScale;
-  const dispH = cropImgH * cropScale;
-  // Batas biar foto gak keluar dari kotak crop (frame 92% x 82%)
-  const frameW = box.clientWidth * 0.92;
-  const frameH = box.clientHeight * 0.82;
-  // Foto harus nutupin frame, jadi max geser = (disp - frame)/2
-  const maxX = Math.max(0, (dispW - frameW) / 2);
-  const maxY = Math.max(0, (dispH - frameH) / 2);
-  cropX = Math.max(-maxX, Math.min(maxX, cropX));
-  cropY = Math.max(-maxY, Math.min(maxY, cropY));
+  const box = el('cropBox'); if(!box) return;
+  const dispW = cropImgW * cropScale; const dispH = cropImgH * cropScale;
+  const frameW = box.clientWidth * 0.92; const frameH = box.clientHeight * 0.82;
+  const maxX = Math.max(0, (dispW - frameW) / 2); const maxY = Math.max(0, (dispH - frameH) / 2);
+  cropX = Math.max(-maxX, Math.min(maxX, cropX)); cropY = Math.max(-maxY, Math.min(maxY, cropY));
 }
 function updateCropTransform(){
   clampCrop();
-  const img = document.getElementById('cropImg');
-  if(!img) return;
-  // Pakai calc biar -50% gak ikut ke-scale, ini yang bikin hasil geser kemarin!
+  const img = el('cropImg'); if(!img) return;
   img.style.transform = `translate(calc(-50% + ${cropX}px), calc(-50% + ${cropY}px)) scale(${cropScale})`;
-  const lbl = document.getElementById('zoomLabel'); if(lbl) lbl.innerText = Math.round(cropScale*100) + '%';
+  const lbl = el('zoomLabel'); if(lbl) lbl.innerText = Math.round(cropScale*100) + '%';
 }
-window.aturZoom = (v) => {
-  cropScale = Number(v)/100;
-  if(cropScale<1) cropScale=1; if(cropScale>3) cropScale=3;
-  updateCropTransform();
-  const sl = document.getElementById('zoomSlider'); if(sl && Number(sl.value)!==Math.round(cropScale*100)) sl.value = Math.round(cropScale*100);
-};
-window.zoomTambah = () => { cropScale = Math.min(3, cropScale + 0.2); const sl=document.getElementById('zoomSlider'); if(sl) sl.value=Math.round(cropScale*100); updateCropTransform(); };
-window.zoomKurang = () => { cropScale = Math.max(1, cropScale - 0.2); const sl=document.getElementById('zoomSlider'); if(sl) sl.value=Math.round(cropScale*100); updateCropTransform(); };
-window.resetCrop = () => { cropScale=1; cropX=0; cropY=0; const sl=document.getElementById('zoomSlider'); if(sl) sl.value=100; updateCropTransform(); };
-
+window.aturZoom = (v) => { cropScale = Number(v)/100; if(cropScale<1) cropScale=1; if(cropScale>3) cropScale=3; updateCropTransform(); const sl=el('zoomSlider'); if(sl && Number(sl.value)!==Math.round(cropScale*100)) sl.value=Math.round(cropScale*100); };
+window.zoomTambah = () => { cropScale = Math.min(3, cropScale + 0.2); const sl=el('zoomSlider'); if(sl) sl.value=Math.round(cropScale*100); updateCropTransform(); };
+window.zoomKurang = () => { cropScale = Math.max(1, cropScale - 0.2); const sl=el('zoomSlider'); if(sl) sl.value=Math.round(cropScale*100); updateCropTransform(); };
+window.resetCrop = () => { cropScale=1; cropX=0; cropY=0; const sl=el('zoomSlider'); if(sl) sl.value=100; updateCropTransform(); };
 function bukaCrop(base64){
   cropScale = 1; cropX = 0; cropY = 0;
-  const img = document.getElementById('cropImg');
+  const img = el('cropImg'); if(!img) return;
   img.src = base64;
   img.onload = () => {
-    const box = document.getElementById('cropBox');
-    const bw = box.clientWidth, bh = box.clientHeight;
-    const scaleFit = Math.max(bw / img.naturalWidth, bh / img.naturalHeight);
-    cropImgW = img.naturalWidth * scaleFit;
-    cropImgH = img.naturalHeight * scaleFit;
-    img.style.width = cropImgW + 'px';
-    img.style.height = cropImgH + 'px';
-    updateCropTransform();
+    const box = el('cropBox');
+    const scaleFit = Math.max(box.clientWidth / img.naturalWidth, box.clientHeight / img.naturalHeight);
+    cropImgW = img.naturalWidth * scaleFit; cropImgH = img.naturalHeight * scaleFit;
+    img.style.width = cropImgW + 'px'; img.style.height = cropImgH + 'px'; updateCropTransform();
   };
-  const sl = document.getElementById('zoomSlider'); if(sl) sl.value = 100;
-  document.getElementById('cropModal').classList.remove('hidden');
+  const sl = el('zoomSlider'); if(sl) sl.value = 100;
+  el('cropModal').classList.remove('hidden');
 }
-window.batalCrop = () => {
-  document.getElementById('cropModal').classList.add('hidden');
-  const inp = document.getElementById('fotoInput'); if(inp) inp.value='';
-};
+window.batalCrop = () => { const m=el('cropModal'); if(m) m.classList.add('hidden'); const inp=el('fotoInput'); if(inp) inp.value=''; };
 window.potongFoto = () => {
-  const img = document.getElementById('cropImg');
-  const box = document.getElementById('cropBox');
-  const frameW = box.clientWidth * 0.92;
-  const frameH = box.clientHeight * 0.82;
-  const canvas = document.createElement('canvas');
-  canvas.width = 800; canvas.height = Math.round(800 * frameH / frameW);
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#fff'; ctx.fillRect(0,0,canvas.width,canvas.height);
-  const dispW = cropImgW * cropScale;
-  const dispH = cropImgH * cropScale;
-  const imgLeft = box.clientWidth/2 + cropX - dispW/2;
-  const imgTop = box.clientHeight/2 + cropY - dispH/2;
-  const frameLeft = box.clientWidth/2 - frameW/2;
-  const frameTop = box.clientHeight/2 - frameH/2;
-  const sx = (frameLeft - imgLeft) / dispW * img.naturalWidth;
-  const sy = (frameTop - imgTop) / dispH * img.naturalHeight;
-  const sw = frameW / dispW * img.naturalWidth;
-  const sh = frameH / dispH * img.naturalHeight;
+  const img = el('cropImg'); const box = el('cropBox');
+  const frameW = box.clientWidth * 0.92; const frameH = box.clientHeight * 0.82;
+  const canvas = document.createElement('canvas'); canvas.width = 800; canvas.height = Math.round(800 * frameH / frameW);
+  const ctx = canvas.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  const dispW = cropImgW * cropScale; const dispH = cropImgH * cropScale;
+  const imgLeft = box.clientWidth/2 + cropX - dispW/2; const imgTop = box.clientHeight/2 + cropY - dispH/2;
+  const frameLeft = box.clientWidth/2 - frameW/2; const frameTop = box.clientHeight/2 - frameH/2;
+  const sx = (frameLeft - imgLeft) / dispW * img.naturalWidth; const sy = (frameTop - imgTop) / dispH * img.naturalHeight;
+  const sw = frameW / dispW * img.naturalWidth; const sh = frameH / dispH * img.naturalHeight;
   ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-  const hasil = canvas.toDataURL('image/jpeg', 0.8);
-  window.FOTO_BARU = hasil;
-  const prev = document.getElementById('fotoPreview');
-  if(prev){ prev.src = hasil; prev.classList.remove('hidden'); }
-  const st = document.getElementById('fotoStatus');
-  if(st) st.innerText = '✅ Foto udah di-crop, tinggal pencet UPDATE!';
-  document.getElementById('cropModal').classList.add('hidden');
-  toast('✅ Foto udah di-crop!');
+  const hasil = canvas.toDataURL('image/jpeg', 0.8); window.FOTO_BARU = hasil;
+  const prev = el('fotoPreview'); if(prev){ prev.src = hasil; prev.classList.remove('hidden'); }
+  const st = el('fotoStatus'); if(st) st.innerText = '✅ Foto udah di-crop, tinggal pencet UPDATE / SIMPAN!';
+  el('cropModal').classList.add('hidden'); toast('✅ Foto udah di-crop!');
 };
-
-function olahFoto(file){
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => { bukaCrop(e.target.result); };
-  reader.readAsDataURL(file);
-}
+function olahFoto(file){ if(!file) return; const reader = new FileReader(); reader.onload = (e) => { bukaCrop(e.target.result); }; reader.readAsDataURL(file); }
 window.previewFoto = function(input){ if(input.files[0]) olahFoto(input.files[0]); };
-document.addEventListener('change', (e)=>{
-  if(e.target && e.target.id === 'fotoInput'){
-    if(e.target.files[0]) olahFoto(e.target.files[0]);
-  }
-});
-// Geser pakai Pointer Event - ini yang bikin gak loncat & gak rebutan scroll
+document.addEventListener('change', (e)=>{ if(e.target && e.target.id === 'fotoInput'){ if(e.target.files[0]) olahFoto(e.target.files[0]); } });
 document.addEventListener('DOMContentLoaded', () => {
-  const box = document.getElementById('cropBox');
-  if(!box) return;
-  box.addEventListener('pointerdown', (e)=>{
-    cropDragging = true; cropPointerId = e.pointerId;
-    cropStartX = e.clientX; cropStartY = e.clientY;
-    cropStartPX = cropX; cropStartPY = cropY;
-    box.setPointerCapture(e.pointerId);
-    e.preventDefault();
-  });
-  box.addEventListener('pointermove', (e)=>{
-    if(!cropDragging || e.pointerId !== cropPointerId) return;
-    cropX = cropStartPX + (e.clientX - cropStartX);
-    cropY = cropStartPY + (e.clientY - cropStartY);
-    updateCropTransform();
-    e.preventDefault();
-  });
-  const endDrag = (e)=>{ if(e.pointerId===cropPointerId){ cropDragging=false; cropPointerId=null; } };
-  box.addEventListener('pointerup', endDrag);
-  box.addEventListener('pointercancel', endDrag);
+  const box = el('cropBox'); if(!box) return;
+  box.addEventListener('pointerdown', (e)=>{ cropDragging=true; cropPointerId=e.pointerId; cropStartX=e.clientX; cropStartY=e.clientY; cropStartPX=cropX; cropStartPY=cropY; box.setPointerCapture(e.pointerId); e.preventDefault(); });
+  box.addEventListener('pointermove', (e)=>{ if(!cropDragging || e.pointerId!==cropPointerId) return; cropX=cropStartPX+(e.clientX-cropStartX); cropY=cropStartPY+(e.clientY-cropStartY); updateCropTransform(); e.preventDefault(); });
+  const endDrag=(e)=>{ if(e.pointerId===cropPointerId){ cropDragging=false; cropPointerId=null; } };
+  box.addEventListener('pointerup', endDrag); box.addEventListener('pointercancel', endDrag);
 });
 
 function getTanggalHariIni() { return new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }); }
@@ -182,17 +120,10 @@ function aman(teks) { return String(teks ?? '').replace(/&/g,'&amp;').replace(/<
 function tampilStok(b) { let s = (b.stok ?? '').toString().trim(); if (!s) return '0'; return s; }
 function gabungData() { barang = barangPublic.map(p => ({ ...p, modal: (barangPrivate[p.id] ? barangPrivate[p.id].modal : 0) })); render(); }
 
-onSnapshot(query(collection(db, "barang_public"), orderBy("nama")), (snap) => {
-  barangPublic = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  gabungData();
-});
+onSnapshot(query(collection(db, "barang_public"), orderBy("nama")), (snap) => { barangPublic = snap.docs.map(d => ({ id: d.id, ...d.data() })); gabungData(); });
 function mulaiDengarPrivate() {
   if (unsubPrivate) return;
-  unsubPrivate = onSnapshot(query(collection(db, "barang_private")), (snap) => {
-    barangPrivate = {};
-    snap.docs.forEach(d => { barangPrivate[d.id] = d.data(); });
-    gabungData();
-  });
+  unsubPrivate = onSnapshot(query(collection(db, "barang_private")), (snap) => { barangPrivate = {}; snap.docs.forEach(d => { barangPrivate[d.id] = d.data(); }); gabungData(); });
 }
 function stopDengarPrivate() { if (unsubPrivate) { unsubPrivate(); unsubPrivate = null; } barangPrivate = {}; gabungData(); }
 
@@ -202,148 +133,135 @@ onAuthStateChanged(auth, (user) => {
   updateUI(); render();
 });
 function updateUI() {
-  document.getElementById('statusLogin').innerText = isLogin ? '✅ Login Admin - ' + (auth.currentUser ? auth.currentUser.email : '') : '🔒 Mode Lihat Saja';
-  document.getElementById('statusLogin').className = isLogin ? 'text-sm font-bold text-green-600' : 'text-sm font-bold text-red-500';
-  document.getElementById('btnLogin').innerText = isLogin ? 'LOGOUT' : 'LOGIN';
-  let btnTambah = document.getElementById('btnTambah');
-  if (btnTambah) { if (isLogin) btnTambah.classList.remove('hidden'); else btnTambah.classList.add('hidden'); }
+  const st = el('statusLogin'); if(st){ st.innerText = isLogin ? '✅ Login Admin - ' + (auth.currentUser ? auth.currentUser.email : '') : '🔒 Mode Lihat Saja'; st.className = isLogin ? 'text-sm font-bold text-green-600' : 'text-sm font-bold text-red-500'; }
+  const bl = el('btnLogin'); if(bl) bl.innerText = isLogin ? 'LOGOUT' : 'LOGIN';
+  const bt = el('btnTambah'); if(bt){ if(isLogin) bt.classList.remove('hidden'); else bt.classList.add('hidden'); }
 }
 window.toggleLogin = async () => {
+  if (!IS_ADMIN_PAGE) return;
   if (isLogin) { await signOut(auth); toast('Berhasil Logout'); return; }
-  document.getElementById('boxLogin').classList.toggle('hidden');
+  el('boxLogin').classList.toggle('hidden');
 };
 window.doLogin = async () => {
-  let email = document.getElementById('inputEmail').value.trim();
-  let pass = document.getElementById('inputPass').value;
+  let email = el('inputEmail').value.trim(); let pass = el('inputPass').value;
   if (!email || !pass){ toastError("Isi Email & Password dulu!"); return; }
-  try {
-    let hasil = await signInWithEmailAndPassword(auth, email, pass);
-    if (hasil.user.uid !== ADMIN_UID) { await signOut(auth); toastError("Akun ini bukan Admin!"); return; }
-    document.getElementById('boxLogin').classList.add('hidden');
-    document.getElementById('inputPass').value = '';
-    toast('Login Berhasil!');
-  } catch (e) { toastError('Gagal Login!'); }
+  try { let hasil = await signInWithEmailAndPassword(auth, email, pass); if (hasil.user.uid !== ADMIN_UID) { await signOut(auth); toastError("Akun ini bukan Admin!"); return; } el('boxLogin').classList.add('hidden'); el('inputPass').value = ''; toast('Login Berhasil!'); } catch (e) { toastError('Gagal Login!'); }
 };
-window.bukaForm = () => {
-  if (!isLogin){ toastError("Harus Login dulu!"); return; }
-  document.getElementById('judulForm').innerText = editId ? 'Edit Barang' : 'Tambah Barang';
-  document.getElementById('popupForm').classList.remove('hidden');
-};
-window.tutupForm = () => { document.getElementById('popupForm').classList.add('hidden'); };
+window.bukaForm = () => { if (!isLogin){ toastError("Harus Login dulu!"); return; } el('judulForm').innerText = editId ? 'Edit Barang' : 'Tambah Barang'; el('popupForm').classList.remove('hidden'); };
+window.tutupForm = () => { const p=el('popupForm'); if(p) p.classList.add('hidden'); };
 window.cariBarang = (teks) => { kataCari = teks.toLowerCase().trim(); currentPage = 1; render(); };
 window.bukaZoomFoto = (id) => {
-  const b = barang.find(x => x.id === id);
-  if(!b || !b.foto) return;
-  let modal = document.getElementById('modalZoomFoto');
-  if(modal) modal.remove();
-  modal = document.createElement('div');
-  modal.id = 'modalZoomFoto';
+  const b = barang.find(x => x.id === id); if(!b || !b.foto) return;
+  let modal = document.getElementById('modalZoomFoto'); if(modal) modal.remove();
+  modal = document.createElement('div'); modal.id = 'modalZoomFoto';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:100;display:flex;align-items:center;justify-content:center;';
   modal.innerHTML = `<img src="${b.foto}" style="max-width:95%;max-height:90%;"><button onclick="document.getElementById('modalZoomFoto').remove()" style="position:absolute;top:15px;right:15px;background:white;width:36px;height:36px;border-radius:50%;font-weight:bold;">✕</button>`;
-  modal.addEventListener('click', (e)=>{ if(e.target === modal) modal.remove(); });
-  document.body.appendChild(modal);
+  modal.addEventListener('click', (e)=>{ if(e.target === modal) modal.remove(); }); document.body.appendChild(modal);
 };
+
+// ===== QTY & BELI =====
+window.ubahQty = (id, delta) => {
+  let q = qtyMap[id] || 1; q += delta; if(q<1) q=1; if(q>99) q=99; qtyMap[id]=q;
+  let elm = document.getElementById('qty-'+id); if(elm) elm.innerText = q;
+};
+window.beliSekarang = (id) => {
+  const b = barang.find(x => x.id === id); if(!b) return;
+  let q = qtyMap[id] || 1; let j = b.jual || b.harga || 0;
+  let total = q * j;
+  let pesan = `Halo UD. BILAL, saya mau pesan:\n- ${b.nama}\n- Jumlah: ${q}\n- Harga: Rp ${Number(j).toLocaleString('id-ID')} / pcs\n- Total: Rp ${Number(total).toLocaleString('id-ID')}`;
+  window.open(`https://wa.me/${NOMOR_WA}?text=${encodeURIComponent(pesan)}`, '_blank');
+};
+
+// ===== RENDER - BEDA PENGUNJUNG VS ADMIN =====
 function render() {
   updateUI();
   let totalUntung = 0;
-  if (isLogin) {
-    barang.forEach(b => {
-      let j = b.jual || b.harga || 0;
-      let stokAngka = parseFloat(String(b.stok ?? '').replace(',', '.')) || 0;
-      totalUntung += (j - (b.modal || 0)) * stokAngka;
-    });
-  }
+  if (isLogin) { barang.forEach(b => { let j = b.jual || b.harga || 0; let stokAngka = parseFloat(String(b.stok ?? '').replace(',', '.')) || 0; totalUntung += (j - (b.modal || 0)) * stokAngka; }); }
   let hasilCari = barang.filter(b => b.nama.toLowerCase().includes(kataCari) || (b.keterangan || '').toLowerCase().includes(kataCari));
   let totalPage = Math.max(1, Math.ceil(hasilCari.length / perPage));
   if (currentPage > totalPage) currentPage = totalPage;
   let list = hasilCari.slice((currentPage - 1) * perPage, currentPage * perPage);
   let html = '';
   list.forEach(b => {
-    let j = b.jual || b.harga || 0;
-    let modal = b.modal || 0;
-    let u = j - modal;
-    let ket = bersihKet(b.keterangan);
-    let tgl = b.tanggalUpdate || '-';
+    let j = b.jual || b.harga || 0; let modal = b.modal || 0; let u = j - modal;
+    let ket = bersihKet(b.keterangan); let tgl = b.tanggalUpdate || '-';
     let badgeBaru = isHariIni(b.tanggalUpdate) ? `<span class="badge-baru">BARU</span>` : '';
-    let tombolWA = `<div class="px-3 pb-3"><a href="https://wa.me/${NOMOR_WA}?text=${encodeURIComponent(`Halo UD. BILAL, saya mau pesan ${b.nama} - Rp ${Number(j).toLocaleString('id-ID')}`)}" target="_blank" class="block text-center bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl">💬 PESAN VIA WHATSAPP</a></div>`;
-    let tombol = isLogin ? `<div class="flex gap-2 px-3 pb-3"><button onclick="editBarang('${b.id}')" class="flex-1 bg-green-500 text-white py-3 rounded-xl flex items-center justify-center">✏️</button><button onclick="hapus('${b.id}')" class="flex-1 bg-red-500 text-white py-3 rounded-xl flex items-center justify-center">🗑️</button></div>` : ``;
-    let barisModal = isLogin ? `<div class="mx-3 my-2 bg-gray-100 rounded-xl px-3 py-2.5 flex justify-between items-center"><span>💵 Harga Modal</span><span class="font-bold">Rp ${Number(modal).toLocaleString('id-ID')}</span></div>` : '';
-    let barisUntung = isLogin ? `<div class="mx-3 my-2 bg-gray-100 rounded-xl px-3 py-2.5 flex justify-between items-center"><span>↕️ Untung</span><span class="font-bold ${u >= 0 ? 'text-green-600' : 'text-red-600'}">Rp ${u.toLocaleString('id-ID')}</span></div>` : '';
-    let barisTanggal = `<div class="px-3 pt-2"><span class="last-update">Terakhir Update: ${aman(tgl)}</span></div>`;
-    let blokFoto = b.foto ? `<div class="px-3 pt-3"><img src="${b.foto}" onclick="bukaZoomFoto('${b.id}')" class="w-full h-44 object-cover rounded-xl cursor-pointer" style="background:#eee;" alt="${aman(b.nama)}"><p class="text-center text-xs text-gray-400 mt-1">Klik foto untuk zoom</p></div>` : `<div class="px-3 pt-3"><div class="w-full h-20 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 text-sm">Belum ada foto</div></div>`;
-    html += `<div class="border-2 border-gray-300 rounded-xl overflow-hidden"><div class="flex justify-between items-center bg-blue-50 px-3 py-2 border-b-2 border-gray-300"><span class="font-bold text-lg">${aman(b.nama)} ${badgeBaru}</span><span class="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full">STOK: ${aman(tampilStok(b))}</span></div>${blokFoto}${barisTanggal}${barisModal}<div class="mx-3 my-2 bg-gray-100 rounded-xl px-3 py-2.5 flex justify-between items-center"><span>🏷️ Harga Jual</span><span class="font-bold">Rp ${Number(j).toLocaleString('id-ID')}</span></div><div class="mx-3 my-2 bg-gray-100 rounded-xl px-3 py-2.5 flex justify-between items-center"><span>ℹ️ Keterangan</span><span class="font-bold">${ket ? aman(ket) : '-'}</span></div>${barisUntung}${tombolWA}${tombol}</div>`;
+    let q = qtyMap[b.id] || 1;
+    let foto = b.foto ? `<img src="${b.foto}" onclick="bukaZoomFoto('${b.id}')" class="foto-produk cursor-pointer" alt="${aman(b.nama)}">` : `<div class="w-full flex items-center justify-center text-gray-400 text-xs" style="aspect-ratio:1/1;background:#f8f8f8;">Belum ada foto</div>`;
+
+    // --- KARTU SAMA UNTUK 2 HALAMAN: Nama / Harga / Keterangan / Qty / WA ---
+    let isiKartu = `
+      <div class="p-2 text-center flex-1 flex flex-col">
+        <p class="font-bold text-[15px] leading-tight line-clamp-2 min-h-[38px]">${aman(b.nama)}</p>
+        <p class="text-gray-400 font-bold text-[14px] mt-1">Rp${Number(j).toLocaleString('id-ID')}</p>
+        <p class="text-[12px] text-gray-500 mt-1 min-h-[18px]">${ket ? aman(ket) : '-'}</p>
+        <div class="flex items-center justify-center gap-0 mt-2 border rounded-lg overflow-hidden w-fit mx-auto">
+          <button onclick="ubahQty('${b.id}', -1)" class="qty-btn">-</button>
+          <span id="qty-${b.id}" class="w-8 text-center font-bold text-[14px]">${q}</span>
+          <button onclick="ubahQty('${b.id}', 1)" class="qty-btn">+</button>
+        </div>
+        <button onclick="beliSekarang('${b.id}')" class="w-full mt-2 py-2.5 rounded-lg font-bold text-white text-[13px]" style="background:#7cb342;">💬 Pesan via WA</button>
+        <p class="last-update mt-1">${aman(tgl)}</p>
+      </div>`;
+
+    let infoAdmin = '';
+    if (IS_ADMIN_PAGE) {
+      // HALAMAN ADMIN: Selalu tampilkan Modal / Untung / Stok / Edit / Hapus
+      infoAdmin = `<div class="px-2 pb-1 text-[11px] text-gray-500 space-y-0.5 border-t pt-1">
+        <div class="flex justify-between"><span>Modal</span><b>Rp ${Number(modal).toLocaleString('id-ID')}</b></div>
+        <div class="flex justify-between"><span>Untung</span><b class="${u>=0?'text-green-600':'text-red-600'}">Rp ${u.toLocaleString('id-ID')}</b></div>
+        <div class="flex justify-between"><span>Stok</span><b>${aman(tampilStok(b))}</b></div>
+      </div>
+      <div class="flex gap-1 px-2 pb-2">
+        <button onclick="editBarang('${b.id}')" class="flex-1 bg-yellow-400 text-white py-1.5 rounded-lg text-xs font-bold">✏️ Edit</button>
+        <button onclick="hapus('${b.id}')" class="flex-1 bg-red-500 text-white py-1.5 rounded-lg text-xs font-bold">🗑️ Hapus</button>
+      </div>`;
+    } else {
+      // HALAMAN PENGUNJUNG: Cuma Stok, GAK ADA Edit / Hapus / Modal / Untung
+      infoAdmin = `<div class="px-2 pb-2 text-center"><span class="text-[11px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-bold">STOK: ${aman(tampilStok(b))}</span></div>`;
+    }
+
+    html += `<div class="kartu">
+      <div class="relative">${foto}<div class="absolute top-1 left-1">${badgeBaru}</div></div>
+      ${isiKartu}
+      ${infoAdmin}
+    </div>`;
   });
-  if (hasilCari.length === 0) html = `<p class="text-center text-gray-400 py-4">Barang gak ketemu, coba kata lain</p>`;
-  document.getElementById('tabel').innerHTML = html;
-  document.getElementById('infoPage').innerText = `Page ${currentPage} / ${totalPage} (Total ${hasilCari.length} barang)`;
-  document.querySelector('.footer').innerHTML = isLogin ? `Total Jenis Produk: ${barang.length} | Total Untung: Rp ${totalUntung.toLocaleString('id-ID')}` : `Total Jenis Produk: ${barang.length}`;
+  if (hasilCari.length === 0) html = `<p class="text-center text-gray-400 py-4 col-span-2">Barang gak ketemu, coba kata lain</p>`;
+  const tabel = el('tabel'); if(tabel) tabel.innerHTML = html;
+  const info = el('infoPage'); if(info) info.innerText = `Page ${currentPage} / ${totalPage} (Total ${hasilCari.length} barang)`;
+  const foot = document.querySelector('.footer'); if(foot) foot.innerHTML = (IS_ADMIN_PAGE && isLogin) ? `Total Jenis Produk: ${barang.length} | Total Untung: Rp ${totalUntung.toLocaleString('id-ID')}` : `Total Jenis Produk: ${barang.length}`;
 }
-window.gantiPage = (n) => {
-  let tp = Math.max(1, Math.ceil(barang.length / perPage));
-  currentPage += n; if (currentPage < 1) currentPage = 1; if (currentPage > tp) currentPage = tp;
-  render(); window.scrollTo(0, 0);
-};
+
+window.gantiPage = (n) => { let tp = Math.max(1, Math.ceil(barang.length / perPage)); currentPage += n; if (currentPage < 1) currentPage = 1; if (currentPage > tp) currentPage = tp; render(); window.scrollTo(0, 0); };
 window.simpan = async () => {
   if (!isLogin){ toastError("Harus Login dulu!"); return; }
-  let nama = document.getElementById('nama').value.trim();
-  let modal = Number(document.getElementById('modal').value);
-  let jual = Number(document.getElementById('harga').value);
-  let keterangan = bersihKet(document.getElementById('keterangan').value);
-  let stok = document.getElementById('stok').value.trim();
+  let nama = el('nama').value.trim(); let modal = Number(el('modal').value); let jual = Number(el('harga').value); let keterangan = bersihKet(el('keterangan').value); let stok = el('stok').value.trim();
   if (!nama || !modal || !jual || !stok){ toastError("Isi dulu!"); return; }
-  let tanggalUpdate = getTanggalHariIni();
-  let fotoBaru = window.FOTO_BARU || null;
+  let tanggalUpdate = getTanggalHariIni(); let fotoBaru = window.FOTO_BARU || null;
   try {
     if (editId) {
       let dataPublic = { nama, jual, harga: jual, keterangan, stok, tanggalUpdate };
-      if (fotoBaru) dataPublic.foto = fotoBaru;
-      else { let lama = barang.find(x => x.id === editId); if(lama && lama.foto) dataPublic.foto = lama.foto; }
-      await setDoc(doc(db, "barang_public", editId), dataPublic);
-      await setDoc(doc(db, "barang_private", editId), { modal });
-      editId = null; document.getElementById('btnSimpan').innerText = "SIMPAN";
+      if (fotoBaru) dataPublic.foto = fotoBaru; else { let lama = barang.find(x => x.id === editId); if(lama && lama.foto) dataPublic.foto = lama.foto; }
+      await setDoc(doc(db, "barang_public", editId), dataPublic); await setDoc(doc(db, "barang_private", editId), { modal }); editId = null; el('btnSimpan').innerText = "SIMPAN";
     } else {
-      let dataBaru = { nama, jual, harga: jual, keterangan, stok, tanggalUpdate };
-      if (fotoBaru) dataBaru.foto = fotoBaru;
-      let refBaru = await addDoc(collection(db, "barang_public"), dataBaru);
-      await setDoc(doc(db, "barang_private", refBaru.id), { modal });
+      let dataBaru = { nama, jual, harga: jual, keterangan, stok, tanggalUpdate }; if (fotoBaru) dataBaru.foto = fotoBaru;
+      let refBaru = await addDoc(collection(db, "barang_public"), dataBaru); await setDoc(doc(db, "barang_private", refBaru.id), { modal });
     }
-    window.FOTO_BARU = null;
-    const prev = document.getElementById('fotoPreview'); if(prev){ prev.src=''; prev.classList.add('hidden'); }
-    const inpFoto = document.getElementById('fotoInput'); if(inpFoto) inpFoto.value='';
-    const st = document.getElementById('fotoStatus'); if(st) st.innerText='';
-    document.getElementById('nama').value = ''; document.getElementById('modal').value = ''; document.getElementById('harga').value = ''; document.getElementById('keterangan').value = ''; document.getElementById('stok').value = '';
-    document.getElementById('popupForm').classList.add('hidden');
-    toast('✅ Berhasil disimpan!');
+    window.FOTO_BARU = null; const prev = el('fotoPreview'); if(prev){ prev.src=''; prev.classList.add('hidden'); } const inpFoto = el('fotoInput'); if(inpFoto) inpFoto.value=''; const st = el('fotoStatus'); if(st) st.innerText='';
+    el('nama').value = ''; el('modal').value = ''; el('harga').value = ''; el('keterangan').value = ''; el('stok').value = '';
+    el('popupForm').classList.add('hidden'); toast('✅ Berhasil disimpan!');
   } catch (e) { toastError("Gagal simpan! Foto kegedean, coba foto lain."); }
 };
 window.editBarang = (id) => {
-  if (!isLogin){ toastError("Harus Login dulu!"); return; }
-  let b = barang.find(x => x.id === id);
-  if (!b){ toastError("Barang gak ketemu, refresh dulu!"); return; }
-  document.getElementById('nama').value = b.nama;
-  document.getElementById('modal').value = b.modal || '';
-  document.getElementById('harga').value = b.jual || b.harga;
-  document.getElementById('keterangan').value = bersihKet(b.keterangan);
-  document.getElementById('stok').value = b.stok;
-  window.FOTO_BARU = null;
-  const prev = document.getElementById('fotoPreview');
-  const st = document.getElementById('fotoStatus');
+  if (!isLogin){ toastError("Harus Login dulu!"); return; } let b = barang.find(x => x.id === id); if (!b){ toastError("Barang gak ketemu, refresh dulu!"); return; }
+  el('nama').value = b.nama; el('modal').value = b.modal || ''; el('harga').value = b.jual || b.harga; el('keterangan').value = bersihKet(b.keterangan); el('stok').value = b.stok; window.FOTO_BARU = null;
+  const prev = el('fotoPreview'); const st = el('fotoStatus');
   if(prev){ if(b.foto){ prev.src=b.foto; prev.classList.remove('hidden'); if(st) st.innerText='Foto lama masih ada. Pilih foto baru kalau mau ganti.'; } else { prev.src=''; prev.classList.add('hidden'); if(st) st.innerText='Belum ada foto, silahkan pilih foto.'; } }
-  const inpFoto = document.getElementById('fotoInput'); if(inpFoto) inpFoto.value='';
-  editId = id; document.getElementById('btnSimpan').innerText = "UPDATE";
-  document.getElementById('judulForm').innerText = 'Edit Barang';
-  document.getElementById('popupForm').classList.remove('hidden');
+  const inpFoto = el('fotoInput'); if(inpFoto) inpFoto.value=''; editId = id; el('btnSimpan').innerText = "UPDATE"; el('judulForm').innerText = 'Edit Barang'; el('popupForm').classList.remove('hidden');
 };
-window.hapus = async (id) => {
-  if (!isLogin){ toastError("Harus Login dulu!"); return; }
-  if (confirm("Hapus?")) { await deleteDoc(doc(db, "barang_public", id)); await deleteDoc(doc(db, "barang_private", id)); toast('Barang dihapus'); }
-};
+window.hapus = async (id) => { if (!isLogin){ toastError("Harus Login dulu!"); return; } if (confirm("Hapus?")) { await deleteDoc(doc(db, "barang_public", id)); await deleteDoc(doc(db, "barang_private", id)); toast('Barang dihapus'); } };
 window.batalEdit = () => {
-  editId = null; window.FOTO_BARU = null;
-  const prev = document.getElementById('fotoPreview'); if(prev){ prev.src=''; prev.classList.add('hidden'); }
-  const inpFoto = document.getElementById('fotoInput'); if(inpFoto) inpFoto.value='';
-  const st = document.getElementById('fotoStatus'); if(st) st.innerText='';
-  document.getElementById('nama').value = ''; document.getElementById('modal').value = ''; document.getElementById('harga').value = ''; document.getElementById('keterangan').value = ''; document.getElementById('stok').value = '';
-  document.getElementById('btnSimpan').innerText = "SIMPAN";
-  document.getElementById('popupForm').classList.add('hidden');
+  editId = null; window.FOTO_BARU = null; const prev = el('fotoPreview'); if(prev){ prev.src=''; prev.classList.add('hidden'); } const inpFoto = el('fotoInput'); if(inpFoto) inpFoto.value=''; const st = el('fotoStatus'); if(st) st.innerText='';
+  el('nama').value = ''; el('modal').value = ''; el('harga').value = ''; el('keterangan').value = ''; el('stok').value = ''; el('btnSimpan').innerText = "SIMPAN"; el('popupForm').classList.add('hidden');
 };
