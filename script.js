@@ -1,11 +1,10 @@
 // ==========================================
-// UD. BILAL - script.js (PISAH PUBLIC / PRIVATE + AMAN)
+// UD. BILAL - script.js (WA + FOTO + CUBIT ZOOM)
 // ==========================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, addDoc, deleteDoc, doc, updateDoc, setDoc, getDocs, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, addDoc, deleteDoc, doc, setDoc, getDocs, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-// ---------- CONFIG FIREBASE - TETAP SAMA ----------
 const firebaseConfig = {
   apiKey: "AIzaSyAhce1AyhPGe1cDkIzcBcgAFFOXC2Isxx0",
   authDomain: "toko-bilal.firebaseapp.com",
@@ -17,57 +16,37 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
-
-// ---------- KUNCI ADMIN - GANTI DISINI! ----------
 const ADMIN_UID = "spaWNW7l2YSqBvhC7hkK6Sd3d7A3";
+const NOMOR_WA = "6281919194295";
 
-// ---------- STATE ----------
 let barangPublic = [];
-let barangPrivate = {}; // { id: { modal } }
-let barang = []; // gabungan buat ditampilin
+let barangPrivate = {};
+let barang = [];
 let editId = null;
 let currentPage = 1;
 const perPage = 10;
 let isLogin = false;
 let kataCari = '';
 let unsubPrivate = null;
+let fotoBaruBase64 = null;
 
-// ---------- HELPER ----------
 function getTanggalHariIni() {
   return new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
 }
-function isHariIni(tgl) {
-  if (!tgl) return false;
-  return tgl === getTanggalHariIni();
-}
-function bersihKet(teks) {
-  if (!teks) return '';
-  return teks.toString().replace(/^\s*\/\s*/, '').trim();
-}
-// Anti-XSS: biar nama barang gak bisa nyusupin script
-function aman(teks) {
-  return String(teks ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-}
-function tampilStok(b) {
-  let s = (b.stok ?? '').toString().trim();
-  if (!s) return '0';
-  return s;
-}
+function isHariIni(tgl) { if (!tgl) return false; return tgl === getTanggalHariIni(); }
+function bersihKet(teks) { if (!teks) return ''; return teks.toString().replace(/^\s*\/\s*/, '').trim(); }
+function aman(teks) { return String(teks ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function tampilStok(b) { let s = (b.stok ?? '').toString().trim(); if (!s) return '0'; return s; }
 function gabungData() {
-  barang = barangPublic.map(p => ({
-    ...p,
-    modal: (barangPrivate[p.id] ? barangPrivate[p.id].modal : 0)
-  }));
+  barang = barangPublic.map(p => ({ ...p, modal: (barangPrivate[p.id] ? barangPrivate[p.id].modal : 0) }));
   render();
 }
 
-// ---------- AMBIL DATA PUBLIC - SIAPA AJA BOLEH ----------
 onSnapshot(query(collection(db, "barang_public"), orderBy("nama")), (snap) => {
   barangPublic = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   gabungData();
 });
 
-// ---------- AMBIL DATA PRIVATE - CUMA ADMIN ----------
 function mulaiDengarPrivate() {
   if (unsubPrivate) return;
   unsubPrivate = onSnapshot(query(collection(db, "barang_private")), (snap) => {
@@ -83,33 +62,19 @@ function stopDengarPrivate() {
 }
 
 onAuthStateChanged(auth, (user) => {
-  // KUNCI: cuma UID abang yang dianggap admin, akun lain ditolak!
   isLogin = !!user && user.uid === ADMIN_UID;
-  if (isLogin) mulaiDengarPrivate();
-  else stopDengarPrivate();
-  updateUI();
-  render();
+  if (isLogin) mulaiDengarPrivate(); else stopDengarPrivate();
+  updateUI(); render();
 });
 
-// ---------- UI LOGIN ----------
 function updateUI() {
-  document.getElementById('statusLogin').innerText = isLogin
-    ? '✅ Login Admin - ' + (auth.currentUser ? auth.currentUser.email : '')
-    : '🔒 Mode Lihat Saja';
-  document.getElementById('statusLogin').className = isLogin
-    ? 'text-sm font-bold text-green-600'
-    : 'text-sm font-bold text-red-500';
+  document.getElementById('statusLogin').innerText = isLogin ? '✅ Login Admin - ' + (auth.currentUser ? auth.currentUser.email : '') : '🔒 Mode Lihat Saja';
+  document.getElementById('statusLogin').className = isLogin ? 'text-sm font-bold text-green-600' : 'text-sm font-bold text-red-500';
   document.getElementById('btnLogin').innerText = isLogin ? 'LOGOUT' : 'LOGIN';
   let btnTambah = document.getElementById('btnTambah');
   let btnMigrasi = document.getElementById('btnMigrasi');
-if (btnMigrasi) {
-  if (isLogin) btnMigrasi.classList.remove('hidden');
-  else btnMigrasi.classList.add('hidden');
-}
-  if (btnTambah) {
-    if (isLogin) btnTambah.classList.remove('hidden');
-    else btnTambah.classList.add('hidden');
-  }
+  if (btnMigrasi) { if (isLogin) btnMigrasi.classList.remove('hidden'); else btnMigrasi.classList.add('hidden'); }
+  if (btnTambah) { if (isLogin) btnTambah.classList.remove('hidden'); else btnTambah.classList.add('hidden'); }
 }
 window.toggleLogin = async () => {
   if (isLogin) { await signOut(auth); alert("Berhasil Logout"); return; }
@@ -121,34 +86,83 @@ window.doLogin = async () => {
   if (!email || !pass) return alert("Isi Email & Password dulu!");
   try {
     let hasil = await signInWithEmailAndPassword(auth, email, pass);
-    if (hasil.user.uid !== ADMIN_UID) {
-      await signOut(auth);
-      return alert("Akun ini bukan Admin UD. BILAL!");
-    }
+    if (hasil.user.uid !== ADMIN_UID) { await signOut(auth); return alert("Akun ini bukan Admin UD. BILAL!"); }
     document.getElementById('boxLogin').classList.add('hidden');
     document.getElementById('inputPass').value = '';
     alert('Login Berhasil!');
   } catch (e) { alert('Gagal Login!'); }
 };
 
-// ---------- POP UP FORM ----------
 window.bukaForm = () => {
   if (!isLogin) return alert("Harus Login dulu!");
   document.getElementById('judulForm').innerText = editId ? 'Edit Barang' : 'Tambah Barang';
   document.getElementById('popupForm').classList.remove('hidden');
 };
-window.tutupForm = () => {
-  document.getElementById('popupForm').classList.add('hidden');
+window.tutupForm = () => { document.getElementById('popupForm').classList.add('hidden'); };
+window.cariBarang = (teks) => { kataCari = teks.toLowerCase().trim(); currentPage = 1; render(); };
+
+function fileKeBase64Kecil(file, cb){
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const max = 800;
+      let w = img.width, h = img.height;
+      if (w > h && w > max){ h = h * max / w; w = max; }
+      else if (h > max){ w = w * max / h; h = max; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      cb(canvas.toDataURL('image/jpeg', 0.7));
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+document.addEventListener('change', (e)=>{
+  if(e.target.id === 'fotoInput'){
+    const f = e.target.files[0];
+    if(!f) return;
+    fileKeBase64Kecil(f, (base64)=>{
+      fotoBaruBase64 = base64;
+      const prev = document.getElementById('fotoPreview');
+      if(prev){ prev.src = base64; prev.classList.remove('hidden'); }
+    });
+  }
+});
+
+window.bukaZoomFoto = (src) => {
+  let modal = document.getElementById('modalZoomFoto');
+  if(!modal){
+    modal = document.createElement('div');
+    modal.id = 'modalZoomFoto';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:100;display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML = `<img id="imgZoom" style="max-width:95%;max-height:90%;touch-action:none;"><button onclick="document.getElementById('modalZoomFoto').remove()" style="position:absolute;top:15px;right:15px;background:white;width:36px;height:36px;border-radius:50%;font-weight:bold;">✕</button>`;
+    modal.addEventListener('click', (e)=>{ if(e.target === modal) modal.remove(); });
+    document.body.appendChild(modal);
+    const img = document.getElementById('imgZoom');
+    let scale=1, lastDist=0, posX=0, posY=0, lastX=0, lastY=0;
+    modal.addEventListener('touchstart', (e)=>{
+      if(e.touches.length===2) lastDist = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+      else if(e.touches.length===1){ lastX=e.touches[0].clientX; lastY=e.touches[0].clientY; }
+    });
+    modal.addEventListener('touchmove', (e)=>{
+      e.preventDefault();
+      if(e.touches.length===2){
+        let d = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+        if(lastDist>0) scale = Math.min(3, Math.max(1, scale*(d/lastDist)));
+        lastDist=d;
+      } else if(e.touches.length===1 && scale>1){
+        posX += e.touches[0].clientX-lastX; posY += e.touches[0].clientY-lastY;
+        lastX=e.touches[0].clientX; lastY=e.touches[0].clientY;
+      }
+      img.style.transform = `scale(${scale}) translate(${posX/scale}px, ${posY/scale}px)`;
+    }, {passive:false});
+  }
+  document.getElementById('imgZoom').src = src;
+  document.getElementById('imgZoom').style.transform = 'scale(1)';
 };
 
-// ---------- CARI ----------
-window.cariBarang = (teks) => {
-  kataCari = teks.toLowerCase().trim();
-  currentPage = 1;
-  render();
-};
-
-// ---------- RENDER ----------
 function render() {
   updateUI();
   let totalUntung = 0;
@@ -159,10 +173,7 @@ function render() {
       totalUntung += (j - (b.modal || 0)) * stokAngka;
     });
   }
-  let hasilCari = barang.filter(b =>
-    b.nama.toLowerCase().includes(kataCari) ||
-    (b.keterangan || '').toLowerCase().includes(kataCari)
-  );
+  let hasilCari = barang.filter(b => b.nama.toLowerCase().includes(kataCari) || (b.keterangan || '').toLowerCase().includes(kataCari));
   let totalPage = Math.max(1, Math.ceil(hasilCari.length / perPage));
   if (currentPage > totalPage) currentPage = totalPage;
   let list = hasilCari.slice((currentPage - 1) * perPage, currentPage * perPage);
@@ -174,29 +185,25 @@ function render() {
     let ket = bersihKet(b.keterangan);
     let tgl = b.tanggalUpdate || '-';
     let badgeBaru = isHariIni(b.tanggalUpdate) ? `<span class="badge-baru">BARU</span>` : '';
-    let tombolWA = `<div class="px-3 pb-3"><a href="https://wa.me/6281919194295?text=${encodeURIComponent(`Halo UD. BILAL, saya mau pesan ${b.nama} - Rp ${Number(j).toLocaleString('id-ID')}`)}" target="_blank" class="block text-center bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl">💬 PESAN VIA WHATSAPP</a></div>`;
-    let tombol = isLogin
-      ? `<div class="flex gap-2 px-3 pb-3">
+    let tombolWA = `<div class="px-3 pb-3"><a href="https://wa.me/${NOMOR_WA}?text=${encodeURIComponent(`Halo UD. BILAL, saya mau pesan ${b.nama} - Rp ${Number(j).toLocaleString('id-ID')}`)}" target="_blank" class="block text-center bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl">💬 PESAN VIA WHATSAPP</a></div>`;
+    let tombol = isLogin ? `<div class="flex gap-2 px-3 pb-3">
            <button onclick="editBarang('${b.id}')" class="flex-1 bg-green-500 text-white py-3 rounded-xl flex items-center justify-center">
              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
            </button>
            <button onclick="hapus('${b.id}')" class="flex-1 bg-red-500 text-white py-3 rounded-xl flex items-center justify-center">
              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
            </button>
-         </div>`
-      : ``;
-    let barisModal = isLogin
-      ? `<div class="mx-3 my-2 bg-gray-100 rounded-xl px-3 py-2.5 flex justify-between items-center"><span>💵 Harga Modal</span><span class="font-bold">Rp ${Number(modal).toLocaleString('id-ID')}</span></div>`
-      : '';
-    let barisUntung = isLogin
-      ? `<div class="mx-3 my-2 bg-gray-100 rounded-xl px-3 py-2.5 flex justify-between items-center"><span>↕️ Untung</span><span class="font-bold ${u >= 0 ? 'text-green-600' : 'text-red-600'}">Rp ${u.toLocaleString('id-ID')}</span></div>`
-      : '';
+         </div>` : ``;
+    let barisModal = isLogin ? `<div class="mx-3 my-2 bg-gray-100 rounded-xl px-3 py-2.5 flex justify-between items-center"><span>💵 Harga Modal</span><span class="font-bold">Rp ${Number(modal).toLocaleString('id-ID')}</span></div>` : '';
+    let barisUntung = isLogin ? `<div class="mx-3 my-2 bg-gray-100 rounded-xl px-3 py-2.5 flex justify-between items-center"><span>↕️ Untung</span><span class="font-bold ${u >= 0 ? 'text-green-600' : 'text-red-600'}">Rp ${u.toLocaleString('id-ID')}</span></div>` : '';
     let barisTanggal = `<div class="px-3 pt-2"><span class="last-update">Terakhir Update: ${aman(tgl)}</span></div>`;
+    let blokFoto = b.foto ? `<div class="px-3 pt-3"><img src="${b.foto}" onclick="bukaZoomFoto('${b.foto}')" class="w-full h-44 object-cover rounded-xl cursor-pointer" style="background:#eee;" alt="${aman(b.nama)}"><p class="text-center text-xs text-gray-400 mt-1">Klik foto untuk zoom / cubit</p></div>` : '';
     html += `<div class="border-2 border-gray-300 rounded-xl overflow-hidden">
       <div class="flex justify-between items-center bg-blue-50 px-3 py-2 border-b-2 border-gray-300">
         <span class="font-bold text-lg">${aman(b.nama)} ${badgeBaru}</span>
         <span class="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full">STOK: ${aman(tampilStok(b))}</span>
       </div>
+      ${blokFoto}
       ${barisTanggal}
       ${barisModal}
       <div class="mx-3 my-2 bg-gray-100 rounded-xl px-3 py-2.5 flex justify-between items-center"><span>🏷️ Harga Jual</span><span class="font-bold">Rp ${Number(j).toLocaleString('id-ID')}</span></div>
@@ -209,22 +216,15 @@ function render() {
   if (hasilCari.length === 0) html = `<p class="text-center text-gray-400 py-4">Barang gak ketemu, coba kata lain</p>`;
   document.getElementById('tabel').innerHTML = html;
   document.getElementById('infoPage').innerText = `Page ${currentPage} / ${totalPage} (Total ${hasilCari.length} barang)`;
-  document.querySelector('.footer').innerHTML = isLogin
-    ? `Total Jenis Produk: ${barang.length} | Total Untung: Rp ${totalUntung.toLocaleString('id-ID')}`
-    : `Total Jenis Produk: ${barang.length}`;
+  document.querySelector('.footer').innerHTML = isLogin ? `Total Jenis Produk: ${barang.length} | Total Untung: Rp ${totalUntung.toLocaleString('id-ID')}` : `Total Jenis Produk: ${barang.length}`;
 }
 
-// ---------- PAGING ----------
 window.gantiPage = (n) => {
   let tp = Math.max(1, Math.ceil(barang.length / perPage));
-  currentPage += n;
-  if (currentPage < 1) currentPage = 1;
-  if (currentPage > tp) currentPage = tp;
-  render();
-  window.scrollTo(0, 0);
+  currentPage += n; if (currentPage < 1) currentPage = 1; if (currentPage > tp) currentPage = tp;
+  render(); window.scrollTo(0, 0);
 };
 
-// ---------- SIMPAN - NYIMPEN 2x, ID SAMA ----------
 window.simpan = async () => {
   if (!isLogin) return alert("Harus Login dulu!");
   let nama = document.getElementById('nama').value.trim();
@@ -236,24 +236,25 @@ window.simpan = async () => {
   let tanggalUpdate = getTanggalHariIni();
   try {
     if (editId) {
-      await setDoc(doc(db, "barang_public", editId), { nama, jual, harga: jual, keterangan, stok, tanggalUpdate });
+      let dataPublic = { nama, jual, harga: jual, keterangan, stok, tanggalUpdate };
+      if (fotoBaruBase64) dataPublic.foto = fotoBaruBase64;
+      await setDoc(doc(db, "barang_public", editId), dataPublic);
       await setDoc(doc(db, "barang_private", editId), { modal });
-      editId = null;
-      document.getElementById('btnSimpan').innerText = "SIMPAN";
+      editId = null; document.getElementById('btnSimpan').innerText = "SIMPAN";
     } else {
-      let refBaru = await addDoc(collection(db, "barang_public"), { nama, jual, harga: jual, keterangan, stok, tanggalUpdate });
+      let dataBaru = { nama, jual, harga: jual, keterangan, stok, tanggalUpdate };
+      if (fotoBaruBase64) dataBaru.foto = fotoBaruBase64;
+      let refBaru = await addDoc(collection(db, "barang_public"), dataBaru);
       await setDoc(doc(db, "barang_private", refBaru.id), { modal });
     }
-    document.getElementById('nama').value = '';
-    document.getElementById('modal').value = '';
-    document.getElementById('harga').value = '';
-    document.getElementById('keterangan').value = '';
-    document.getElementById('stok').value = '';
+    fotoBaruBase64 = null;
+    const prev = document.getElementById('fotoPreview'); if(prev){ prev.src=''; prev.classList.add('hidden'); }
+    const inpFoto = document.getElementById('fotoInput'); if(inpFoto) inpFoto.value='';
+    document.getElementById('nama').value = ''; document.getElementById('modal').value = ''; document.getElementById('harga').value = ''; document.getElementById('keterangan').value = ''; document.getElementById('stok').value = '';
     document.getElementById('popupForm').classList.add('hidden');
   } catch (e) { alert("Gagal simpan! Cek Rules / UID."); }
 };
 
-// ---------- EDIT / HAPUS / BATAL ----------
 window.editBarang = (id) => {
   if (!isLogin) return alert("Harus Login dulu!");
   let b = barang.find(x => x.id === id);
@@ -263,31 +264,26 @@ window.editBarang = (id) => {
   document.getElementById('harga').value = b.jual || b.harga;
   document.getElementById('keterangan').value = bersihKet(b.keterangan);
   document.getElementById('stok').value = b.stok;
-  editId = id;
-  document.getElementById('btnSimpan').innerText = "UPDATE";
+  fotoBaruBase64 = null;
+  const prev = document.getElementById('fotoPreview');
+  if(prev){ if(b.foto){ prev.src=b.foto; prev.classList.remove('hidden'); } else { prev.src=''; prev.classList.add('hidden'); } }
+  editId = id; document.getElementById('btnSimpan').innerText = "UPDATE";
   document.getElementById('judulForm').innerText = 'Edit Barang';
   document.getElementById('popupForm').classList.remove('hidden');
 };
 window.hapus = async (id) => {
   if (!isLogin) return alert("Harus Login dulu!");
-  if (confirm("Hapus?")) {
-    await deleteDoc(doc(db, "barang_public", id));
-    await deleteDoc(doc(db, "barang_private", id));
-  }
+  if (confirm("Hapus?")) { await deleteDoc(doc(db, "barang_public", id)); await deleteDoc(doc(db, "barang_private", id)); }
 };
 window.batalEdit = () => {
-  editId = null;
-  document.getElementById('nama').value = '';
-  document.getElementById('modal').value = '';
-  document.getElementById('harga').value = '';
-  document.getElementById('keterangan').value = '';
-  document.getElementById('stok').value = '';
+  editId = null; fotoBaruBase64 = null;
+  const prev = document.getElementById('fotoPreview'); if(prev){ prev.src=''; prev.classList.add('hidden'); }
+  const inpFoto = document.getElementById('fotoInput'); if(inpFoto) inpFoto.value='';
+  document.getElementById('nama').value = ''; document.getElementById('modal').value = ''; document.getElementById('harga').value = ''; document.getElementById('keterangan').value = ''; document.getElementById('stok').value = '';
   document.getElementById('btnSimpan').innerText = "SIMPAN";
   document.getElementById('popupForm').classList.add('hidden');
 };
 
-// ---------- MIGRASI SEKALI AJA - PINDAHIN DATA LAMA ----------
-// Cara pakai: Login dulu jadi Admin, buka Console (F12), ketik: migrasiSekali()
 window.migrasiSekali = async () => {
   if (!isLogin) return alert("Login Admin dulu!");
   if (!confirm("Pindahin semua data lama dari 'barang' ke public/private?")) return;
@@ -299,5 +295,5 @@ window.migrasiSekali = async () => {
     await setDoc(doc(db, "barang_private", d.id), { modal: Number(data.modal || 0) });
     jumlah++;
   }
-  alert("Berhasil pindahin " + jumlah + " barang! Sekarang data lama 'barang' boleh dihapus manual di Firebase.");
+  alert("Berhasil pindahin " + jumlah + " barang!");
 };
