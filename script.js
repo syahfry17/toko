@@ -93,7 +93,7 @@ window.batalCrop = () => { const m=el('cropModal'); if(m) m.classList.add('hidde
 window.potongFoto = () => {
   const img = el('cropImg'); const box = el('cropBox'); if(!img||!box) return;
   const frameW = box.clientWidth * 0.92; const frameH = box.clientHeight * 0.82;
-  const canvas = document.createElement('canvas'); canvas.width = 600; canvas.height = Math.round(600 * frameH / frameW);
+  const canvas = document.createElement('canvas'); canvas.width = 400; canvas.height = Math.round(400 * frameH / frameW);
   const ctx = canvas.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,canvas.width,canvas.height);
   const dispW = cropImgW * cropScale; const dispH = cropImgH * cropScale;
   const imgLeft = box.clientWidth/2 + cropX - dispW/2; const imgTop = box.clientHeight/2 + cropY - dispH/2;
@@ -101,17 +101,21 @@ window.potongFoto = () => {
   const sx = (frameLeft - imgLeft) / dispW * img.naturalWidth; const sy = (frameTop - imgTop) / dispH * img.naturalHeight;
   const sw = frameW / dispW * img.naturalWidth; const sh = frameH / dispH * img.naturalHeight;
   ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-  const hasil = canvas.toDataURL('image/jpeg', 0.7); window.FOTO_BARU = hasil;
+  // Kompres otomatis: WebP dulu (lebih kecil ~30%), kalau browser gak dukung fallback ke JPEG
+  let hasil = canvas.toDataURL('image/webp', 0.78);
+  if(!hasil.startsWith('data:image/webp')) hasil = canvas.toDataURL('image/jpeg', 0.72);
+  let ukKB = Math.round(hasil.length / 1024);
+  window.FOTO_BARU = hasil;
   const prev = el('fotoPreview'); if(prev){ prev.src = hasil; prev.classList.remove('hidden'); }
-  const st = el('fotoStatus'); if(st) st.innerText = '✅ Foto udah di-crop & dikecilin, tinggal pencet UPDATE / SIMPAN!';
-  const m=el('cropModal'); if(m) m.classList.add('hidden'); toast('✅ Foto udah dikecilin, jadi ngebut!');
+  const st = el('fotoStatus'); if(st) st.innerText = `✅ Foto otomatis dikompres jadi ${ukKB} KB (WebP), tinggal pencet UPDATE / SIMPAN!`;
+  const m=el('cropModal'); if(m) m.classList.add('hidden'); toast(`✅ Foto dikecilin jadi ${ukKB} KB, website tetap ngebut!`);
 };
 function olahFoto(file){
   if(!file) return;
   const imgTemp = new Image();
   const url = URL.createObjectURL(file);
   imgTemp.onload = () => {
-    const max = 1200; let w = imgTemp.naturalWidth, h = imgTemp.naturalHeight;
+    const max = 1000; let w = imgTemp.naturalWidth, h = imgTemp.naturalHeight;
     if(w > max || h > max){ let r = Math.min(max/w, max/h); w = Math.round(w*r); h = Math.round(h*r); }
     const c = document.createElement('canvas'); c.width = w; c.height = h;
     c.getContext('2d').drawImage(imgTemp, 0, 0, w, h);
