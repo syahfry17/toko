@@ -1,4 +1,4 @@
-// UD. BILAL - script.js v105 - 2 HALAMAN: PENGUNJUNG + ADMIN - TANPA POPUP - CROP ANTI LONCAT
+// UD. BILAL - script.js v106 - 2 HALAMAN AMAN - FIX TOTAL 0
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, deleteDoc, doc, setDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -22,37 +22,25 @@ let barangPrivate = {};
 let barang = [];
 let editId = null;
 let currentPage = 1;
-const perPage = 10; // 2 kolom x 5 baris
+const perPage = 10;
 let isLogin = false;
 let kataCari = '';
 let unsubPrivate = null;
 window.FOTO_BARU = null;
 let qtyMap = {};
-
-// DETEKSI HALAMAN: kalau URL-nya ada kata "admin", berarti halaman admin
 const IS_ADMIN_PAGE = window.location.pathname.includes('admin');
-
-// ===== TOAST, BUKAN ALERT =====
+function el(id){ return document.getElementById(id); }
 function toast(pesan){
   let t = document.getElementById('toastBilal');
-  if(!t){
-    t = document.createElement('div');
-    t.id = 'toastBilal';
-    t.style.cssText = 'position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#16a34a;color:#fff;padding:12px 18px;border-radius:99px;font-weight:700;font-size:14px;z-index:9999;box-shadow:0 4px 15px rgba(0,0,0,0.3);max-width:90%;text-align:center;';
-    document.body.appendChild(t);
-  }
+  if(!t){ t = document.createElement('div'); t.id = 'toastBilal'; t.style.cssText = 'position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#16a34a;color:#fff;padding:12px 18px;border-radius:99px;font-weight:700;font-size:14px;z-index:9999;box-shadow:0 4px 15px rgba(0,0,0,0.3);max-width:90%;text-align:center;'; document.body.appendChild(t); }
   t.style.background = '#16a34a'; t.innerText = pesan; t.style.display = 'block';
   clearTimeout(t._timer); t._timer = setTimeout(()=>{ t.style.display='none'; }, 2000);
 }
 function toastError(pesan){
-  let t = document.getElementById('toastBilal');
-  if(!t){ toast(pesan); return; }
+  let t = document.getElementById('toastBilal'); if(!t){ toast(pesan); return; }
   t.style.background = '#ef4444'; t.innerText = pesan; t.style.display = 'block';
   clearTimeout(t._timer); t._timer = setTimeout(()=>{ t.style.display='none'; t.style.background='#16a34a'; }, 2500);
 }
-function el(id){ return document.getElementById(id); }
-
-// ===== CROP ANTI LONCAT =====
 let cropScale = 1, cropX = 0, cropY = 0, cropImgW = 0, cropImgH = 0;
 let cropStartX = 0, cropStartY = 0, cropStartPX = 0, cropStartPY = 0, cropDragging = false, cropPointerId = null;
 function clampCrop(){
@@ -63,8 +51,7 @@ function clampCrop(){
   cropX = Math.max(-maxX, Math.min(maxX, cropX)); cropY = Math.max(-maxY, Math.min(maxY, cropY));
 }
 function updateCropTransform(){
-  clampCrop();
-  const img = el('cropImg'); if(!img) return;
+  clampCrop(); const img = el('cropImg'); if(!img) return;
   img.style.transform = `translate(calc(-50% + ${cropX}px), calc(-50% + ${cropY}px)) scale(${cropScale})`;
   const lbl = el('zoomLabel'); if(lbl) lbl.innerText = Math.round(cropScale*100) + '%';
 }
@@ -73,21 +60,13 @@ window.zoomTambah = () => { cropScale = Math.min(3, cropScale + 0.2); const sl=e
 window.zoomKurang = () => { cropScale = Math.max(1, cropScale - 0.2); const sl=el('zoomSlider'); if(sl) sl.value=Math.round(cropScale*100); updateCropTransform(); };
 window.resetCrop = () => { cropScale=1; cropX=0; cropY=0; const sl=el('zoomSlider'); if(sl) sl.value=100; updateCropTransform(); };
 function bukaCrop(base64){
-  cropScale = 1; cropX = 0; cropY = 0;
-  const img = el('cropImg'); if(!img) return;
-  img.src = base64;
-  img.onload = () => {
-    const box = el('cropBox');
-    const scaleFit = Math.max(box.clientWidth / img.naturalWidth, box.clientHeight / img.naturalHeight);
-    cropImgW = img.naturalWidth * scaleFit; cropImgH = img.naturalHeight * scaleFit;
-    img.style.width = cropImgW + 'px'; img.style.height = cropImgH + 'px'; updateCropTransform();
-  };
-  const sl = el('zoomSlider'); if(sl) sl.value = 100;
-  el('cropModal').classList.remove('hidden');
+  cropScale = 1; cropX = 0; cropY = 0; const img = el('cropImg'); if(!img) return; img.src = base64;
+  img.onload = () => { const box = el('cropBox'); const scaleFit = Math.max(box.clientWidth / img.naturalWidth, box.clientHeight / img.naturalHeight); cropImgW = img.naturalWidth * scaleFit; cropImgH = img.naturalHeight * scaleFit; img.style.width = cropImgW + 'px'; img.style.height = cropImgH + 'px'; updateCropTransform(); };
+  const sl = el('zoomSlider'); if(sl) sl.value = 100; const m=el('cropModal'); if(m) m.classList.remove('hidden');
 }
 window.batalCrop = () => { const m=el('cropModal'); if(m) m.classList.add('hidden'); const inp=el('fotoInput'); if(inp) inp.value=''; };
 window.potongFoto = () => {
-  const img = el('cropImg'); const box = el('cropBox');
+  const img = el('cropImg'); const box = el('cropBox'); if(!img||!box) return;
   const frameW = box.clientWidth * 0.92; const frameH = box.clientHeight * 0.82;
   const canvas = document.createElement('canvas'); canvas.width = 800; canvas.height = Math.round(800 * frameH / frameW);
   const ctx = canvas.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -100,7 +79,7 @@ window.potongFoto = () => {
   const hasil = canvas.toDataURL('image/jpeg', 0.8); window.FOTO_BARU = hasil;
   const prev = el('fotoPreview'); if(prev){ prev.src = hasil; prev.classList.remove('hidden'); }
   const st = el('fotoStatus'); if(st) st.innerText = '✅ Foto udah di-crop, tinggal pencet UPDATE / SIMPAN!';
-  el('cropModal').classList.add('hidden'); toast('✅ Foto udah di-crop!');
+  const m=el('cropModal'); if(m) m.classList.add('hidden'); toast('✅ Foto udah di-crop!');
 };
 function olahFoto(file){ if(!file) return; const reader = new FileReader(); reader.onload = (e) => { bukaCrop(e.target.result); }; reader.readAsDataURL(file); }
 window.previewFoto = function(input){ if(input.files[0]) olahFoto(input.files[0]); };
@@ -112,127 +91,66 @@ document.addEventListener('DOMContentLoaded', () => {
   const endDrag=(e)=>{ if(e.pointerId===cropPointerId){ cropDragging=false; cropPointerId=null; } };
   box.addEventListener('pointerup', endDrag); box.addEventListener('pointercancel', endDrag);
 });
-
 function getTanggalHariIni() { return new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }); }
 function isHariIni(tgl) { if (!tgl) return false; return tgl === getTanggalHariIni(); }
 function bersihKet(teks) { if (!teks) return ''; return teks.toString().replace(/^\s*\/\s*/, '').trim(); }
 function aman(teks) { return String(teks ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function tampilStok(b) { let s = (b.stok ?? '').toString().trim(); if (!s) return '0'; return s; }
 function gabungData() { barang = barangPublic.map(p => ({ ...p, modal: (barangPrivate[p.id] ? barangPrivate[p.id].modal : 0) })); render(); }
-
 onSnapshot(query(collection(db, "barang_public"), orderBy("nama")), (snap) => { barangPublic = snap.docs.map(d => ({ id: d.id, ...d.data() })); gabungData(); });
-function mulaiDengarPrivate() {
-  if (unsubPrivate) return;
-  unsubPrivate = onSnapshot(query(collection(db, "barang_private")), (snap) => { barangPrivate = {}; snap.docs.forEach(d => { barangPrivate[d.id] = d.data(); }); gabungData(); });
-}
+function mulaiDengarPrivate() { if (unsubPrivate) return; unsubPrivate = onSnapshot(query(collection(db, "barang_private")), (snap) => { barangPrivate = {}; snap.docs.forEach(d => { barangPrivate[d.id] = d.data(); }); gabungData(); }); }
 function stopDengarPrivate() { if (unsubPrivate) { unsubPrivate(); unsubPrivate = null; } barangPrivate = {}; gabungData(); }
-
-onAuthStateChanged(auth, (user) => {
-  isLogin = !!user && user.uid === ADMIN_UID;
-  if (isLogin) mulaiDengarPrivate(); else stopDengarPrivate();
-  updateUI(); render();
-});
+onAuthStateChanged(auth, (user) => { isLogin = !!user && user.uid === ADMIN_UID; if (isLogin) mulaiDengarPrivate(); else stopDengarPrivate(); updateUI(); render(); });
 function updateUI() {
   const st = el('statusLogin'); if(st){ st.innerText = isLogin ? '✅ Login Admin - ' + (auth.currentUser ? auth.currentUser.email : '') : '🔒 Mode Lihat Saja'; st.className = isLogin ? 'text-sm font-bold text-green-600' : 'text-sm font-bold text-red-500'; }
   const bl = el('btnLogin'); if(bl) bl.innerText = isLogin ? 'LOGOUT' : 'LOGIN';
   const bt = el('btnTambah'); if(bt){ if(isLogin) bt.classList.remove('hidden'); else bt.classList.add('hidden'); }
+  const saved = localStorage.getItem('emailAdminBilal'); const inpE = el('inputEmail'); if(inpE && saved) inpE.value = saved;
 }
-window.toggleLogin = async () => {
-  if (!IS_ADMIN_PAGE) return;
-  if (isLogin) { await signOut(auth); toast('Berhasil Logout'); return; }
-  el('boxLogin').classList.toggle('hidden');
-};
+window.toggleLogin = async () => { if (!IS_ADMIN_PAGE) return; if (isLogin) { await signOut(auth); toast('Berhasil Logout'); return; } const b=el('boxLogin'); if(b) b.classList.toggle('hidden'); };
 window.doLogin = async () => {
-  let email = el('inputEmail').value.trim(); let pass = el('inputPass').value;
+  let email = el('inputEmail') ? el('inputEmail').value.trim() : ''; let pass = el('inputPass') ? el('inputPass').value : '';
   if (!email || !pass){ toastError("Isi Email & Password dulu!"); return; }
-  try { let hasil = await signInWithEmailAndPassword(auth, email, pass); if (hasil.user.uid !== ADMIN_UID) { await signOut(auth); toastError("Akun ini bukan Admin!"); return; } el('boxLogin').classList.add('hidden'); el('inputPass').value = ''; toast('Login Berhasil!'); } catch (e) { toastError('Gagal Login!'); }
+  try { let hasil = await signInWithEmailAndPassword(auth, email, pass); if (hasil.user.uid !== ADMIN_UID) { await signOut(auth); toastError("Akun ini bukan Admin!"); return; } const b=el('boxLogin'); if(b) b.classList.add('hidden'); if(el('inputPass')) el('inputPass').value = ''; toast('Login Berhasil!'); } catch (e) { toastError('Gagal Login!'); }
 };
-window.bukaForm = () => { if (!isLogin){ toastError("Harus Login dulu!"); return; } el('judulForm').innerText = editId ? 'Edit Barang' : 'Tambah Barang'; el('popupForm').classList.remove('hidden'); };
+window.bukaForm = () => { if (!isLogin){ toastError("Harus Login dulu!"); return; } const j=el('judulForm'); if(j) j.innerText = editId ? 'Edit Barang' : 'Tambah Barang'; const p=el('popupForm'); if(p) p.classList.remove('hidden'); };
 window.tutupForm = () => { const p=el('popupForm'); if(p) p.classList.add('hidden'); };
 window.cariBarang = (teks) => { kataCari = teks.toLowerCase().trim(); currentPage = 1; render(); };
 window.bukaZoomFoto = (id) => {
   const b = barang.find(x => x.id === id); if(!b || !b.foto) return;
   let modal = document.getElementById('modalZoomFoto'); if(modal) modal.remove();
-  modal = document.createElement('div'); modal.id = 'modalZoomFoto';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:100;display:flex;align-items:center;justify-content:center;';
+  modal = document.createElement('div'); modal.id = 'modalZoomFoto'; modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:100;display:flex;align-items:center;justify-content:center;';
   modal.innerHTML = `<img src="${b.foto}" style="max-width:95%;max-height:90%;"><button onclick="document.getElementById('modalZoomFoto').remove()" style="position:absolute;top:15px;right:15px;background:white;width:36px;height:36px;border-radius:50%;font-weight:bold;">✕</button>`;
   modal.addEventListener('click', (e)=>{ if(e.target === modal) modal.remove(); }); document.body.appendChild(modal);
 };
-
-// ===== QTY & BELI =====
-window.ubahQty = (id, delta) => {
-  let q = qtyMap[id] || 1; q += delta; if(q<1) q=1; if(q>99) q=99; qtyMap[id]=q;
-  let elm = document.getElementById('qty-'+id); if(elm) elm.innerText = q;
-};
+window.ubahQty = (id, delta) => { let q = qtyMap[id] || 1; q += delta; if(q<1) q=1; if(q>99) q=99; qtyMap[id]=q; let elm = document.getElementById('qty-'+id); if(elm) elm.innerText = q; };
 window.beliSekarang = (id) => {
-  const b = barang.find(x => x.id === id); if(!b) return;
-  let q = qtyMap[id] || 1; let j = b.jual || b.harga || 0;
-  let total = q * j;
+  const b = barang.find(x => x.id === id); if(!b) return; let q = qtyMap[id] || 1; let j = b.jual || b.harga || 0; let total = q * j;
   let pesan = `Halo UD. BILAL, saya mau pesan:\n- ${b.nama}\n- Jumlah: ${q}\n- Harga: Rp ${Number(j).toLocaleString('id-ID')} / pcs\n- Total: Rp ${Number(total).toLocaleString('id-ID')}`;
   window.open(`https://wa.me/${NOMOR_WA}?text=${encodeURIComponent(pesan)}`, '_blank');
 };
-
-// ===== RENDER - BEDA PENGUNJUNG VS ADMIN =====
 function render() {
   updateUI();
   let totalUntung = 0;
   if (isLogin) { barang.forEach(b => { let j = b.jual || b.harga || 0; let stokAngka = parseFloat(String(b.stok ?? '').replace(',', '.')) || 0; totalUntung += (j - (b.modal || 0)) * stokAngka; }); }
   let hasilCari = barang.filter(b => b.nama.toLowerCase().includes(kataCari) || (b.keterangan || '').toLowerCase().includes(kataCari));
-  let totalPage = Math.max(1, Math.ceil(hasilCari.length / perPage));
-  if (currentPage > totalPage) currentPage = totalPage;
-  let list = hasilCari.slice((currentPage - 1) * perPage, currentPage * perPage);
-  let html = '';
+  let totalPage = Math.max(1, Math.ceil(hasilCari.length / perPage)); if (currentPage > totalPage) currentPage = totalPage;
+  let list = hasilCari.slice((currentPage - 1) * perPage, currentPage * perPage); let html = '';
   list.forEach(b => {
-    let j = b.jual || b.harga || 0; let modal = b.modal || 0; let u = j - modal;
-    let ket = bersihKet(b.keterangan); let tgl = b.tanggalUpdate || '-';
-    let badgeBaru = isHariIni(b.tanggalUpdate) ? `<span class="badge-baru">BARU</span>` : '';
-    let q = qtyMap[b.id] || 1;
+    let j = b.jual || b.harga || 0; let modal = b.modal || 0; let u = j - modal; let ket = bersihKet(b.keterangan); let tgl = b.tanggalUpdate || '-';
+    let badgeBaru = isHariIni(b.tanggalUpdate) ? `<span class="badge-baru">BARU</span>` : ''; let q = qtyMap[b.id] || 1;
     let foto = b.foto ? `<img src="${b.foto}" onclick="bukaZoomFoto('${b.id}')" class="foto-produk cursor-pointer" alt="${aman(b.nama)}">` : `<div class="w-full flex items-center justify-center text-gray-400 text-xs" style="aspect-ratio:1/1;background:#f8f8f8;">Belum ada foto</div>`;
-
-    // --- KARTU SAMA UNTUK 2 HALAMAN: Nama / Harga / Keterangan / Qty / WA ---
-    let isiKartu = `
-      <div class="p-2 text-center flex-1 flex flex-col">
-        <p class="font-bold text-[15px] leading-tight line-clamp-2 min-h-[38px]">${aman(b.nama)}</p>
-        <p class="text-gray-400 font-bold text-[14px] mt-1">Rp${Number(j).toLocaleString('id-ID')}</p>
-        <p class="text-[12px] text-gray-500 mt-1 min-h-[18px]">${ket ? aman(ket) : '-'}</p>
-        <div class="flex items-center justify-center gap-0 mt-2 border rounded-lg overflow-hidden w-fit mx-auto">
-          <button onclick="ubahQty('${b.id}', -1)" class="qty-btn">-</button>
-          <span id="qty-${b.id}" class="w-8 text-center font-bold text-[14px]">${q}</span>
-          <button onclick="ubahQty('${b.id}', 1)" class="qty-btn">+</button>
-        </div>
-        <button onclick="beliSekarang('${b.id}')" class="w-full mt-2 py-2.5 rounded-lg font-bold text-white text-[13px]" style="background:#7cb342;">💬 Pesan via WA</button>
-        <p class="last-update mt-1">${aman(tgl)}</p>
-      </div>`;
-
+    let isiKartu = `<div class="p-2 text-center flex-1 flex flex-col"><p class="font-bold text-[15px] leading-tight line-clamp-2 min-h-[38px]">${aman(b.nama)}</p><p class="text-gray-400 font-bold text-[14px] mt-1">Rp${Number(j).toLocaleString('id-ID')}</p><p class="text-[12px] text-gray-500 mt-1 min-h-[18px]">${ket ? aman(ket) : '-'}</p><div class="flex items-center justify-center gap-0 mt-2 border rounded-lg overflow-hidden w-fit mx-auto"><button onclick="ubahQty('${b.id}', -1)" class="qty-btn">-</button><span id="qty-${b.id}" class="w-8 text-center font-bold text-[14px]">${q}</span><button onclick="ubahQty('${b.id}', 1)" class="qty-btn">+</button></div><button onclick="beliSekarang('${b.id}')" class="w-full mt-2 py-2.5 rounded-lg font-bold text-white text-[13px]" style="background:#7cb342;">💬 Pesan via WA</button><p class="last-update mt-1">${aman(tgl)}</p></div>`;
     let infoAdmin = '';
-    if (IS_ADMIN_PAGE) {
-      // HALAMAN ADMIN: Selalu tampilkan Modal / Untung / Stok / Edit / Hapus
-      infoAdmin = `<div class="px-2 pb-1 text-[11px] text-gray-500 space-y-0.5 border-t pt-1">
-        <div class="flex justify-between"><span>Modal</span><b>Rp ${Number(modal).toLocaleString('id-ID')}</b></div>
-        <div class="flex justify-between"><span>Untung</span><b class="${u>=0?'text-green-600':'text-red-600'}">Rp ${u.toLocaleString('id-ID')}</b></div>
-        <div class="flex justify-between"><span>Stok</span><b>${aman(tampilStok(b))}</b></div>
-      </div>
-      <div class="flex gap-1 px-2 pb-2">
-        <button onclick="editBarang('${b.id}')" class="flex-1 bg-yellow-400 text-white py-1.5 rounded-lg text-xs font-bold">✏️ Edit</button>
-        <button onclick="hapus('${b.id}')" class="flex-1 bg-red-500 text-white py-1.5 rounded-lg text-xs font-bold">🗑️ Hapus</button>
-      </div>`;
-    } else {
-      // HALAMAN PENGUNJUNG: Cuma Stok, GAK ADA Edit / Hapus / Modal / Untung
-      infoAdmin = `<div class="px-2 pb-2 text-center"><span class="text-[11px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-bold">STOK: ${aman(tampilStok(b))}</span></div>`;
-    }
-
-    html += `<div class="kartu">
-      <div class="relative">${foto}<div class="absolute top-1 left-1">${badgeBaru}</div></div>
-      ${isiKartu}
-      ${infoAdmin}
-    </div>`;
+    if (IS_ADMIN_PAGE) { infoAdmin = `<div class="px-2 pb-1 text-[11px] text-gray-500 space-y-0.5 border-t pt-1"><div class="flex justify-between"><span>Modal</span><b>Rp ${Number(modal).toLocaleString('id-ID')}</b></div><div class="flex justify-between"><span>Untung</span><b class="${u>=0?'text-green-600':'text-red-600'}">Rp ${u.toLocaleString('id-ID')}</b></div><div class="flex justify-between"><span>Stok</span><b>${aman(tampilStok(b))}</b></div></div><div class="flex gap-1 px-2 pb-2"><button onclick="editBarang('${b.id}')" class="flex-1 bg-yellow-400 text-white py-1.5 rounded-lg text-xs font-bold">✏️ Edit</button><button onclick="hapus('${b.id}')" class="flex-1 bg-red-500 text-white py-1.5 rounded-lg text-xs font-bold">🗑️ Hapus</button></div>`; }
+    else { infoAdmin = `<div class="px-2 pb-2 text-center"><span class="text-[11px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-bold">STOK: ${aman(tampilStok(b))}</span></div>`; }
+    html += `<div class="kartu"><div class="relative">${foto}<div class="absolute top-1 left-1">${badgeBaru}</div></div>${isiKartu}${infoAdmin}</div>`;
   });
   if (hasilCari.length === 0) html = `<p class="text-center text-gray-400 py-4 col-span-2">Barang gak ketemu, coba kata lain</p>`;
   const tabel = el('tabel'); if(tabel) tabel.innerHTML = html;
   const info = el('infoPage'); if(info) info.innerText = `Page ${currentPage} / ${totalPage} (Total ${hasilCari.length} barang)`;
   const foot = document.querySelector('.footer'); if(foot) foot.innerHTML = (IS_ADMIN_PAGE && isLogin) ? `Total Jenis Produk: ${barang.length} | Total Untung: Rp ${totalUntung.toLocaleString('id-ID')}` : `Total Jenis Produk: ${barang.length}`;
 }
-
 window.gantiPage = (n) => { let tp = Math.max(1, Math.ceil(barang.length / perPage)); currentPage += n; if (currentPage < 1) currentPage = 1; if (currentPage > tp) currentPage = tp; render(); window.scrollTo(0, 0); };
 window.simpan = async () => {
   if (!isLogin){ toastError("Harus Login dulu!"); return; }
@@ -240,28 +158,17 @@ window.simpan = async () => {
   if (!nama || !modal || !jual || !stok){ toastError("Isi dulu!"); return; }
   let tanggalUpdate = getTanggalHariIni(); let fotoBaru = window.FOTO_BARU || null;
   try {
-    if (editId) {
-      let dataPublic = { nama, jual, harga: jual, keterangan, stok, tanggalUpdate };
-      if (fotoBaru) dataPublic.foto = fotoBaru; else { let lama = barang.find(x => x.id === editId); if(lama && lama.foto) dataPublic.foto = lama.foto; }
-      await setDoc(doc(db, "barang_public", editId), dataPublic); await setDoc(doc(db, "barang_private", editId), { modal }); editId = null; el('btnSimpan').innerText = "SIMPAN";
-    } else {
-      let dataBaru = { nama, jual, harga: jual, keterangan, stok, tanggalUpdate }; if (fotoBaru) dataBaru.foto = fotoBaru;
-      let refBaru = await addDoc(collection(db, "barang_public"), dataBaru); await setDoc(doc(db, "barang_private", refBaru.id), { modal });
-    }
+    if (editId) { let dataPublic = { nama, jual, harga: jual, keterangan, stok, tanggalUpdate }; if (fotoBaru) dataPublic.foto = fotoBaru; else { let lama = barang.find(x => x.id === editId); if(lama && lama.foto) dataPublic.foto = lama.foto; } await setDoc(doc(db, "barang_public", editId), dataPublic); await setDoc(doc(db, "barang_private", editId), { modal }); editId = null; if(el('btnSimpan')) el('btnSimpan').innerText = "SIMPAN"; }
+    else { let dataBaru = { nama, jual, harga: jual, keterangan, stok, tanggalUpdate }; if (fotoBaru) dataBaru.foto = fotoBaru; let refBaru = await addDoc(collection(db, "barang_public"), dataBaru); await setDoc(doc(db, "barang_private", refBaru.id), { modal }); }
     window.FOTO_BARU = null; const prev = el('fotoPreview'); if(prev){ prev.src=''; prev.classList.add('hidden'); } const inpFoto = el('fotoInput'); if(inpFoto) inpFoto.value=''; const st = el('fotoStatus'); if(st) st.innerText='';
-    el('nama').value = ''; el('modal').value = ''; el('harga').value = ''; el('keterangan').value = ''; el('stok').value = '';
-    el('popupForm').classList.add('hidden'); toast('✅ Berhasil disimpan!');
+    el('nama').value = ''; el('modal').value = ''; el('harga').value = ''; el('keterangan').value = ''; el('stok').value = ''; const pf=el('popupForm'); if(pf) pf.classList.add('hidden'); toast('✅ Berhasil disimpan!');
   } catch (e) { toastError("Gagal simpan! Foto kegedean, coba foto lain."); }
 };
 window.editBarang = (id) => {
   if (!isLogin){ toastError("Harus Login dulu!"); return; } let b = barang.find(x => x.id === id); if (!b){ toastError("Barang gak ketemu, refresh dulu!"); return; }
   el('nama').value = b.nama; el('modal').value = b.modal || ''; el('harga').value = b.jual || b.harga; el('keterangan').value = bersihKet(b.keterangan); el('stok').value = b.stok; window.FOTO_BARU = null;
-  const prev = el('fotoPreview'); const st = el('fotoStatus');
-  if(prev){ if(b.foto){ prev.src=b.foto; prev.classList.remove('hidden'); if(st) st.innerText='Foto lama masih ada. Pilih foto baru kalau mau ganti.'; } else { prev.src=''; prev.classList.add('hidden'); if(st) st.innerText='Belum ada foto, silahkan pilih foto.'; } }
-  const inpFoto = el('fotoInput'); if(inpFoto) inpFoto.value=''; editId = id; el('btnSimpan').innerText = "UPDATE"; el('judulForm').innerText = 'Edit Barang'; el('popupForm').classList.remove('hidden');
+  const prev = el('fotoPreview'); const st = el('fotoStatus'); if(prev){ if(b.foto){ prev.src=b.foto; prev.classList.remove('hidden'); if(st) st.innerText='Foto lama masih ada. Pilih foto baru kalau mau ganti.'; } else { prev.src=''; prev.classList.add('hidden'); if(st) st.innerText='Belum ada foto, silahkan pilih foto.'; } }
+  const inpFoto = el('fotoInput'); if(inpFoto) inpFoto.value=''; editId = id; if(el('btnSimpan')) el('btnSimpan').innerText = "UPDATE"; if(el('judulForm')) el('judulForm').innerText = 'Edit Barang'; const pf=el('popupForm'); if(pf) pf.classList.remove('hidden');
 };
 window.hapus = async (id) => { if (!isLogin){ toastError("Harus Login dulu!"); return; } if (confirm("Hapus?")) { await deleteDoc(doc(db, "barang_public", id)); await deleteDoc(doc(db, "barang_private", id)); toast('Barang dihapus'); } };
-window.batalEdit = () => {
-  editId = null; window.FOTO_BARU = null; const prev = el('fotoPreview'); if(prev){ prev.src=''; prev.classList.add('hidden'); } const inpFoto = el('fotoInput'); if(inpFoto) inpFoto.value=''; const st = el('fotoStatus'); if(st) st.innerText='';
-  el('nama').value = ''; el('modal').value = ''; el('harga').value = ''; el('keterangan').value = ''; el('stok').value = ''; el('btnSimpan').innerText = "SIMPAN"; el('popupForm').classList.add('hidden');
-};
+window.batalEdit = () => { editId = null; window.FOTO_BARU = null; const prev = el('fotoPreview'); if(prev){ prev.src=''; prev.classList.add('hidden'); } const inpFoto = el('fotoInput'); if(inpFoto) inpFoto.value=''; const st = el('fotoStatus'); if(st) st.innerText=''; if(el('nama')) el('nama').value=''; if(el('modal')) el('modal').value=''; if(el('harga')) el('harga').value=''; if(el('keterangan')) el('keterangan').value=''; if(el('stok')) el('stok').value=''; if(el('btnSimpan')) el('btnSimpan').innerText = "SIMPAN"; const pf=el('popupForm'); if(pf) pf.classList.add('hidden'); };
