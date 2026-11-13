@@ -1,4 +1,4 @@
-// UD. BILAL - script.js v109 - OPTIMIZED: Firebase lazy-load + cache lokal, auth hanya di admin
+// UD. BILAL - script.js v114 - OPTIMIZED: Firebase lazy-load + cache lokal, auth hanya di admin
 const firebaseConfig = {
   apiKey: "AIzaSyAhce1AyhPGe1cDkIzcBcgAFFOXC2Isxx0",
   authDomain: "toko-bilal.firebaseapp.com",
@@ -26,8 +26,8 @@ let lastDataHash = '';
 
 // === Firebase lazy-load (tidak blokir tampilan pertama) ===
 let app = null, db = null, auth = null;
-let fb = {};
-let fbAuth = {};
+let fb = {};        // fungsi firestore: collection, addDoc, deleteDoc, doc, setDoc, onSnapshot, query, orderBy
+let fbAuth = {};    // fungsi auth: signInWithEmailAndPassword, signOut, onAuthStateChanged
 let fbInitPromise = null;
 function initFirebase(){
   if (fbInitPromise) return fbInitPromise;
@@ -189,7 +189,7 @@ function render() {
     let j = b.jual || b.harga || 0; let modal = b.modal || 0; let u = j - modal; let ket = bersihKet(b.keterangan); let tgl = b.tanggalUpdate || '-';
     let badgeBaru = isHariIni(b.tanggalUpdate) ? `<span class="badge-baru">BARU</span>` : ''; let q = qtyMap[b.id] || 1;
     let foto = b.foto ? `<img loading="lazy" decoding="async" src="${b.foto}" onclick="bukaZoomFoto('${b.id}')" class="foto-produk cursor-pointer" alt="${aman(b.nama)}">` : `<div class="w-full flex items-center justify-center text-gray-400 text-xs" style="aspect-ratio:1/1;background:#f8f8f8;">Belum ada foto</div>`;
-    let isiKartu = `<div class="p-2 text-center flex-1 flex flex-col"><p class="font-bold text-[15px] leading-tight line-clamp-2 min-h-[38px]">${aman(b.nama)}</p><p class="text-gray-400 font-bold text-[14px] mt-1">Rp${Number(j).toLocaleString('id-ID')}</p><p class="text-[12px] text-gray-500 mt-1 min-h-[18px]">${ket ? aman(ket) : '-'}</p><div class="flex items-center justify-center gap-0 mt-2 border rounded-lg overflow-hidden w-fit mx-auto"><button onclick="ubahQty('${b.id}', -1)" class="qty-btn">-</button><span id="qty-${b.id}" class="w-8 text-center font-bold text-[14px]">${q}</span><button onclick="ubahQty('${b.id}', 1)" class="qty-btn">+</button></div><button onclick="beliSekarang('${b.id}')" class="w-full mt-2 py-2.5 rounded-lg font-bold text-white text-[13px]" style="background:#7cb342;">💬 Pesan via WA</button>${IS_ADMIN_PAGE ? '<p class="last-update mt-1">Update ' + aman(tgl) + '</p>' : ''}</div>`;
+    let isiKartu = `<div class="p-2 text-center flex-1 flex flex-col"><p class="font-bold text-[15px] leading-tight line-clamp-2 min-h-[38px]">${aman(b.nama)}</p><p class="text-gray-400 font-bold text-[14px] mt-1">Rp${Number(j).toLocaleString('id-ID')}</p><p class="text-[12px] text-gray-500 mt-1 min-h-[18px]">${ket ? aman(ket) : '-'}</p><div class="flex items-center justify-center gap-0 mt-2 border rounded-lg overflow-hidden w-fit mx-auto"><button onclick="ubahQty('${b.id}', -1)" class="qty-btn">-</button><span id="qty-${b.id}" class="w-8 text-center font-bold text-[14px]">${q}</span><button onclick="ubahQty('${b.id}', 1)" class="qty-btn">+</button></div><button onclick="beliSekarang('${b.id}')" class="w-full mt-2 py-2.5 rounded-lg font-bold text-white text-[13px]" style="background:#7cb342;">💬 Pesan via WA</button>${IS_ADMIN_PAGE ? '<p class="last-update mt-1">Update 23 Nov 2026</p>' : ''}</div>`;
     let infoAdmin = '';
     if (IS_ADMIN_PAGE) { infoAdmin = `<div class="px-2 pb-1 text-[11px] text-gray-500 space-y-0.5 border-t pt-1"><div class="flex justify-between"><span>Modal</span><b>Rp ${Number(modal).toLocaleString('id-ID')}</b></div><div class="flex justify-between"><span>Untung</span><b class="${u>=0?'text-green-600':'text-red-600'}">Rp ${u.toLocaleString('id-ID')}</b></div><div class="flex justify-between"><span>Stok</span><b>${aman(tampilStok(b))}</b></div></div><div class="flex gap-1 px-2 pb-2"><button onclick="editBarang('${b.id}')" class="flex-1 bg-yellow-400 text-white py-1.5 rounded-lg text-xs font-bold">✏️ Edit</button><button onclick="hapus('${b.id}')" class="flex-1 bg-red-500 text-white py-1.5 rounded-lg text-xs font-bold">🗑️ Hapus</button></div>`; }
     else { infoAdmin = `<div class="px-2 pb-2 text-center"><span class="text-[11px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-bold">STOK: ${aman(tampilStok(b))}</span></div>`; }
