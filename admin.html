@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - UD. BILAL</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .last-update { font-size: 10px; color: #999; }
+    .badge-baru { font-size: 10px; background: #ff3b30; color: #fff; padding: 2px 6px; border-radius: 20px; font-weight: 700; }
+    #cropBox { width: 100%; height: 300px; overflow: hidden; position: relative; background: #000; touch-action: none; border-radius: 12px; }
+    #cropImg { position: absolute; left: 50%; top: 50%; max-width: none; will-change: transform; touch-action: none; user-select: none; -webkit-user-drag: none; }
+    #cropFrame { position: absolute; left: 50%; top: 50%; width: 92%; height: 82%; transform: translate(-50%,-50%); border: 2px dashed #fff; border-radius: 12px; box-shadow: 0 0 0 999px rgba(0,0,0,0.55); pointer-events: none; }
+    #tabel { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .kartu { background: #fff; border: 1px solid #eee; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 1px 6px rgba(0,0,0,0.05); }
+    .kartu img.foto-produk { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; background: #f8f8f8; }
+    .qty-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 18px; background: #f3f4f6; }
+    /* ==== KUNCI ADMIN: semua di bawah ini hanya muncul setelah login admin ==== */
+    .butuh-login { display: none !important; }
+    #gateAdmin { position: fixed; inset: 0; background: #f3f4f6; z-index: 9998; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    #gateAdmin .box { background: #fff; border-radius: 16px; padding: 24px; max-width: 360px; width: 100%; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+  </style>
+</head>
+<body class="bg-gray-100 p-3">
+  <!-- ===== GERBANG LOGIN (tampil dulu, hilang setelah login admin) ===== -->
+  <div id="gateAdmin">
+    <div class="box">
+      <div style="font-size:48px;">🔒</div>
+      <h2 style="font-weight:900;color:#166534;margin:8px 0 4px;">HALAMAN ADMIN</h2>
+      <p style="font-size:13px;color:#666;margin-bottom:16px;">Khusus pemilik UD. BILAL. Login dulu ya.</p>
+      <button onclick="document.getElementById('gateAdmin').style.display='none';document.getElementById('boxLogin').classList.remove('hidden');document.getElementById('btnLogin').click();" style="width:100%;background:#16a34a;color:#fff;border:none;padding:12px;border-radius:10px;font-weight:700;font-size:15px;cursor:pointer;">🔑 LOGIN ADMIN</button>
+      <a href="/toko/" style="display:block;margin-top:10px;font-size:12px;color:#666;text-decoration:none;">← Kembali ke Toko</a>
+    </div>
+  </div>
+
+  <div class="flex justify-between items-center mb-3">
+    <h1 class="text-xl font-black" style="color:#166534;">🔧 ADMIN - UD. BILAL</h1>
+    <a href="/toko/" target="_blank" rel="noopener" class="bg-green-500 text-white px-3 py-2 rounded-lg text-sm font-bold">Lihat Toko 👀</a>
+  </div>
+
+  <div class="bg-white p-3 rounded-xl shadow mb-3 flex justify-between items-center">
+    <span id="statusLogin" class="text-sm font-bold text-red-500">🔒 Mode Lihat Saja</span>
+    <button id="btnLogin" onclick="toggleLogin()" class="bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm">LOGIN</button>
+  </div>
+
+  <div id="boxLogin" class="bg-yellow-50 border-2 border-yellow-300 p-4 rounded-xl shadow mb-3 space-y-3 hidden">
+    <p class="font-bold text-center">Login Admin</p>
+    <!-- EMAIL TIDAK DI-PREFILL lagi (agar email admin tidak bocor ke publik) -->
+    <input id="inputEmail" type="email" placeholder="Email Admin" autocomplete="username" class="w-full border p-3 rounded-lg">
+    <input id="inputPass" type="password" placeholder="Password" autocomplete="current-password" class="w-full border p-3 rounded-lg">
+    <button onclick="doLogin()" class="w-full bg-green-500 text-white p-3 rounded-lg font-bold">MASUK</button>
+    <button onclick="toggleLogin()" class="w-full bg-gray-300 p-3 rounded-lg">Batal</button>
+  </div>
+
+  <button id="btnTambah" onclick="bukaForm()" class="butuh-login w-full bg-blue-500 text-white p-3 rounded-xl font-bold mb-3 hidden">+ Tambah Barang</button>
+  <input id="inputCari" oninput="cariBarang(this.value)" type="text" placeholder="🔍 Cari barang..." autocomplete="off" class="butuh-login w-full border-2 border-gray-300 p-3 rounded-xl mb-3 bg-white font-bold">
+
+  <div class="butuh-login bg-white p-3 rounded-xl shadow">
+    <div id="tabel"></div>
+    <div class="flex justify-between items-center mt-4">
+      <button onclick="gantiPage(-1)" class="bg-gray-200 px-4 py-2 rounded-lg font-bold text-sm">⬅ Prev</button>
+      <span id="infoPage" class="font-bold text-sm">Page 1 / 1</span>
+      <button onclick="gantiPage(1)" class="bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm">Next ➡</button>
+    </div>
+    <div class="footer text-center font-bold mt-3 text-sm border-t pt-3">Total Jenis Produk: 0</div>
+  </div>
+
+  <div id="popupForm" class="butuh-login fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-start justify-center p-3 pt-10" onclick="tutupForm()">
+    <div class="bg-white p-4 rounded-xl shadow w-full max-w-md space-y-3" onclick="event.stopPropagation()">
+      <div class="flex justify-between items-center">
+        <h2 id="judulForm" class="font-bold text-lg">Tambah Barang</h2>
+        <button onclick="tutupForm()" class="bg-gray-200 w-8 h-8 rounded-full font-bold">✕</button>
+      </div>
+      <div class="space-y-3">
+        <input id="nama" type="text" placeholder="Nama Barang" class="w-full border p-3 rounded-lg">
+        <input id="modal" type="number" placeholder="Harga Modal" class="w-full border p-3 rounded-lg">
+        <input id="harga" type="number" placeholder="Harga Jual" class="w-full border p-3 rounded-lg">
+        <input id="keterangan" type="text" placeholder="Keterangan" class="w-full border p-3 rounded-lg">
+        <input id="stok" type="text" placeholder="Stok" class="w-full border p-3 rounded-lg">
+        <label class="block text-sm font-bold">Foto Barang:</label>
+        <input id="fotoInput" type="file" accept="image/*" class="w-full border p-3 rounded-lg bg-white">
+        <img id="fotoPreview" class="w-full h-40 object-cover rounded-lg hidden bg-gray-100">
+        <p id="fotoStatus" class="text-xs text-gray-500 text-center"></p>
+        <button id="btnSimpan" onclick="simpan()" class="w-full bg-blue-500 text-white p-3 rounded-lg font-bold">SIMPAN</button>
+        <button onclick="batalEdit()" class="w-full bg-gray-300 p-3 rounded-lg">Batal Edit</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="cropModal" class="butuh-login fixed inset-0 bg-black bg-opacity-90 z-[100] hidden flex items-center justify-center p-3">
+    <div class="bg-white p-4 rounded-xl w-full max-w-md space-y-3">
+      <h2 class="font-bold text-center">✂️ Crop Foto</h2>
+      <p class="text-xs text-center text-gray-500">Geser fotonya, yang di dalam kotak putih yang bakal kepakai.</p>
+      <div id="cropBox"><img id="cropImg" src="" draggable="false"><div id="cropFrame"></div></div>
+      <label class="block text-sm font-bold text-center">🔍 Zoom: <span id="zoomLabel">100%</span></label>
+      <div class="flex gap-2 items-center">
+        <button type="button" onclick="zoomKurang()" class="flex-1 bg-gray-200 p-3 rounded-lg font-black text-xl">-</button>
+        <input id="zoomSlider" type="range" min="100" max="300" value="100" class="flex-[2]" oninput="aturZoom(this.value)">
+        <button type="button" onclick="zoomTambah()" class="flex-1 bg-gray-200 p-3 rounded-lg font-black text-xl">+</button>
+      </div>
+      <div class="flex gap-2">
+        <button type="button" onclick="resetCrop()" class="flex-1 bg-yellow-100 p-2 rounded-lg font-bold text-sm">↺ Reset Posisi</button>
+        <button type="button" onclick="batalCrop()" class="flex-1 bg-gray-300 p-2 rounded-lg">Batal</button>
+      </div>
+      <button onclick="potongFoto()" class="w-full bg-green-500 text-white p-3 rounded-lg font-bold">✂️ POTONG & PAKAI FOTO INI</button>
+    </div>
+  </div>
+
+  <script type="module" src="script.js?v=112"></script>
+
+  <!-- ===== GERBANG PENGAMAN: sembunyikan isi sampai benar-benar login admin ===== -->
+  <script>
+  (function(){
+    // Saat halaman admin dibuka, hapus cache harga modal dulu (cegah bocor setelah logout)
+    try { localStorage.removeItem('bilal_cache_private'); } catch(e){}
+
+    // Simpan daftar elemen sensitif SEKALI di awal (setelah login class-nya hilang)
+    var daftarTersembunyi = Array.prototype.slice.call(document.querySelectorAll('.butuh-login'));
+    function setTampil(tampil){
+      daftarTersembunyi.forEach(function(el){
+        if(tampil){ el.classList.remove('butuh-login'); }
+        else { el.classList.add('butuh-login'); }
+      });
+      // kalau logout, bersihkan cache harga modal
+      if(!tampil){
+        try { localStorage.removeItem('bilal_cache_private'); } catch(e){}
+      }
+    }
+
+    // Pantau status login lewat teks di #statusLogin (diisi oleh script.js)
+    var terakhirLogin = null;
+    setInterval(function(){
+      var st = document.getElementById('statusLogin');
+      if(!st) return;
+      var sudahLogin = st.innerText.indexOf('✅ Login Admin') !== -1;
+      if(sudahLogin === terakhirLogin) return;
+      terakhirLogin = sudahLogin;
+      if(sudahLogin){
+        var gate = document.getElementById('gateAdmin');
+        if(gate) gate.style.display = 'none';
+        setTampil(true);
+      } else {
+        // Logout terdeteksi → sembunyikan lagi semua isi admin & tampilkan gerbang
+        setTampil(false);
+        var gate2 = document.getElementById('gateAdmin');
+        if(gate2) gate2.style.display = 'flex';
+      }
+    }, 400);
+
+    // Tombol LOGIN di header: buka form login (tutup gate)
+    var origToggle = window.toggleLogin;
+    window.toggleLogin = function(){
+      var gate = document.getElementById('gateAdmin');
+      if(gate) gate.style.display = 'none';
+      if(origToggle) return origToggle.apply(this, arguments);
+    };
+  })();
+  </script>
+</body>
+</html>
