@@ -3,41 +3,107 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>UD. BILAL - Toko Sembako</title>
-  <link rel="stylesheet" href="style.css">
-  <style>
-    #tabel { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .kartu { background: #fff; border: 1px solid #eee; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 1px 6px rgba(0,0,0,0.05); }
-    .kartu img.foto-produk { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; background: #f8f8f8; }
-    .qty-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 18px; background: #f3f4f6; }
-    .badge-baru { font-size: 10px; background: #ff3b30; color: #fff; padding: 2px 6px; border-radius: 20px; font-weight: 700; }
-    .last-update { font-size: 10px; color: #999; }
-  </style>
+  <title>UD. BILAL - Toko Kelontong</title>
+  <link rel="stylesheet" href="style.css?v=4">
 </head>
-<body class="bg-gray-100 p-3">
-  <!-- HEADER: tombol admin (icon gembok) dipindah ke pojok kanan atas header -->
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;background:linear-gradient(135deg,#ffffff 0%,#f0fdf4 100%);padding:12px 14px;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,0.06);border-bottom:2px solid #fbbf24;">
-    <img src="logov2.png" class="w-14 h-14 object-cover" style="border-radius:50%;border:2px solid #fbbf24;background:#fff;">
-    <div style="line-height:1.1;flex:1;">
-      <h1 class="text-2xl font-black" style="color:#166534;">UD. <span style="color:#15803d;">BILAL</span></h1>
-      <p class="text-sm font-semibold mt-1" style="color:#b45309;">Sembako Lengkap, Harga Bersahabat</p>
-      <div style="width:118px;height:3px;background:linear-gradient(90deg,#16a34a,#fbbf24);border-radius:99px;margin-top:5px;"></div>
+<body class="bg-gray-100">
+
+  <!-- ================= HEADER UD. BILAL ================= -->
+  <header class="bg-green-500 text-white p-4 text-center sticky top-1 z-50 shadow">
+    <h1 class="text-2xl font-black">UD. BILAL</h1>
+    <p class="text-sm">Toko Kelontong & Sembako • Pangkatan</p>
+  </header>
+
+  <main class="max-w-md mx-auto p-3 space-y-3">
+
+    <!-- ================= PENCARIAN ALA MACAU ================= -->
+    <!-- Ini yang kita rapikan tadi, udah nyambung ke style.css -->
+    <div class="pencarian-wrap">
+      <div class="pencarian-box">
+        <input
+          id="cariBarang"
+          type="text"
+          inputmode="search"
+          autocomplete="off"
+          placeholder="🔍 Cari barang..."
+          oninput="cariBarang()"
+          aria-label="Cari barang"
+        >
+        <button
+          id="btnClearSearch"
+          type="button"
+          aria-label="Hapus pencarian"
+          hidden
+        >×</button>
+      </div>
+      <div
+        id="infoHasilCari"
+        class="hasil-cari"
+        role="status"
+        aria-live="polite"
+        hidden
+      ></div>
     </div>
-    <!-- Tombol Khusus Admin: icon gembok saja, di pojok kanan atas header -->
-    <a href="admin.html" title="Khusus Admin" aria-label="Khusus Admin" style="align-self:flex-start;line-height:1;font-size:22px;text-decoration:none;padding:2px 4px;border-radius:8px;">&#128274;</a>
-  </div>
-  <!-- Kolom cari: autocomplete off + data-lpignore supaya browser tidak tawarkan sandi -->
-  <input id="inputCari" oninput="cariBarang(this.value)" type="text" placeholder="&#128269; Cari barang... misal: Beras, Minyak, Gula" class="w-full border-2 border-gray-300 p-3 rounded-xl mb-3 bg-white font-bold" autocomplete="off" data-lpignore="true">
-  <div class="bg-white p-3 rounded-xl shadow">
-    <div id="tabel"></div>
-    <div class="flex justify-between items-center mt-4">
-      <button onclick="gantiPage(-1)" class="bg-gray-200 px-4 py-2 rounded-lg font-bold text-sm">&#11013; Prev</button>
-      <span id="infoPage" class="font-bold text-sm">Page 1 / 1</span>
-      <button onclick="gantiPage(1)" class="bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm">Next &#10145;</button>
+
+    <!-- ================= KATEGORI ================= -->
+    <div id="kategoriWrap" class="flex gap-2 overflow-hidden">
+      <button onclick="filterKategori('semua')" class="bg-white border border-gray-300 rounded-full px-4 py-2 text-sm font-bold">Semua</button>
+      <button onclick="filterKategori('sembako')" class="bg-white border border-gray-300 rounded-full px-4 py-2 text-sm font-bold">Sembako</button>
+      <button onclick="filterKategori('rokok')" class="bg-white border border-gray-300 rounded-full px-4 py-2 text-sm font-bold">Rokok</button>
+      <button onclick="filterKategori('minuman')" class="bg-white border border-gray-300 rounded-full px-4 py-2 text-sm font-bold">Minuman</button>
+      <button onclick="filterKategori('snack')" class="bg-white border border-gray-300 rounded-full px-4 py-2 text-sm font-bold">Snack</button>
     </div>
-    <div class="footer text-center font-bold mt-3 text-sm border-t pt-3">Total Jenis Produk: 0</div>
+
+    <!-- ================= STATUS / INFO ================= -->
+    <div
+      id="statusData"
+      role="status"
+      style="text-align:center;font-size:13px;color:#555;padding:6px 4px"
+    ></div>
+
+    <!-- ================= DAFTAR BARANG ================= -->
+    <!-- Barang diisi otomatis dari script.js -->
+    <div id="daftarBarang" class="grid gap-2">
+      <p class="text-center text-gray-500 text-sm p-4">Memuat barang...</p>
+    </div>
+
+    <!-- Kalau barang tidak ketemu -->
+    <div id="barangKosong" class="hidden text-center p-5 bg-white rounded-xl">
+      <p class="text-gray-500 text-sm">Barang tidak ditemukan</p>
+      <button onclick="hapusCari()" class="mt-2 bg-green-500 text-white px-4 py-2 rounded-full text-sm font-bold">Tampilkan Semua</button>
+    </div>
+
+  </main>
+
+  <!-- ================= KERANJANG / BAWAH ================= -->
+  <div class="max-w-md mx-auto p-3 pb-10">
+    <button id="btnKeranjang" onclick="bukaKeranjang()" class="w-full bg-green-500 text-white p-4 rounded-2xl font-black shadow flex justify-between items-center">
+      <span>🛒 Keranjang</span>
+      <span id="totalKeranjang">Rp 0</span>
+    </button>
   </div>
-  <p class="text-center text-xs text-gray-400 mt-4">&copy; UD. BILAL - Pesan via WhatsApp, Bayar di Tempat / Transfer</p>
-  <script type="module" src="script.js?v=114"></script>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="text-center pb-10">
+    <div class="garis"></div>
+    <div class="brand font-black">UD. BILAL</div>
+    <div class="copy text-xs text-gray-500">© 2025 - 2026 • All Rights Reserved</div>
+  </footer>
+
+  <!-- ================= TOMBOL KE ATAS ================= -->
+  <button id="btnTop" onclick="keAtas()">
+    <span class="panah">^</span>
+    <span class="teks">TOP</span>
+  </button>
+
+  <script>
+    function keAtas() {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  </script>
+
+  <!-- JS TOKO -->
+  <script src="script.js?v=2" defer></script>
+
 </body>
 </html>
