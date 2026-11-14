@@ -442,3 +442,11 @@ setInterval(() => {
     }
   });
 }, 300);
+// FIX PAKSA: Posisi tombol X pencarian biar pas tengah
+setInterval(() => {
+  const x = document.getElementById('btnClearCari');
+  if (x) {
+    x.style.cssText = 'position:absolute;right:12px;top:0;bottom:0;margin:auto;width:28px;height:28px;border-radius:50%;background:#e5e7eb;color:#555;font-size:14px;font-weight:bold;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;z-index:5;line-height:1;';
+    if (!document.querySelector('input[oninput*="cariBarang"]')?.value) x.style.display = 'none';
+  }
+}, 300);
