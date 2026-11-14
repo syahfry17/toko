@@ -442,29 +442,24 @@ setInterval(() => {
     }
   });
 }, 300);
-// FIX FINAL: Pencarian ala Macau - bulat, ada 🔍 kiri, X pas tengah kanan
+// === KODE FULL PENCARIAN ALA MACAU - UDAH BENER, TINGGAL PASTE ===
 document.addEventListener('DOMContentLoaded', () => {
   const inp = document.querySelector('input[oninput*="cariBarang"]');
   if (!inp) return;
-  const lama = document.getElementById('btnClearCari');
-  if (lama) lama.remove();
-  const iconLama = document.getElementById('iconCariMacau');
-  if (iconLama) iconLama.remove();
+
+  // Bersihin sisa kode lama biar gak dobel
+  const lamaX = document.getElementById('btnClearCari');
+  if (lamaX) lamaX.remove();
+  const lamaIcon = document.getElementById('iconCariMacau');
+  if (lamaIcon) lamaIcon.remove();
 
   const wrap = inp.parentNode;
   wrap.style.cssText = 'position:relative;display:flex;align-items:center;width:100%;';
 
-  // Bikin kotak nya bulat kayak Macau
-  inp.style.cssText = 'width:100%;padding:12px 42px 12px 42px;border-radius:999px;border:2px solid #1a7a5a;outline:none;font-size:16px;font-weight:600;background:#fff;';
+  // Kotak pencarian jadi bulat kayak Macau, padding kiri 16px aja biar 🔍 nya cuma 1
+  inp.style.cssText = 'width:100%;padding:12px 42px 12px 16px;border-radius:999px;border:2px solid #1a7a5a;outline:none;font-size:16px;font-weight:600;background:#fff;';
 
-  // Ikon kaca pembesar kiri
-  const icon = document.createElement('span');
-  icon.id = 'iconCariMacau';
-  icon.innerText = '🔍';
-  icon.style.cssText = 'position:absolute;left:14px;top:0;bottom:0;margin:auto;height:20px;display:flex;align-items:center;font-size:17px;pointer-events:none;';
-  wrap.appendChild(icon);
-
-  // Tombol X kanan - persis Macau
+  // Tombol X kanan - pas tengah, ada jarak dari pinggir
   const btnX = document.createElement('button');
   btnX.id = 'btnClearCari';
   btnX.innerText = '×';
@@ -477,3 +472,4 @@ document.addEventListener('DOMContentLoaded', () => {
   inp.addEventListener('input', cek);
   cek();
 });
+// === SELESAI ===
