@@ -434,3 +434,11 @@ document.addEventListener('DOMContentLoaded', () => {
   inp.addEventListener('input', cekX);
   cekX();
 });
+// FIX PAKSA: Hapus dobel STOK: -> jadi Stok | 9 aja
+setInterval(() => {
+  document.querySelectorAll('b').forEach(b => {
+    if (b.textContent.trim().startsWith('STOK:')) {
+      b.textContent = b.textContent.replace('STOK:', '').trim();
+    }
+  });
+}, 300);
