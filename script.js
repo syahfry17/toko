@@ -1,5 +1,5 @@
-// UD. BILAL - script.js v115 - RAPI
-// Perubahan v115: hapus qty (- 1 +), stok angka cuma di Admin, pelanggan cuma TERSEDIA/HABIS
+// UD. BILAL - script.js v116 - RAPI
+// v116: Hapus TERSEDIA di pelanggan. Stok HANYA di Admin. Pelanggan cuma Nama, Harga, Tombol WA.
 const firebaseConfig = {
   apiKey: "AIzaSyAhce1AyhPGe1cDkIzcBcgAFFOXC2Isxx0",
   authDomain: "toko-bilal.firebaseapp.com",
@@ -163,9 +163,6 @@ function bersihKet(teks) { if (!teks) return ''; return teks.toString().replace(
 function aman(teks) { return String(teks ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 function tampilStok(b) { let s = (b.stok ?? '').toString().trim(); if (!s) return '0'; return s; }
 
-// Stok angka -> true kalau masih ada, buat pelanggan
-function stokAda(b) { return (parseFloat(String(b.stok ?? '').replace(',', '.')) || 0) > 0; }
-
 function gabungData() {
   barang = barangPublic.map(p => ({ ...p, modal: (barangPrivate[p.id] ? barangPrivate[p.id].modal : 0) }));
   render();
@@ -283,14 +280,8 @@ function render() {
           <button onclick="hapus('${b.id}')" class="flex-1 bg-red-500 text-white py-1.5 rounded-lg text-xs font-bold">🗑️ Hapus</button>
         </div>`;
     } else {
-      // PELANGGAN: cuma TERSEDIA / HABIS, tanpa angka stok
-      let ada = stokAda(b);
-      let teksStatus = ada ? 'TERSEDIA ✅' : 'HABIS ❌';
-      let kelasStatus = ada ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600';
-      infoAdmin = `
-        <div class="px-2 pb-2 text-center">
-          <span class="text-[11px] ${kelasStatus} px-2 py-0.5 rounded-full font-bold">${teksStatus}</span>
-        </div>`;
+      // PELANGGAN: KOSONG, gak ada stok, gak ada TERSEDIA
+      infoAdmin = '';
     }
 
     html += `<div class="kartu"><div class="relative">${foto}<div class="absolute top-1 left-1">${badgeBaru}</div></div>${isiKartu}${infoAdmin}</div>`;
