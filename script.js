@@ -1,5 +1,5 @@
-// UD. BILAL - script.js v116 - RAPI
-// v116: Hapus TERSEDIA di pelanggan. Stok HANYA di Admin. Pelanggan cuma Nama, Harga, Tombol WA.
+// UD. BILAL - script.js v117 - RAPI
+// v117: Hapus qty, Hapus STOK/TERSEDIA di pelanggan (cuma Admin), + Tombol X di pencarian
 const firebaseConfig = {
   apiKey: "AIzaSyAhce1AyhPGe1cDkIzcBcgAFFOXC2Isxx0",
   authDomain: "toko-bilal.firebaseapp.com",
@@ -208,6 +208,15 @@ window.tutupForm = () => { const p = el('popupForm'); if (p) p.classList.add('hi
 let cariTimer = null;
 window.cariBarang = (teks) => { clearTimeout(cariTimer); cariTimer = setTimeout(() => { kataCari = teks.toLowerCase().trim(); currentPage = 1; render(); }, 250); };
 
+// === Tombol X di pencarian - hapus teks, balik ke semua barang ===
+window.hapusCari = () => {
+  const inp = document.querySelector('input[oninput*="cariBarang"]') || el('inputCari') || document.querySelector('input[placeholder*="Cari"]');
+  if (inp) inp.value = '';
+  kataCari = ''; currentPage = 1; render();
+  const btnX = el('btnClearCari'); if (btnX) btnX.style.display = 'none';
+  if (inp) inp.focus();
+};
+
 window.bukaZoomFoto = (id) => {
   const b = barang.find(x => x.id === id); if (!b || !b.foto) return;
   let modal = document.getElementById('modalZoomFoto'); if (modal) modal.remove();
@@ -255,7 +264,6 @@ function render() {
       ? `<img loading="lazy" decoding="async" src="${b.foto}" onclick="bukaZoomFoto('${b.id}')" class="foto-produk cursor-pointer" alt="${aman(b.nama)}">`
       : `<div class="w-full flex items-center justify-center text-gray-400 text-xs" style="aspect-ratio:1/1;background:#f8f8f8;">Belum ada foto</div>`;
 
-    // --- Kartu atas: NAMA, HARGA, KET, TOMBOL WA (tanpa - 1 +) ---
     let isiKartu = `
       <div class="p-2 text-center flex-1 flex flex-col">
         <p class="font-bold text-[15px] leading-tight line-clamp-2 min-h-[38px]">${aman(b.nama)}</p>
@@ -265,10 +273,8 @@ function render() {
         ${IS_ADMIN_PAGE ? '<p class="last-update mt-1">Update 23 Nov 2026</p>' : ''}
       </div>`;
 
-    // --- Kartu bawah: beda Admin vs Pelanggan ---
     let infoAdmin = '';
     if (IS_ADMIN_PAGE) {
-      // ADMIN SAJA: Modal, Untung, Stok angka
       infoAdmin = `
         <div class="px-2 pb-1 text-[11px] text-gray-500 space-y-0.5 border-t pt-1">
           <div class="flex justify-between"><span>Modal</span><b>Rp ${Number(modal).toLocaleString('id-ID')}</b></div>
@@ -404,3 +410,27 @@ function mulaiFirebase() {
 }
 if ('requestIdleCallback' in window) requestIdleCallback(mulaiFirebase, { timeout: 1500 });
 else setTimeout(mulaiFirebase, 0);
+
+// === Tombol X di pencarian - otomatis nempel, gak perlu edit index.html ===
+document.addEventListener('DOMContentLoaded', () => {
+  const inp = document.querySelector('input[oninput*="cariBarang"]') || el('inputCari') || document.querySelector('input[placeholder*="Cari"]');
+  if (!inp) return;
+  if (document.getElementById('btnClearCari')) return;
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:relative;flex:1;display:flex;align-items:center;';
+  inp.parentNode.insertBefore(wrap, inp);
+  wrap.appendChild(inp);
+  inp.style.paddingRight = '38px';
+  inp.style.width = '100%';
+  const btnX = document.createElement('button');
+  btnX.id = 'btnClearCari';
+  btnX.innerText = '✕';
+  btnX.type = 'button';
+  btnX.setAttribute('aria-label', 'Hapus pencarian');
+  btnX.style.cssText = 'position:absolute;right:8px;top:50%;transform:translateY(-50%);width:26px;height:26px;border-radius:50%;background:#e5e7eb;color:#555;font-size:13px;font-weight:bold;display:none;align-items:center;justify-content:center;border:none;cursor:pointer;z-index:2;';
+  btnX.onclick = () => window.hapusCari();
+  wrap.appendChild(btnX);
+  const cekX = () => { btnX.style.display = inp.value ? 'flex' : 'none'; };
+  inp.addEventListener('input', cekX);
+  cekX();
+});
