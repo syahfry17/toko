@@ -442,11 +442,25 @@ setInterval(() => {
     }
   });
 }, 300);
-// FIX PAKSA: Posisi tombol X pencarian biar pas tengah
-setInterval(() => {
-  const x = document.getElementById('btnClearCari');
-  if (x) {
-    x.style.cssText = 'position:absolute;right:12px;top:0;bottom:0;margin:auto;width:28px;height:28px;border-radius:50%;background:#e5e7eb;color:#555;font-size:14px;font-weight:bold;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;z-index:5;line-height:1;';
-    if (!document.querySelector('input[oninput*="cariBarang"]')?.value) x.style.display = 'none';
-  }
-}, 300);
+// FIX FINAL X: Pake flex, bukan absolute, biar selalu pas tengah
+document.addEventListener('DOMContentLoaded', () => {
+  const inp = document.querySelector('input[oninput*="cariBarang"]');
+  if (!inp) return;
+  const lama = document.getElementById('btnClearCari');
+  if (lama) lama.remove();
+  // Bungkus jadi flex
+  const wrap = inp.parentNode;
+  wrap.style.cssText = 'position:relative;display:flex;align-items:center;';
+  inp.style.paddingRight = '42px';
+  const btnX = document.createElement('button');
+  btnX.id = 'btnClearCari';
+  btnX.innerText = '✕';
+  btnX.type = 'button';
+  // Kunci: margin-left minus, jadi dia nempel di dalam kotak, tapi ikut flex = selalu tengah
+  btnX.style.cssText = 'margin-left:-38px;width:28px;height:28px;min-width:28px;border-radius:50%;background:#e5e7eb;color:#555;font-size:14px;font-weight:bold;display:none;align-items:center;justify-content:center;border:none;cursor:pointer;z-index:5;';
+  btnX.onclick = () => window.hapusCari();
+  wrap.appendChild(btnX);
+  const cek = () => { btnX.style.display = inp.value ? 'flex' : 'none'; };
+  inp.addEventListener('input', cek);
+  cek();
+});
