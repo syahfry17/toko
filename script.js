@@ -442,24 +442,37 @@ setInterval(() => {
     }
   });
 }, 300);
-// FIX FINAL X: Pake flex, bukan absolute, biar selalu pas tengah
+// FIX FINAL: Pencarian ala Macau - bulat, ada 🔍 kiri, X pas tengah kanan
 document.addEventListener('DOMContentLoaded', () => {
   const inp = document.querySelector('input[oninput*="cariBarang"]');
   if (!inp) return;
   const lama = document.getElementById('btnClearCari');
   if (lama) lama.remove();
-  // Bungkus jadi flex
+  const iconLama = document.getElementById('iconCariMacau');
+  if (iconLama) iconLama.remove();
+
   const wrap = inp.parentNode;
-  wrap.style.cssText = 'position:relative;display:flex;align-items:center;';
-  inp.style.paddingRight = '42px';
+  wrap.style.cssText = 'position:relative;display:flex;align-items:center;width:100%;';
+
+  // Bikin kotak nya bulat kayak Macau
+  inp.style.cssText = 'width:100%;padding:12px 42px 12px 42px;border-radius:999px;border:2px solid #1a7a5a;outline:none;font-size:16px;font-weight:600;background:#fff;';
+
+  // Ikon kaca pembesar kiri
+  const icon = document.createElement('span');
+  icon.id = 'iconCariMacau';
+  icon.innerText = '🔍';
+  icon.style.cssText = 'position:absolute;left:14px;top:0;bottom:0;margin:auto;height:20px;display:flex;align-items:center;font-size:17px;pointer-events:none;';
+  wrap.appendChild(icon);
+
+  // Tombol X kanan - persis Macau
   const btnX = document.createElement('button');
   btnX.id = 'btnClearCari';
-  btnX.innerText = '✕';
+  btnX.innerText = '×';
   btnX.type = 'button';
-  // Kunci: margin-left minus, jadi dia nempel di dalam kotak, tapi ikut flex = selalu tengah
-  btnX.style.cssText = 'margin-left:-38px;width:28px;height:28px;min-width:28px;border-radius:50%;background:#e5e7eb;color:#555;font-size:14px;font-weight:bold;display:none;align-items:center;justify-content:center;border:none;cursor:pointer;z-index:5;';
+  btnX.style.cssText = 'position:absolute;right:10px;top:0;bottom:0;margin:auto;width:28px;height:28px;border-radius:50%;background:#e5e7eb;color:#555;font-size:18px;font-weight:bold;display:none;align-items:center;justify-content:center;border:none;cursor:pointer;z-index:5;line-height:1;padding-bottom:2px;';
   btnX.onclick = () => window.hapusCari();
   wrap.appendChild(btnX);
+
   const cek = () => { btnX.style.display = inp.value ? 'flex' : 'none'; };
   inp.addEventListener('input', cek);
   cek();
