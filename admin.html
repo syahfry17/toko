@@ -28,8 +28,13 @@
     .search-admin { width: 100%; border: 2px solid #e5e7eb; padding: 12px 14px; border-radius: 14px; background: #fff; font-weight: 600; font-size: 14px; outline: none; }
     .search-admin:focus { border-color: #16a34a; }
     .info-admin-box { background: #f8fafc; border-top: 1px solid #eef2f7; padding: 10px 12px 8px; font-size: 12px; }
-    .btn-edit { flex: 1; background: #facc15; color: #422006; padding: 9px; border-radius: 10px; font-weight: 800; font-size: 13px; }
-    .btn-hapus { flex: 1; background: #ef4444; color: #fff; padding: 9px; border-radius: 10px; font-weight: 800; font-size: 13px; }
+
+    /* --- TOMBOL EDIT / HAPUS YANG BENER - ICON DI KIRI, TEKS DI KANAN --- */
+    .btn-edit { flex: 1; background: #facc15; color: #422006; padding: 10px 6px; border-radius: 10px; font-weight: 800; font-size: 13px; display: inline-flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; border: none; cursor: pointer; }
+    .btn-hapus { flex: 1; background: #ef4444; color: #fff; padding: 10px 6px; border-radius: 10px; font-weight: 800; font-size: 13px; display: inline-flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; border: none; cursor: pointer; }
+    /* PAKSA TOMBOL DARI script.js v114 BIAR GAK NUMPUK LAGI */
+    .kartu .flex.gap-1 { display: flex !important; gap: 8px !important; }
+    .kartu .flex.gap-1 button { display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: center !important; gap: 6px !important; white-space: nowrap !important; flex: 1 !important; min-width: 0 !important; padding: 10px 6px !important; font-size: 13px !important; font-weight: 800 !important; border-radius: 10px !important; }
   </style>
 </head>
 <body class="bg-gray-100 p-3">
