@@ -1,4 +1,4 @@
-// UD. BILAL - script.js v127 (Terintegrasi Google Drive Bridge & Format JPEG)
+// UD. BILAL - script.js v128 (Simpan Langsung Base64 ke Firestore)
 const firebaseConfig = {
   apiKey: "AIzaSyAhce1AyhPGe1cDkIzcBcgAFFOXC2Isxx0",
   authDomain: "toko-bilal.firebaseapp.com",
@@ -84,108 +84,6 @@ function toastError(pesan){
   clearTimeout(t._timer); t._timer = setTimeout(()=>{ t.style.display='none'; t.style.background='#16a34a'; }, 2500);
 }
 
-// --- JEMBATAN BRIDGE GOOGLE DRIVE ---
-let bridgeState = null;
-function randomNonce() {
-  return Array.from(crypto.getRandomValues(new Uint8Array(16)), v => v.toString(16).padStart(2, '0')).join('');
-}
-function googleOrigin(origin) {
-  return /^https:\/\/(?:[a-z0-9-]+\.)?script\.googleusercontent\.com$/.test(origin) ||
-         /^https:\/\/[a-z0-9-]+-script\.googleusercontent\.com$/.test(origin) ||
-         origin === 'https://script.google.com';
-}
-function getBridge() {
-  const endpointUrl = 'https://script.google.com/macros/s/AKfycbyfbG44Rrch0R0bYbuEDOLe952lsL_hDAxg0PCpIrMx1AX5RW-gojnbhWOEWgOpq2cKbw/exec';
-  
-  if (bridgeState && bridgeState.url === endpointUrl) return bridgeState.promise;
-  if (bridgeState && bridgeState.dispose) bridgeState.dispose();
-
-  const nonce = randomNonce();
-  let iframe = document.getElementById('driveBridge');
-  if (!iframe) {
-    iframe = document.createElement('iframe');
-    iframe.id = 'driveBridge';
-    iframe.style.cssText = 'position:absolute;width:1px;height:1px;border:0;left:-100px;';
-    document.body.appendChild(iframe);
-  }
-  
-  const state = {
-    url: endpointUrl,
-    nonce,
-    iframe,
-    pending: new Map(),
-    source: null,
-    origin: null,
-    listener: null,
-    timer: null
-  };
-
-  state.promise = new Promise((resolve, reject) => {
-    state.timer = setTimeout(() => {
-      state.dispose();
-      reject(new Error('Penghubung Google Drive belum merespons.'));
-    }, 30000);
-
-    state.listener = event => {
-      const m = event.data;
-      if (!m || m.channel !== 'bilal-drive-v2' || m.nonce !== nonce || !googleOrigin(event.origin)) return;
-      if (m.ready && !state.source) {
-        state.source = event.source;
-        state.origin = event.origin;
-        clearTimeout(state.timer);
-        resolve(state);
-        return;
-      }
-      if (event.source !== state.source || event.origin !== state.origin) return;
-      const pending = state.pending.get(m.id);
-      if (!pending) return;
-      state.pending.delete(m.id);
-      clearTimeout(pending.timer);
-      if (m.error) pending.reject(new Error(m.error));
-      else pending.resolve(m.data);
-    };
-    window.addEventListener('message', state.listener);
-  });
-
-  state.dispose = () => {
-    clearTimeout(state.timer);
-    window.removeEventListener('message', state.listener);
-    for (const p of state.pending.values()) {
-      clearTimeout(p.timer);
-      p.reject(new Error('Sambungan diganti.'));
-    }
-    state.pending.clear();
-    if (bridgeState === state) bridgeState = null;
-  };
-
-  bridgeState = state;
-  iframe.src = endpointUrl + '?bridge=1&nonce=' + nonce;
-  return state.promise;
-}
-
-async function driveRequest(action, payload) {
-  const state = await getBridge();
-  return new Promise((resolve, reject) => {
-    const id = randomNonce();
-    const timer = setTimeout(() => {
-      state.pending.delete(id);
-      reject(new Error('Respons Apps Script terlalu lama.'));
-    }, 60000);
-    state.pending.set(id, { resolve, reject, timer });
-    state.source.postMessage({ channel: 'bilal-drive-v2', nonce: state.nonce, id, action, payload }, state.origin);
-  });
-}
-
-async function uploadFotoKeDrive(base64Data, idTokenAdmin) {
-  const base64String = base64Data.split(',')[1] || base64Data;
-  const result = await driveRequest('upload', {
-    idToken: idTokenAdmin,
-    base64: base64String
-  });
-  if (!result.ok) throw new Error(result.error || 'Gagal mengupload foto ke Google Drive.');
-  return result.id;
-}
-
 let cropScale = 1, cropX = 0, cropY = 0, cropImgW = 0, cropImgH = 0;
 let cropStartX = 0, cropStartY = 0, cropStartPX = 0, cropStartPY = 0, cropDragging = false, cropPointerId = null;
 
@@ -224,13 +122,11 @@ window.potongFoto = () => {
   const sw = frameW / dispW * img.naturalWidth; const sh = frameH / dispH * img.naturalHeight;
   ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
   
-  // DIPERBAIKI: Menggunakan format image/jpeg murni agar lolos validasi backend Code.gs
   let hasil = canvas.toDataURL('image/jpeg', 0.78);
-  
   let ukKB = Math.round(hasil.length / 1024);
   window.FOTO_BARU = hasil;
   const prev = el('fotoPreview'); if(prev){ prev.src = hasil; prev.classList.remove('hidden'); }
-  const st = el('fotoStatus'); if(st) st.innerText = `✅ Foto otomatis dikompres jadi ${ukKB} KB, siap diupload ke Drive!`;
+  const st = el('fotoStatus'); if(st) st.innerText = `✅ Foto otomatis dikompres jadi ${ukKB} KB, siap disimpan!`;
   const m=el('cropModal'); if(m) m.classList.add('hidden'); toast(`✅ Foto siap (${ukKB} KB)`);
 };
 
@@ -377,7 +273,7 @@ function render() {
 
 window.gantiPage = (n) => { let tp = Math.max(1, Math.ceil(barang.length / perPage)); currentPage += n; if (currentPage < 1) currentPage = 1; if (currentPage > tp) currentPage = tp; render(); window.scrollTo(0, 0); };
 
-// --- FUNGSI SIMPAN DENGAN INTEGRASI GOOGLE DRIVE ---
+// --- FUNGSI SIMPAN (Menyimpan Langsung Base64 Foto ke Database) ---
 window.simpan = async () => {
   if (!bolehKelola()){ toastError('Harus Login dulu!'); return; }
   if (writeBusy) return;
@@ -398,22 +294,6 @@ window.simpan = async () => {
   button.innerText = 'MENYIMPAN...';
 
   try {
-    let fotoUrlFinal = null;
-    
-    // Jika admin memilih foto baru, upload dulu ke Google Drive via Bridge
-    if (window.FOTO_BARU) {
-      button.innerText = 'UPLOADING FOTO KE DRIVE...';
-      const currentUser = auth.currentUser;
-      if (!currentUser) throw new Error('Sesi login admin kedaluwarsa.');
-      
-      const idTokenAdmin = await currentUser.getIdToken();
-      const fotoId = await uploadFotoKeDrive(window.FOTO_BARU, idTokenAdmin);
-      
-      const endpointUrl = 'https://script.google.com/macros/s/AKfycbyfbG44Rrch0R0bYbuEDOLe952lsL_hDAxg0PCpIrMx1AX5RW-gojnbhWOEWgOpq2cKbw/exec';
-      fotoUrlFinal = endpointUrl + '?photo=' + fotoId;
-    }
-
-    button.innerText = 'MENYIMPAN KE DATABASE...';
     const ref = editId ? fb.doc(db, 'barang_public', editId) : fb.doc(fb.collection(db, 'barang_public'));
     
     const data = { 
@@ -425,8 +305,9 @@ window.simpan = async () => {
       tanggalUpdate: getTanggalHariIni() 
     };
     
-    if (fotoUrlFinal) {
-      data.foto = fotoUrlFinal;
+    // Jika ada foto baru yang dipilih/dipotong, simpan string base64-nya langsung ke database
+    if (window.FOTO_BARU) {
+      data.foto = window.FOTO_BARU;
     }
 
     const batch = fb.writeBatch(db);
@@ -436,7 +317,7 @@ window.simpan = async () => {
     
     writeBusy = false; 
     window.batalEdit(); 
-    toast('✅ Berhasil disimpan & foto masuk Drive!');
+    toast('✅ Berhasil disimpan!');
   } catch(e){ 
     toastError(e.message || pesanError(e)); 
   } finally { 
