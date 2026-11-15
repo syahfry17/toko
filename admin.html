@@ -8,6 +8,7 @@
 <style>
   body{font-family:system-ui,-apple-system,sans-serif;background:#f1f5f9}
   input,select,textarea{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;font-size:14px}
+  /* TOMBOL VERSI LAMA - PENSIL DI ATAS, TULISAN DI BAWAH */
   .btn-edit,.btn-hapus{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:10px 4px;font-size:14px;font-weight:700;border-radius:10px;border:none;cursor:pointer}
   .btn-edit{background:#facc15;color:#000}
   .btn-hapus{background:#ef4444;color:#fff}
@@ -16,6 +17,7 @@
 </head>
 <body>
 <div class="max-w-md mx-auto pb-24">
+  <!-- HEADER -->
   <div class="bg-green-600 text-white p-4 m-3 rounded-2xl shadow">
     <div class="flex justify-between items-start">
       <div>
@@ -28,12 +30,20 @@
       </div>
     </div>
   </div>
+
+  <!-- STATISTIK -->
   <div class="grid grid-cols-3 gap-2 px-3">
     <div class="bg-white rounded-xl p-3 text-center shadow-sm"><p id="totalProduk" class="font-extrabold text-lg leading-none">0</p><p class="text-[11px] text-gray-500 mt-1">TOTAL PRODUK</p></div>
     <div class="bg-white rounded-xl p-3 text-center shadow-sm"><p id="totalUntung" class="font-extrabold text-lg leading-none text-green-600">Rp 0</p><p class="text-[11px] text-gray-500 mt-1">TOTAL UNTUNG</p></div>
     <div class="bg-white rounded-xl p-3 text-center shadow-sm"><p id="stokMenipis" class="font-extrabold text-lg leading-none text-red-500">0</p><p class="text-[11px] text-gray-500 mt-1">STOK MENIPIS</p></div>
   </div>
-  <div class="px-3 mt-3"><button onclick="bukaFormTambah()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow">+ Tambah Barang</button></div>
+
+  <!-- TAMBAH -->
+  <div class="px-3 mt-3">
+    <button onclick="bukaFormTambah()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow">+ Tambah Barang</button>
+  </div>
+
+  <!-- FORM -->
   <div id="formBarang" class="hidden px-3 mt-3">
     <div class="bg-white rounded-2xl p-4 shadow-sm">
       <h2 id="formTitle" class="font-bold mb-3">Tambah Barang Baru</h2>
@@ -53,8 +63,15 @@
       </div>
     </div>
   </div>
-  <div class="px-3 mt-3"><input id="cariAdmin" oninput="renderAdmin()" placeholder="🔍 Cari barang..." class="border-green-600 border-2"></div>
+
+  <!-- CARI -->
+  <div class="px-3 mt-3">
+    <input id="cariAdmin" oninput="renderAdmin()" placeholder="🔍 Cari barang..." class="border-green-600 border-2">
+  </div>
+
+  <!-- LIST 2 KOLOM -->
   <div id="listBarangAdmin" class="grid grid-cols-2 gap-3 p-3"></div>
+
   <p class="text-center text-xs text-gray-400 mt-2">© UD. BILAL - Admin</p>
 </div>
 <script type="module" src="script.js"></script>
