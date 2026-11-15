@@ -1,4 +1,4 @@
-// UD. BILAL - script.js v126 (Terintegrasi Google Drive Bridge)
+// UD. BILAL - script.js v127 (Terintegrasi Google Drive Bridge & Format JPEG)
 const firebaseConfig = {
   apiKey: "AIzaSyAhce1AyhPGe1cDkIzcBcgAFFOXC2Isxx0",
   authDomain: "toko-bilal.firebaseapp.com",
@@ -223,8 +223,10 @@ window.potongFoto = () => {
   const sx = (frameLeft - imgLeft) / dispW * img.naturalWidth; const sy = (frameTop - imgTop) / dispH * img.naturalHeight;
   const sw = frameW / dispW * img.naturalWidth; const sh = frameH / dispH * img.naturalHeight;
   ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-  let hasil = canvas.toDataURL('image/webp', 0.78);
-  if(!hasil.startsWith('data:image/webp')) hasil = canvas.toDataURL('image/jpeg', 0.72);
+  
+  // DIPERBAIKI: Menggunakan format image/jpeg murni agar lolos validasi backend Code.gs
+  let hasil = canvas.toDataURL('image/jpeg', 0.78);
+  
   let ukKB = Math.round(hasil.length / 1024);
   window.FOTO_BARU = hasil;
   const prev = el('fotoPreview'); if(prev){ prev.src = hasil; prev.classList.remove('hidden'); }
