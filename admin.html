@@ -5,8 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin - UD. BILAL</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body{font-family:system-ui,-apple-system,sans-serif;background:#f1f5f9}
+  .info-admin-box{padding:10px 10px 4px !important;font-size:12px}
+  /* TOMBOL EDIT / HAPUS - UDAH DIKECILIN */
+  .btn-edit,.btn-hapus{flex:1 !important;padding:7px 4px !important;font-size:12px !important;font-weight:700;border-radius:9px;display:flex !important;align-items:center;justify-content:center;gap:4px;white-space:nowrap;line-height:1.2;border:none;cursor:pointer}
+  .btn-edit{background:#facc15;color:#000}
+  .btn-hapus{background:#ef4444;color:#fff}
+  .btn-edit .ico,.btn-hapus .ico{font-size:11px !important;line-height:1}
+  .card-barang{background:#fff;border-radius:14px;padding:12px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  input,select,textarea{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;font-size:14px}
+  .btn-simpan{background:#16a34a;color:#fff;font-weight:800;padding:12px;border-radius:12px;width:100%}
+</style>
 </head>
-<body class="bg-slate-100 font-sans">
+<body>
 <div class="max-w-md mx-auto pb-24">
   <!-- HEADER -->
   <div class="bg-green-600 text-white p-4 sticky top-0 z-10 rounded-b-2xl">
@@ -15,39 +27,41 @@
       <a href="index.html" class="bg-white text-green-700 text-xs font-bold px-3 py-2 rounded-full">Lihat Toko →</a>
     </div>
     <!-- STATISTIK -->
-    <div class="grid grid-cols-3 gap-2 mt-3 text-center text-xs">
+    <div class="info-admin-box grid grid-cols-3 gap-2 mt-3 text-center">
       <div class="bg-white/20 rounded-xl p-2"><p class="text-[11px] opacity-80">Total Barang</p><p id="totalBarang" class="font-extrabold text-lg leading-none mt-1">0</p></div>
       <div class="bg-white/20 rounded-xl p-2"><p class="text-[11px] opacity-80">Stok Menipis</p><p id="stokMenipis" class="font-extrabold text-lg leading-none mt-1">0</p></div>
       <div class="bg-white/20 rounded-xl p-2"><p class="text-[11px] opacity-80">Total Stok</p><p id="totalStok" class="font-extrabold text-lg leading-none mt-1">0</p></div>
     </div>
   </div>
 
-  <!-- FORM -->
+  <!-- FORM TAMBAH / EDIT -->
   <div class="p-3">
     <div class="bg-white rounded-2xl p-4 shadow-sm">
       <h2 id="formTitle" class="font-bold mb-3">Tambah Barang Baru</h2>
       <input type="hidden" id="editId">
       <div class="space-y-2">
-        <input id="nama" placeholder="Nama Barang - cth: Beras Cap Ayam 5kg" class="w-full p-2.5 border border-slate-300 rounded-xl bg-white text-sm">
+        <input id="nama" placeholder="Nama Barang - cth: Beras Cap Ayam 5kg">
         <div class="grid grid-cols-2 gap-2">
-          <input id="harga" type="number" placeholder="Harga - cth: 65000" class="w-full p-2.5 border border-slate-300 rounded-xl bg-white text-sm">
-          <input id="stok" placeholder="Stok - cth: 5 Karung" class="w-full p-2.5 border border-slate-300 rounded-xl bg-white text-sm">
+          <input id="harga" type="number" placeholder="Harga - cth: 65000">
+          <input id="stok" placeholder="Stok - cth: 5 Karung">
         </div>
-        <input id="kategori" placeholder="Kategori - cth: Beras" class="w-full p-2.5 border border-slate-300 rounded-xl bg-white text-sm">
-        <input id="gambar" placeholder="Link Gambar (boleh kosong)" class="w-full p-2.5 border border-slate-300 rounded-xl bg-white text-sm">
-        <textarea id="deskripsi" rows="2" placeholder="Deskripsi singkat (boleh kosong)" class="w-full p-2.5 border border-slate-300 rounded-xl bg-white text-sm"></textarea>
-        <button onclick="simpanBarang()" class="bg-green-600 text-white font-extrabold p-3 rounded-xl w-full">💾 Simpan Barang</button>
+        <input id="kategori" placeholder="Kategori - cth: Beras">
+        <input id="gambar" placeholder="Link Gambar (boleh kosong)">
+        <textarea id="deskripsi" rows="2" placeholder="Deskripsi singkat (boleh kosong)"></textarea>
+        <button onclick="simpanBarang()" class="btn-simpan">💾 Simpan Barang</button>
         <button id="btnBatal" onclick="batalEdit()" class="w-full text-sm text-gray-500 py-1 hidden">Batal Edit</button>
       </div>
     </div>
 
-    <input id="cariAdmin" oninput="renderAdmin()" placeholder="🔍 Cari barang..." class="w-full p-2.5 border border-slate-300 rounded-xl bg-white text-sm mt-3">
+    <!-- CARI -->
+    <input id="cariAdmin" oninput="renderAdmin()" placeholder="🔍 Cari barang..." class="mt-3">
 
+    <!-- LIST BARANG -->
     <h3 class="font-bold mt-4 mb-2 px-1">Daftar Barang</h3>
     <div id="listBarangAdmin" class="space-y-2"></div>
-    <p class="text-center text-xs text-gray-400 mt-6">© UD. BILAL - Admin v123</p>
+    <p class="text-center text-xs text-gray-400 mt-6">© UD. BILAL - Admin v122</p>
   </div>
 </div>
-<script type="module" src="script.js?v=123"></script>
+<script type="module" src="script.js?v=122"></script>
 </body>
 </html>
