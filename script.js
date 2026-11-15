@@ -1,4 +1,4 @@
-// UD. BILAL - script.js v121 - Tombol WA hijau WA asli #25D366
+// UD. BILAL - script.js v114 - OPTIMIZED: Firebase lazy-load + cache lokal, auth hanya di admin
 const firebaseConfig = {
   apiKey: "AIzaSyAhce1AyhPGe1cDkIzcBcgAFFOXC2Isxx0",
   authDomain: "toko-bilal.firebaseapp.com",
@@ -19,13 +19,15 @@ let isLogin = false;
 let kataCari = '';
 let unsubPrivate = null;
 window.FOTO_BARU = null;
+let qtyMap = {};
 const IS_ADMIN_PAGE = window.location.pathname.includes('admin');
 let sudahRenderPertama = false;
 let lastDataHash = '';
 
+// === Firebase lazy-load (tidak blokir tampilan pertama) ===
 let app = null, db = null, auth = null;
-let fb = {};
-let fbAuth = {};
+let fb = {};        // fungsi firestore: collection, addDoc, deleteDoc, doc, setDoc, onSnapshot, query, orderBy
+let fbAuth = {};    // fungsi auth: signInWithEmailAndPassword, signOut, onAuthStateChanged
 let fbInitPromise = null;
 function initFirebase(){
   if (fbInitPromise) return fbInitPromise;
@@ -99,6 +101,7 @@ window.potongFoto = () => {
   const sx = (frameLeft - imgLeft) / dispW * img.naturalWidth; const sy = (frameTop - imgTop) / dispH * img.naturalHeight;
   const sw = frameW / dispW * img.naturalWidth; const sh = frameH / dispH * img.naturalHeight;
   ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+  // Kompres otomatis: WebP dulu (lebih kecil ~30%), kalau browser gak dukung fallback ke JPEG
   let hasil = canvas.toDataURL('image/webp', 0.78);
   if(!hasil.startsWith('data:image/webp')) hasil = canvas.toDataURL('image/jpeg', 0.72);
   let ukKB = Math.round(hasil.length / 1024);
@@ -155,111 +158,4 @@ window.doLogin = async () => {
   await initFirebase();
   let email = el('inputEmail') ? el('inputEmail').value.trim() : ''; let pass = el('inputPass') ? el('inputPass').value : '';
   if (!email || !pass){ toastError("Isi Email & Password dulu!"); return; }
-  try { let hasil = await fbAuth.signInWithEmailAndPassword(auth, email, pass); if (hasil.user.uid !== ADMIN_UID) { await fbAuth.signOut(auth); toastError("Akun ini bukan Admin!"); return; } const b=el('boxLogin'); if(b) b.classList.add('hidden'); if(el('inputPass')) el('inputPass').value = ''; toast('Login Berhasil!'); } catch (e) { toastError('Gagal Login!'); }
-};
-window.bukaForm = () => { if (!isLogin){ toastError("Harus Login dulu!"); return; } const j=el('judulForm'); if(j) j.innerText = editId ? 'Edit Barang' : 'Tambah Barang'; const p=el('popupForm'); if(p) p.classList.remove('hidden'); };
-window.tutupForm = () => { const p=el('popupForm'); if(p) p.classList.add('hidden'); };
-let cariTimer = null;
-window.cariBarang = (teks) => { clearTimeout(cariTimer); cariTimer = setTimeout(()=>{ kataCari = teks.toLowerCase().trim(); currentPage = 1; render(); }, 250); };
-window.bukaZoomFoto = (id) => {
-  const b = barang.find(x => x.id === id); if(!b || !b.foto) return;
-  let modal = document.getElementById('modalZoomFoto'); if(modal) modal.remove();
-  modal = document.createElement('div'); modal.id = 'modalZoomFoto'; modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:100;display:flex;align-items:center;justify-content:center;';
-  modal.innerHTML = `<img src="${b.foto}" style="max-width:95%;max-height:90%;"><button onclick="document.getElementById('modalZoomFoto').remove()" style="position:absolute;top:15px;right:15px;background:white;width:36px;height:36px;border-radius:50%;font-weight:bold;">✕</button>`;
-  modal.addEventListener('click', (e)=>{ if(e.target === modal) modal.remove(); }); document.body.appendChild(modal);
-};
-window.beliSekarang = (id) => {
-  const b = barang.find(x => x.id === id); if(!b) return; let q = 1; let j = b.jual || b.harga || 0; let total = q * j;
-  let pesan = `Halo UD. BILAL, saya mau pesan:\n- ${b.nama}\n- Jumlah: ${q}\n- Harga: Rp ${Number(j).toLocaleString('id-ID')} / pcs\n- Total: Rp ${Number(total).toLocaleString('id-ID')}`;
-  window.open(`https://wa.me/${NOMOR_WA}?text=${encodeURIComponent(pesan)}`, '_blank');
-};
-function render() {
-  sudahRenderPertama = true;
-  updateUI();
-  let totalUntung = 0;
-  let stokMenipis = 0;
-  barang.forEach(b => {
-    let j = b.jual || b.harga || 0;
-    let stokAngka = parseFloat(String(b.stok ?? '').replace(',', '.')) || 0;
-    if (isLogin) totalUntung += (j - (b.modal || 0)) * stokAngka;
-    if (stokAngka <= 5) stokMenipis++;
-  });
-  if (el('statTotalProduk')) el('statTotalProduk').innerText = barang.length;
-  if (el('statTotalUntung')) el('statTotalUntung').innerText = 'Rp ' + totalUntung.toLocaleString('id-ID');
-  if (el('statStokMenipis')) el('statStokMenipis').innerText = stokMenipis;
-
-  let hasilCari = barang.filter(b => b.nama.toLowerCase().includes(kataCari) || (b.keterangan || '').toLowerCase().includes(kataCari));
-  let totalPage = Math.max(1, Math.ceil(hasilCari.length / perPage)); if (currentPage > totalPage) currentPage = totalPage;
-  let list = hasilCari.slice((currentPage - 1) * perPage, currentPage * perPage); let html = '';
-  list.forEach(b => {
-    let j = b.jual || b.harga || 0; let modal = b.modal || 0; let u = j - modal; let ket = bersihKet(b.keterangan);
-    let badgeBaru = isHariIni(b.tanggalUpdate) ? `<span class="badge-baru">BARU</span>` : '';
-    let stokAngka = parseFloat(String(b.stok ?? '').replace(',', '.')) || 0;
-    let stokWarn = stokAngka <= 5 ? `<div style="color:#ef4444;font-weight:800;font-size:11px;text-align:right;">⚠️ MAU HABIS!</div>` : '';
-    let foto = b.foto ? `<img loading="lazy" decoding="async" src="${b.foto}" onclick="bukaZoomFoto('${b.id}')" class="foto-produk cursor-pointer" alt="${aman(b.nama)}">` : `<div class="w-full flex items-center justify-center text-gray-400 text-xs" style="aspect-ratio:1/1;background:#f8f8f8;">Belum ada foto</div>`;
-    // v121: TOMBOL WA HIJAU WA ASLI #25D366
-    let tombolWA = IS_ADMIN_PAGE ? '' : `<button onclick="beliSekarang('${b.id}')" class="w-full mt-2 py-2.5 rounded-lg font-bold text-white text-[13px]" style="background:#25D366;box-shadow:0 3px 10px rgba(37,211,102,.4);">💬 Pesan via WA</button>`;
-    let isiKartu = `<div class="p-2 text-center flex-1 flex flex-col"><p class="font-bold text-[15px] leading-tight line-clamp-2 min-h-[38px]">${aman(b.nama)}</p><p class="text-gray-400 font-bold text-[14px] mt-1">Rp${Number(j).toLocaleString('id-ID')}</p><p class="text-[12px] text-gray-500 mt-1 min-h-[18px]">${ket ? aman(ket) : '-'}</p>${tombolWA}</div>`;
-    let infoAdmin = '';
-    if (IS_ADMIN_PAGE) {
-      infoAdmin = `<div class="flex gap-2 mt-2"><button onclick="editBarang('${b.id}')" class="flex-1 py-1.5 px-1 text-xs font-bold rounded-lg bg-yellow-300 text-black flex items-center justify-center gap-1 whitespace-nowrap"><span class="text-[11px] leading-none">✏️</span> Edit</button><button onclick="hapusBarang('${b.id}')" class="flex-1 py-1.5 px-1 text-xs font-bold rounded-lg bg-red-500 text-white flex items-center justify-center gap-1 whitespace-nowrap"><span class="text-[11px] leading-none">🗑️</span> Hapus</button></div> `;
-    } else { infoAdmin = ``; }
-    html += `<div class="kartu"><div class="relative">${foto}<div class="absolute top-1 left-1">${badgeBaru}</div></div>${isiKartu}${infoAdmin}</div>`;
-  });
-  if (hasilCari.length === 0) html = `<p class="text-center text-gray-400 py-4 col-span-2">Barang gak ketemu, coba kata lain</p>`;
-  const tabel = el('tabel'); if(tabel) tabel.innerHTML = html;
-  const info = el('infoPage'); if(info) info.innerText = `Page ${currentPage} / ${totalPage} (Total ${hasilCari.length} barang)`;
-  const foot = document.querySelector('.footer'); if(foot) foot.innerHTML = (IS_ADMIN_PAGE && isLogin) ? `Total Jenis Produk: ${barang.length} | Total Untung: Rp ${totalUntung.toLocaleString('id-ID')}` : `Total Jenis Produk: ${barang.length}`;
-}
-window.gantiPage = (n) => { let tp = Math.max(1, Math.ceil(barang.length / perPage)); currentPage += n; if (currentPage < 1) currentPage = 1; if (currentPage > tp) currentPage = tp; render(); window.scrollTo(0, 0); };
-window.simpan = async () => {
-  await initFirebase();
-  if (!isLogin){ toastError("Harus Login dulu!"); return; }
-  let nama = el('nama').value.trim(); let modal = Number(el('modal').value); let jual = Number(el('harga').value); let keterangan = bersihKet(el('keterangan').value); let stok = el('stok').value.trim();
-  if (!nama || !modal || !jual || !stok){ toastError("Isi dulu!"); return; }
-  let tanggalUpdate = getTanggalHariIni(); let fotoBaru = window.FOTO_BARU || null;
-  try {
-    if (editId) { let dataPublic = { nama, jual, harga: jual, keterangan, stok, tanggalUpdate }; if (fotoBaru) dataPublic.foto = fotoBaru; else { let lama = barang.find(x => x.id === editId); if(lama && lama.foto) dataPublic.foto = lama.foto; } await fb.setDoc(fb.doc(db, "barang_public", editId), dataPublic); await fb.setDoc(fb.doc(db, "barang_private", editId), { modal }); editId = null; if(el('btnSimpan')) el('btnSimpan').innerText = "SIMPAN"; }
-    else { let dataBaru = { nama, jual, harga: jual, keterangan, stok, tanggalUpdate }; if (fotoBaru) dataBaru.foto = fotoBaru; let refBaru = await fb.addDoc(fb.collection(db, "barang_public"), dataBaru); await fb.setDoc(fb.doc(db, "barang_private", refBaru.id), { modal }); }
-    window.FOTO_BARU = null; const prev = el('fotoPreview'); if(prev){ prev.src=''; prev.classList.add('hidden'); } const inpFoto = el('fotoInput'); if(inpFoto) inpFoto.value=''; const st = el('fotoStatus'); if(st) st.innerText='';
-    el('nama').value = ''; el('modal').value = ''; el('harga').value = ''; el('keterangan').value = ''; el('stok').value = ''; const pf=el('popupForm'); if(pf) pf.classList.add('hidden'); toast('✅ Berhasil disimpan!');
-  } catch (e) { toastError("Gagal simpan! Foto kegedean, coba foto lain."); }
-};
-window.editBarang = (id) => {
-  if (!isLogin){ toastError("Harus Login dulu!"); return; } let b = barang.find(x => x.id === id); if (!b){ toastError("Barang gak ketemu, refresh dulu!"); return; }
-  el('nama').value = b.nama; el('modal').value = b.modal || ''; el('harga').value = b.jual || b.harga; el('keterangan').value = bersihKet(b.keterangan); el('stok').value = b.stok; window.FOTO_BARU = null;
-  const prev = el('fotoPreview'); const st = el('fotoStatus'); if(prev){ if(b.foto){ prev.src=b.foto; prev.classList.remove('hidden'); if(st) st.innerText='Foto lama masih ada. Pilih foto baru kalau mau ganti.'; } else { prev.src=''; prev.classList.add('hidden'); if(st) st.innerText='Belum ada foto, silahkan pilih foto.'; } }
-  const inpFoto = el('fotoInput'); if(inpFoto) inpFoto.value=''; editId = id; if(el('btnSimpan')) el('btnSimpan').innerText = "UPDATE"; if(el('judulForm')) el('judulForm').innerText = 'Edit Barang'; const pf=el('popupForm'); if(pf) pf.classList.remove('hidden');
-};
-window.hapus = async (id) => { await initFirebase(); if (!isLogin){ toastError("Harus Login dulu!"); return; } if (confirm("Hapus?")) { await fb.deleteDoc(fb.doc(db, "barang_public", id)); await fb.deleteDoc(fb.doc(db, "barang_private", id)); toast('Barang dihapus'); } };
-window.batalEdit = () => { editId = null; window.FOTO_BARU = null; const prev = el('fotoPreview'); if(prev){ prev.src=''; prev.classList.add('hidden'); } const inpFoto = el('fotoInput'); if(inpFoto) inpFoto.value=''; const st = el('fotoStatus'); if(st) st.innerText=''; if(el('nama')) el('nama').value=''; if(el('modal')) el('modal').value=''; if(el('harga')) el('harga').value=''; if(el('keterangan')) el('keterangan').value=''; if(el('stok')) el('stok').value=''; if(el('btnSimpan')) el('btnSimpan').innerText = "SIMPAN"; const pf=el('popupForm'); if(pf) pf.classList.add('hidden'); };
-
-try {
-  const cachePub = JSON.parse(localStorage.getItem('bilal_cache_public') || 'null');
-  if (cachePub && Array.isArray(cachePub)) { barangPublic = cachePub; gabungData(); }
-  if (IS_ADMIN_PAGE) { const cachePriv = JSON.parse(localStorage.getItem('bilal_cache_private') || 'null'); if (cachePriv && typeof cachePriv === 'object') { barangPrivate = cachePriv; gabungData(); } }
-} catch(e){}
-
-function mulaiFirebase(){
-  initFirebase().then(() => {
-    fb.onSnapshot(fb.query(fb.collection(db, "barang_public"), fb.orderBy("nama")), (snap) => {
-      let baru = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      let hash = JSON.stringify(baru.map(b=>b.id + b.nama + b.jual + b.stok));
-      if(hash === lastDataHash && sudahRenderPertama) return;
-      lastDataHash = hash; barangPublic = baru;
-      try { localStorage.setItem('bilal_cache_public', JSON.stringify(baru)); } catch(e){}
-      gabungData();
-    });
-    if (IS_ADMIN_PAGE) {
-      fbAuth.onAuthStateChanged(auth, (user) => {
-        let loginBaru = !!user && user.uid === ADMIN_UID;
-        if (loginBaru === isLogin && sudahRenderPertama) return;
-        isLogin = loginBaru;
-        if (isLogin) mulaiDengarPrivate(); else { if(unsubPrivate){ unsubPrivate(); unsubPrivate=null; } barangPrivate={}; }
-        updateUI(); render();
-      });
-    }
-  }).catch(()=>{});
-}
-if ('requestIdleCallback' in window) requestIdleCallback(mulaiFirebase, { timeout: 1500 });
-else setTimeout(mulaiFirebase, 0);
+  try { let hasil = await fbAuth.signInWithEmailAndPassword(auth, email, pass); if (hasil.user.uid !== ADMIN_UID) { await fbAuth.signOut(auth); toastError("Akun ini bukan Admin!"); return; } const b=el('boxLogin'); if(b) b.classList.add('hidden'); if(el('inputPass')) el('inputPass').value = ''; toast('Login Berhasil!'); } catch (e) { toastError('Gagal Login!');
