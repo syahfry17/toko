@@ -1,4 +1,4 @@
-// UD. BILAL - script.js v119 - ADMIN DIPoles: tanpa WA di admin, stat dashboard, stok menipis merah
+// UD. BILAL - script.js v121 - Tombol WA hijau WA asli #25D366
 const firebaseConfig = {
   apiKey: "AIzaSyAhce1AyhPGe1cDkIzcBcgAFFOXC2Isxx0",
   authDomain: "toko-bilal.firebaseapp.com",
@@ -23,7 +23,6 @@ const IS_ADMIN_PAGE = window.location.pathname.includes('admin');
 let sudahRenderPertama = false;
 let lastDataHash = '';
 
-// === Firebase lazy-load ===
 let app = null, db = null, auth = null;
 let fb = {};
 let fbAuth = {};
@@ -185,7 +184,6 @@ function render() {
     if (isLogin) totalUntung += (j - (b.modal || 0)) * stokAngka;
     if (stokAngka <= 5) stokMenipis++;
   });
-  // Isi 3 kotak ringkasan di admin
   if (el('statTotalProduk')) el('statTotalProduk').innerText = barang.length;
   if (el('statTotalUntung')) el('statTotalUntung').innerText = 'Rp ' + totalUntung.toLocaleString('id-ID');
   if (el('statStokMenipis')) el('statStokMenipis').innerText = stokMenipis;
@@ -197,14 +195,14 @@ function render() {
     let j = b.jual || b.harga || 0; let modal = b.modal || 0; let u = j - modal; let ket = bersihKet(b.keterangan);
     let badgeBaru = isHariIni(b.tanggalUpdate) ? `<span class="badge-baru">BARU</span>` : '';
     let stokAngka = parseFloat(String(b.stok ?? '').replace(',', '.')) || 0;
-    let stokWarn = stokAngka <= 5 ? `<span style="color:#ef4444;font-weight:800;">⚠️ MAU HABIS!</span>` : '';
+    let stokWarn = stokAngka <= 5 ? `<div style="color:#ef4444;font-weight:800;font-size:11px;text-align:right;">⚠️ MAU HABIS!</div>` : '';
     let foto = b.foto ? `<img loading="lazy" decoding="async" src="${b.foto}" onclick="bukaZoomFoto('${b.id}')" class="foto-produk cursor-pointer" alt="${aman(b.nama)}">` : `<div class="w-full flex items-center justify-center text-gray-400 text-xs" style="aspect-ratio:1/1;background:#f8f8f8;">Belum ada foto</div>`;
-    // ADMIN: tanpa tombol WA, tanpa tanggal Update. PENGUNJUNG: tetap ada WA
-    let tombolWA = IS_ADMIN_PAGE ? '' : `<button onclick="beliSekarang('${b.id}')" class="w-full mt-2 py-2.5 rounded-lg font-bold text-white text-[13px]" style="background:#7cb342;">💬 Pesan via WA</button>`;
+    // v121: TOMBOL WA HIJAU WA ASLI #25D366
+    let tombolWA = IS_ADMIN_PAGE ? '' : `<button onclick="beliSekarang('${b.id}')" class="w-full mt-2 py-2.5 rounded-lg font-bold text-white text-[13px]" style="background:#25D366;box-shadow:0 3px 10px rgba(37,211,102,.4);">💬 Pesan via WA</button>`;
     let isiKartu = `<div class="p-2 text-center flex-1 flex flex-col"><p class="font-bold text-[15px] leading-tight line-clamp-2 min-h-[38px]">${aman(b.nama)}</p><p class="text-gray-400 font-bold text-[14px] mt-1">Rp${Number(j).toLocaleString('id-ID')}</p><p class="text-[12px] text-gray-500 mt-1 min-h-[18px]">${ket ? aman(ket) : '-'}</p>${tombolWA}</div>`;
     let infoAdmin = '';
     if (IS_ADMIN_PAGE) {
-      infoAdmin = `<div class="info-admin-box"><div class="flex justify-between"><span style="color:#888;">Modal</span><b>Rp ${Number(modal).toLocaleString('id-ID')}</b></div><div class="flex justify-between mt-0.5"><span style="color:#888;">Untung</span><b class="${u>=0?'text-green-600':'text-red-600'}">Rp ${u.toLocaleString('id-ID')}</b></div><div class="flex justify-between mt-0.5"><span style="color:#888;">Stok</span><b class="${stokAngka<=5?'text-red-600':''}">${aman(tampilStok(b))} ${stokWarn}</b></div></div><div class="flex gap-2 px-2 pb-2 pt-1"><button onclick="editBarang('${b.id}')" class="btn-edit">✏️ Edit</button><button onclick="hapus('${b.id}')" class="btn-hapus">🗑️ Hapus</button></div>`;
+      infoAdmin = `<div class="info-admin-box"><div class="flex justify-between"><span style="color:#888;">Modal</span><b>Rp ${Number(modal).toLocaleString('id-ID')}</b></div><div class="flex justify-between mt-0.5"><span style="color:#888;">Untung</span><b class="${u>=0?'text-green-600':'text-red-600'}">Rp ${u.toLocaleString('id-ID')}</b></div><div class="mt-0.5"><div class="flex justify-between"><span style="color:#888;">Stok</span><b class="${stokAngka<=5?'text-red-600':''}">${aman(tampilStok(b))}</b></div>${stokWarn}</div></div><div class="flex gap-2 px-2 pb-2 pt-1"><button onclick="editBarang('${b.id}')" class="btn-edit">✏️ Edit</button><button onclick="hapus('${b.id}')" class="btn-hapus">🗑️ Hapus</button></div>`;
     } else { infoAdmin = ``; }
     html += `<div class="kartu"><div class="relative">${foto}<div class="absolute top-1 left-1">${badgeBaru}</div></div>${isiKartu}${infoAdmin}</div>`;
   });
@@ -236,7 +234,6 @@ window.editBarang = (id) => {
 window.hapus = async (id) => { await initFirebase(); if (!isLogin){ toastError("Harus Login dulu!"); return; } if (confirm("Hapus?")) { await fb.deleteDoc(fb.doc(db, "barang_public", id)); await fb.deleteDoc(fb.doc(db, "barang_private", id)); toast('Barang dihapus'); } };
 window.batalEdit = () => { editId = null; window.FOTO_BARU = null; const prev = el('fotoPreview'); if(prev){ prev.src=''; prev.classList.add('hidden'); } const inpFoto = el('fotoInput'); if(inpFoto) inpFoto.value=''; const st = el('fotoStatus'); if(st) st.innerText=''; if(el('nama')) el('nama').value=''; if(el('modal')) el('modal').value=''; if(el('harga')) el('harga').value=''; if(el('keterangan')) el('keterangan').value=''; if(el('stok')) el('stok').value=''; if(el('btnSimpan')) el('btnSimpan').innerText = "SIMPAN"; const pf=el('popupForm'); if(pf) pf.classList.add('hidden'); };
 
-// === Render instan dari cache lokal ===
 try {
   const cachePub = JSON.parse(localStorage.getItem('bilal_cache_public') || 'null');
   if (cachePub && Array.isArray(cachePub)) { barangPublic = cachePub; gabungData(); }
