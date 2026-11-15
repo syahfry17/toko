@@ -1,11 +1,11 @@
 <!doctype html>
 <html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Uji Foto Drive • UD. BILAL</title>
 <style>*{box-sizing:border-box}body{margin:0;background:#f1f5f2;color:#193a2a;font:15px system-ui,sans-serif}main{max-width:600px;margin:auto;padding:18px}header{background:#166534;color:white;padding:22px;border-radius:18px}h1{font-size:24px;margin:6px 0}h2{font-size:18px;margin:0 0 12px}p{line-height:1.55}section{background:white;margin-top:16px;padding:18px;border-radius:16px;border:1px solid #dfe8e0}label{display:block;font-weight:650;margin:12px 0 7px}input,button{width:100%;padding:13px;border-radius:10px;font:inherit}input{border:1px solid #cbd5ce;min-width:0}button{background:#16833f;color:white;border:0;font-weight:700;margin-top:12px;cursor:pointer}button:disabled{opacity:.5;cursor:wait}.secondary{background:#e5eee7;color:#245433}.note,small{font-size:13px;color:#617167}.status{padding:14px;background:#e9f4ed;border-radius:12px;overflow-wrap:anywhere;white-space:pre-line}img,iframe{width:100%;height:300px;object-fit:contain;border:0;background:#f4f7f4;border-radius:12px;margin-top:12px}[hidden]{display:none!important}a{color:#166534;overflow-wrap:anywhere}header small{color:#d6f3df}</style></head>
-<body><main><header><small>UD. BILAL · PERCOBAAN TERPISAH</small><h1>Foto ke Google Drive</h1><p>Uji satu foto dahulu. Data produk dan halaman toko tidak diubah.</p></header>
-<section><h2>1. Sambungkan Apps Script</h2><label for="endpoint">URL Web App (berakhiran /exec)</label><input id="endpoint" type="url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off"><button id="check" class="secondary">Cek sambungan</button><p class="note">Gunakan deployment proyek percobaan. Jangan masukkan URL script dari pihak lain.</p></section>
+<body><main><header><small>UD. BILAL · PERCOBAAN v2</small><h1>Foto ke Google Drive</h1><p>Uji satu foto dahulu. Data produk dan halaman toko tidak diubah.</p></header><p id="status" class="status" role="status" aria-live="polite">URL sudah diisi. Tekan Cek sambungan setelah Apps Script diperbarui.</p>
+<section><h2>1. Sambungkan Apps Script</h2><label for="endpoint">URL Web App (berakhiran /exec)</label><input id="endpoint" value="https://script.google.com/macros/s/AKfycbyCDX2gpPljtgIZAeMlhxCoiKOKsS3qQZeWMeDP8-at6_fkMn8-_Yo45j8qpQpvBVn_/exec" type="url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off"><button id="check" class="secondary">Cek sambungan</button><p class="note">Gunakan deployment proyek percobaan. Jangan masukkan URL script dari pihak lain.</p></section>
 <section><h2>2. Login admin</h2><form id="login"><label for="email">Email admin toko</label><input id="email" type="email" autocomplete="username" required><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required><button id="loginButton">Login untuk upload</button></form><p id="session" hidden>Login admin aktif untuk percobaan ini.</p><button id="logout" class="secondary" hidden>Logout percobaan</button><p class="note">Login dikirim langsung ke Firebase. Password tidak dikirim ke Apps Script dan tidak disimpan di halaman ini.</p></section>
 <section><h2>3. Pilih dan upload foto</h2><label for="file">Foto percobaan</label><input id="file" type="file" accept="image/jpeg,image/png,image/webp"><p class="note">Otomatis diperkecil ke JPEG, sisi terpanjang maksimal 600 piksel dan ukuran maksimal 200 KB. Gunakan foto produk yang boleh dilihat publik.</p><img id="preview" alt="Pratinjau lokal sebelum upload" hidden><p id="size" class="note"></p><button id="upload" disabled>Upload foto ke Drive</button></section>
-<p id="status" class="status" role="status" aria-live="polite">Mulai dengan mengisi URL Apps Script.</p>
+
 <section><h2>4. Baca kembali dari Drive</h2><label for="photoId">ID foto hasil upload</label><input id="photoId" autocomplete="off" placeholder="Terisi setelah upload berhasil"><button id="view" class="secondary">Tampilkan dari Drive (tanpa login)</button><iframe id="remote" title="Foto yang dibaca kembali dari Google Drive" referrerpolicy="no-referrer" hidden></iframe><p id="linkBox" hidden><a id="publicLink" target="_blank" rel="noopener noreferrer">Buka tampilan foto di tab baru</a></p><p class="note">Untuk pengujian pengunjung: buka tautan foto di tab samaran. Foto harus tetap terlihat tanpa login Google. Ini tampilan melalui Apps Script, bukan URL gambar langsung untuk tag img.</p></section><p class="note"><a href="../index.html">← Kembali ke toko</a></p></main>
 <script>
 'use strict';
@@ -13,17 +13,52 @@ const API_KEY='AIzaSyAhce1AyhPGe1cDkIzcBcgAFFOXC2Isxx0';
 const ADMIN_UID='spaWNW7l2YSqBvhC7hkK6Sd3d7A3';
 const $=id=>document.getElementById(id);
 let token='',expires=0,photo='',busy=false,selection=0;
-const status=text=>{$('status').textContent=text;};
+const status=text=>{$('status').textContent=text;$('status').scrollIntoView({behavior:'smooth',block:'center'});};
 function endpoint(){const url=$('endpoint').value.trim();if(!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(url))throw Error('Masukkan URL deployment Apps Script yang berakhiran /exec.');return url;}
 function controls(){ $('upload').disabled=busy||!photo||!token; ['check','loginButton','logout','file','endpoint','view'].forEach(id=>$(id).disabled=busy); }
 async function jsonFetch(url,options={}){const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),60000);try{const r=await fetch(url,{...options,credentials:'omit',redirect:'follow',signal:controller.signal});const t=await r.text();let data;try{data=JSON.parse(t);}catch(_){throw Error('Balasan bukan JSON. Periksa deployment: Execute as Me dan akses Anyone, lalu gunakan URL /exec.');}if(!r.ok)throw Error(data.error?.message||'Permintaan ditolak.');return data;}finally{clearTimeout(timer);}}
 function errorText(e){if(e.name==='AbortError')return 'Waktu tunggu habis. Periksa folder Drive sebelum mengulang. Upload foto yang sama tidak membuat salinan tambahan.';if(e instanceof TypeError)return 'Sambungan gagal. Periksa internet dan deployment Apps Script. Jika gagal saat upload, cek folder Drive dahulu; foto mungkin sudah tersimpan.';return e.message;}
-$('check').onclick=async()=>{busy=true;controls();try{const result=await jsonFetch(endpoint());if(!result.ok)throw Error(result.error||'Sambungan gagal.');status('Sambungan berhasil. Selanjutnya login admin.');}catch(e){status(errorText(e));}finally{busy=false;controls();}};
+// Apps Script ditempatkan di iframe; hanya frame dengan nonce dan origin cocok diterima.
+let bridge=null;
+function randomId(){return Array.from(crypto.getRandomValues(new Uint8Array(16)),v=>v.toString(16).padStart(2,'0')).join('');}
+function googleOrigin(origin){return /^https:\/\/(?:[a-z0-9-]+\.)?script\.googleusercontent\.com$/.test(origin)||/^https:\/\/[a-z0-9-]+-script\.googleusercontent\.com$/.test(origin)||origin==='https://script.google.com';}
+function connectBridge(){
+  const url=endpoint();
+  if(bridge&&bridge.url===url)return bridge.promise;
+  if(bridge)bridge.dispose();
+  const nonce=randomId(),frame=document.createElement('iframe');
+  frame.title='Penghubung Google Drive';frame.style.cssText='position:absolute;width:1px;height:1px;border:0;left:-100px;';frame.setAttribute('aria-hidden','true');
+  const state={url,nonce,frame,pending:new Map(),source:null,origin:null,listener:null,timer:null};
+  state.promise=new Promise((resolve,reject)=>{
+    state.timer=setTimeout(()=>{state.dispose();reject(Error('Penghubung belum merespons. Perbarui Code.gs lalu Deploy versi baru pada URL yang sama. Pastikan akses Siapa saja.'));},30000);
+    state.listener=event=>{
+      const m=event.data;
+      if(!m||m.channel!=='bilal-drive-v2'||m.nonce!==nonce||!googleOrigin(event.origin))return;
+      if(m.ready&&!state.source){state.source=event.source;state.origin=event.origin;clearTimeout(state.timer);resolve(state);return;}
+      if(event.source!==state.source||event.origin!==state.origin)return;
+      const pending=state.pending.get(m.id);if(!pending)return;
+      state.pending.delete(m.id);clearTimeout(pending.timer);
+      if(m.error)pending.reject(Error(m.error));else pending.resolve(m.data);
+    };
+    window.addEventListener('message',state.listener);
+  });
+  state.dispose=()=>{clearTimeout(state.timer);window.removeEventListener('message',state.listener);frame.remove();for(const pending of state.pending.values()){clearTimeout(pending.timer);pending.reject(Error('Sambungan diganti. Coba lagi.'));}state.pending.clear();if(bridge===state)bridge=null;};
+  bridge=state;frame.src=url+'?bridge=1&nonce='+nonce;document.body.appendChild(frame);return state.promise;
+}
+async function driveRequest(action,payload){
+  const state=await connectBridge();
+  return new Promise((resolve,reject)=>{
+    const id=randomId();const timer=setTimeout(()=>{state.pending.delete(id);reject(Error('Respons Apps Script terlalu lama. Jika sedang upload, periksa folder Drive sebelum mencoba ulang.'));},60000);
+    state.pending.set(id,{resolve,reject,timer});
+    state.source.postMessage({channel:'bilal-drive-v2',nonce:state.nonce,id,action,payload},state.origin);
+  });
+}
+$('check').onclick=async()=>{busy=true;controls();try{status('Memeriksa sambungan…');const result=await driveRequest('check');if(!result.ok)throw Error(result.error||'Sambungan gagal.');status('Sambungan berhasil. Selanjutnya login admin.');}catch(e){status(errorText(e));}finally{busy=false;controls();}};
 $('login').onsubmit=async e=>{e.preventDefault();busy=true;controls();try{const d=await jsonFetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+API_KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('email').value.trim(),password:$('password').value,returnSecureToken:true})});if(d.localId!==ADMIN_UID)throw Error('Akun ini bukan admin UD. BILAL.');token=d.idToken;expires=Date.now()+Number(d.expiresIn)*1000;$('login').hidden=true;$('session').hidden=false;$('logout').hidden=false;status('Login berhasil. Pilih foto percobaan.');}catch(e){status(/INVALID_LOGIN_CREDENTIALS|INVALID_PASSWORD|EMAIL_NOT_FOUND/.test(e.message)?'Email atau password salah.':errorText(e));}finally{$('password').value='';busy=false;controls();}};
 $('logout').onclick=()=>{token='';expires=0;$('login').hidden=false;$('session').hidden=true;$('logout').hidden=true;controls();status('Logout percobaan berhasil. Foto hasil upload tetap bisa diuji tanpa login.');};
 function loadImage(file){return new Promise((resolve,reject)=>{const image=new Image(),url=URL.createObjectURL(file);image.onload=()=>{URL.revokeObjectURL(url);resolve(image);};image.onerror=()=>{URL.revokeObjectURL(url);reject(Error('Foto tidak terbaca. Pilih JPEG, PNG, atau WebP.'));};image.src=url;});}
 $('file').onchange=async()=>{const current=++selection;photo='';$('preview').hidden=true;$('size').textContent='';controls();const file=$('file').files[0];if(!file)return;try{if(file.size>15*1024*1024)throw Error('Foto asli maksimal 15 MB.');if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('Pilih JPEG, PNG, atau WebP.');const image=await loadImage(file);if(current!==selection)return;let side=600,quality=.78,data;do{const scale=Math.min(1,side/Math.max(image.naturalWidth,image.naturalHeight));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0,canvas.width,canvas.height);data=canvas.toDataURL('image/jpeg',quality);if(atob(data.split(',')[1]).length<=200*1024)break;quality-=.1;side=Math.round(side*.85);}while(side>=200);if(atob(data.split(',')[1]).length>200*1024)throw Error('Foto masih terlalu besar. Pilih foto lain.');photo=data;$('preview').src=photo;$('preview').hidden=false;$('size').textContent='Asli: '+Math.round(file.size/1024)+' KB → hasil: '+Math.ceil(atob(photo.split(',')[1]).length/1024)+' KB';status('Foto siap. Ini masih pratinjau lokal; belum diupload.');}catch(e){status(errorText(e));}finally{controls();}};
 function showRemote(){const base=endpoint(),id=$('photoId').value.trim();if(!/^[\w-]{10,200}$/.test(id))throw Error('ID foto belum valid.');const url=base+'?photo='+encodeURIComponent(id);$('remote').src=url;$('remote').hidden=false;$('publicLink').href=url;$('linkBox').hidden=false;}
-$('upload').onclick=async()=>{if(busy||!photo)return;if(!token||Date.now()>=expires-10000){status('Sesi berakhir. Login ulang dahulu.');return;}busy=true;controls();try{status('Mengupload foto ke Drive…');const d=await jsonFetch(endpoint(),{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({idToken:token,base64:photo.split(',')[1]})});if(!d.ok)throw Error(d.error||'Upload gagal.');$('photoId').value=d.id;showRemote();status('Upload berhasil ('+Math.ceil(d.bytes/1024)+' KB). Periksa foto pada bagian 4: foto tersebut diminta ulang dari Drive.');}catch(e){status(errorText(e));}finally{busy=false;controls();}};
+$('upload').onclick=async()=>{if(busy||!photo)return;if(!token||Date.now()>=expires-10000){status('Sesi berakhir. Login ulang dahulu.');return;}busy=true;controls();try{status('Mengupload foto ke Drive…');const d=await driveRequest('upload',{idToken:token,base64:photo.split(',')[1]});if(!d.ok)throw Error(d.error||'Upload gagal.');$('photoId').value=d.id;showRemote();status('Upload berhasil ('+Math.ceil(d.bytes/1024)+' KB). Periksa foto pada bagian 4: foto tersebut diminta ulang dari Drive.');}catch(e){status(errorText(e));}finally{busy=false;controls();}};
 $('view').onclick=()=>{try{showRemote();status('Meminta foto dari Drive tanpa token login. Pastikan gambarnya terlihat di bawah.');}catch(e){status(errorText(e));}};
 </script></body></html>
