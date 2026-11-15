@@ -14,18 +14,14 @@
     #tabel { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .kartu { background: #fff; border: 1px solid #eee; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 1px 6px rgba(0,0,0,0.05); }
     .kartu img.foto-produk { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; background: #f8f8f8; }
-    .qty-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 18px; background: #f3f4f6; }
-    /* ==== KUNCI ADMIN: semua di bawah ini hanya muncul setelah login admin ==== */
     .butuh-login { display: none !important; }
     #gateAdmin { position: fixed; inset: 0; background: #f3f4f6; z-index: 9998; display: flex; align-items: center; justify-content: center; padding: 20px; }
     #gateAdmin .box { background: #fff; border-radius: 16px; padding: 24px; max-width: 360px; width: 100%; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
   </style>
 </head>
 <body class="bg-gray-100 p-3">
-  <!-- ===== GERBANG LOGIN (tampil dulu, hilang setelah login admin) ===== -->
   <div id="gateAdmin">
     <div class="box">
-      <!-- TAMPILAN 1: pengantar (disembunyikan, langsung tampil form login) -->
       <div id="gateIntro" style="display:none;">
         <div style="font-size:48px;">🔒</div>
         <h2 style="font-weight:900;color:#166534;margin:8px 0 4px;">HALAMAN ADMIN</h2>
@@ -33,7 +29,6 @@
         <button onclick="document.getElementById('gateIntro').style.display='none';document.getElementById('gateForm').style.display='block';" style="width:100%;background:#16a34a;color:#fff;border:none;padding:12px;border-radius:10px;font-weight:700;font-size:15px;cursor:pointer;">🔑 LOGIN ADMIN</button>
         <a href="/toko/" style="display:block;margin-top:10px;font-size:12px;color:#666;text-decoration:none;">← Kembali ke Toko</a>
       </div>
-      <!-- TAMPILAN 2: form login (LANGSUNG tampil saat buka admin.html) -->
       <div id="gateForm" style="text-align:left;">
         <p class="font-bold text-center" style="margin:0 0 4px;font-size:18px;color:#166534;">🔑 Login Admin</p>
         <p style="font-size:12px;color:#666;text-align:center;margin:0 0 14px;">Khusus pemilik UD. BILAL</p>
@@ -44,28 +39,22 @@
       </div>
     </div>
   </div>
-
   <div class="flex justify-end items-center mb-3">
     <a href="/toko/" target="_blank" rel="noopener" class="bg-green-500 text-white px-3 py-2 rounded-lg text-sm font-bold">Lihat Toko 👀</a>
   </div>
-
   <div class="bg-white p-3 rounded-xl shadow mb-3 flex justify-between items-center">
     <span id="statusLogin" class="text-sm font-bold text-red-500">🔒 Mode Lihat Saja</span>
     <button id="btnLogin" onclick="toggleLogin()" class="bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm">LOGIN</button>
   </div>
-
   <div id="boxLogin" class="bg-yellow-50 border-2 border-yellow-300 p-4 rounded-xl shadow mb-3 space-y-3 hidden">
     <p class="font-bold text-center">Login Admin</p>
-    <!-- EMAIL TIDAK DI-PREFILL lagi (agar email admin tidak bocor ke publik) -->
     <input id="inputEmail" type="email" placeholder="Email Admin" autocomplete="username" class="w-full border p-3 rounded-lg">
     <input id="inputPass" type="password" placeholder="Password" autocomplete="current-password" class="w-full border p-3 rounded-lg">
     <button onclick="doLogin()" class="w-full bg-green-500 text-white p-3 rounded-lg font-bold">MASUK</button>
     <button onclick="toggleLogin()" class="w-full bg-gray-300 p-3 rounded-lg">Batal</button>
   </div>
-
   <button id="btnTambah" onclick="bukaForm()" class="butuh-login w-full bg-blue-500 text-white p-3 rounded-xl font-bold mb-3 hidden">+ Tambah Barang</button>
   <input id="inputCari" oninput="cariBarang(this.value)" type="text" placeholder="🔍 Cari barang..." autocomplete="off" class="butuh-login w-full border-2 border-gray-300 p-3 rounded-xl mb-3 bg-white font-bold">
-
   <div class="butuh-login bg-white p-3 rounded-xl shadow">
     <div id="tabel"></div>
     <div class="flex justify-between items-center mt-4">
@@ -75,7 +64,6 @@
     </div>
     <div class="footer text-center font-bold mt-3 text-sm border-t pt-3">Total Jenis Produk: 0</div>
   </div>
-
   <div id="popupForm" class="butuh-login fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-start justify-center p-3 pt-10" onclick="tutupForm()">
     <div class="bg-white p-4 rounded-xl shadow w-full max-w-md space-y-3" onclick="event.stopPropagation()">
       <div class="flex justify-between items-center">
@@ -97,7 +85,6 @@
       </div>
     </div>
   </div>
-
   <div id="cropModal" class="butuh-login fixed inset-0 bg-black bg-opacity-90 z-[100] hidden flex items-center justify-center p-3">
     <div class="bg-white p-4 rounded-xl w-full max-w-md space-y-3">
       <h2 class="font-bold text-center">✂️ Crop Foto</h2>
@@ -116,29 +103,20 @@
       <button onclick="potongFoto()" class="w-full bg-green-500 text-white p-3 rounded-lg font-bold">✂️ POTONG & PAKAI FOTO INI</button>
     </div>
   </div>
-
-  <script type="module" src="script.js?v=114"></script>
-
-  <!-- ===== GERBANG PENGAMAN: sembunyikan isi sampai benar-benar login admin ===== -->
+  <script type="module" src="script.js?v=117"></script>
   <script>
   (function(){
-    // Saat halaman admin dibuka, hapus cache harga modal dulu (cegah bocor setelah logout)
     try { localStorage.removeItem('bilal_cache_private'); } catch(e){}
-
-    // Simpan daftar elemen sensitif SEKALI di awal (setelah login class-nya hilang)
     var daftarTersembunyi = Array.prototype.slice.call(document.querySelectorAll('.butuh-login'));
     function setTampil(tampil){
       daftarTersembunyi.forEach(function(el){
         if(tampil){ el.classList.remove('butuh-login'); }
         else { el.classList.add('butuh-login'); }
       });
-      // kalau logout, bersihkan cache harga modal
       if(!tampil){
         try { localStorage.removeItem('bilal_cache_private'); } catch(e){}
       }
     }
-
-    // Pantau status login lewat teks di #statusLogin (diisi oleh script.js)
     var terakhirLogin = null;
     setInterval(function(){
       var st = document.getElementById('statusLogin');
@@ -151,14 +129,11 @@
         if(gate) gate.style.display = 'none';
         setTampil(true);
       } else {
-        // Logout terdeteksi → sembunyikan lagi semua isi admin & tampilkan gerbang
         setTampil(false);
         var gate2 = document.getElementById('gateAdmin');
         if(gate2) gate2.style.display = 'flex';
       }
     }, 400);
-
-    // Tombol MASUK di form login gerbang: isi field lama lalu panggil login asli
     window.gateMasuk = function(){
       var e = document.getElementById('gateEmail');
       var p = document.getElementById('gatePass');
@@ -168,8 +143,6 @@
       if(ip) ip.value = p ? p.value : '';
       if(window.doLogin){ window.doLogin(); }
     };
-
-    // Tombol LOGIN di header: buka form login (tutup gate)
     var origToggle = window.toggleLogin;
     window.toggleLogin = function(){
       var gate = document.getElementById('gateAdmin');
