@@ -285,11 +285,13 @@ window.doLogin = async () => {
     resetPercobaanLogin();
     localStorage.setItem('emailAdminBilal', email);
     isLogin = true;
+    window.isLogin = true; // ← TAMBAHKAN baris ini
     toast('✅ Login Berhasil! Selamat datang Admin');
     mulaiDengarPrivate();
     if (window.tampilkanKontenAdmin) window.tampilkanKontenAdmin(true);
     updateUI();
     render();
+
     
   } catch (e) {
     const terkunci = tambahPercobaanSalah();
