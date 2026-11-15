@@ -7,61 +7,73 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
   body{font-family:system-ui,-apple-system,sans-serif;background:#f1f5f9}
-  .info-admin-box{padding:10px 10px 4px !important;font-size:12px}
-  /* TOMBOL EDIT / HAPUS - UDAH DIKECILIN */
-  .btn-edit,.btn-hapus{flex:1 !important;padding:7px 4px !important;font-size:12px !important;font-weight:700;border-radius:9px;display:flex !important;align-items:center;justify-content:center;gap:4px;white-space:nowrap;line-height:1.2;border:none;cursor:pointer}
+  /* === TOMBOL EDIT / HAPUS - UDAH BENER, PENSIL DI SAMPING === */
+  .btn-edit,.btn-hapus{flex:1 !important;display:flex !important;flex-direction:row !important;align-items:center !important;justify-content:center !important;gap:5px !important;padding:10px 4px !important;font-size:13px !important;font-weight:700;border-radius:10px;border:none;cursor:pointer;white-space:nowrap;line-height:1}
   .btn-edit{background:#facc15;color:#000}
   .btn-hapus{background:#ef4444;color:#fff}
-  .btn-edit .ico,.btn-hapus .ico{font-size:11px !important;line-height:1}
-  .card-barang{background:#fff;border-radius:14px;padding:12px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  .btn-edit .ico,.btn-hapus .ico{font-size:13px !important;line-height:1;display:inline-block !important;margin:0 !important}
   input,select,textarea{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;font-size:14px}
-  .btn-simpan{background:#16a34a;color:#fff;font-weight:800;padding:12px;border-radius:12px;width:100%}
 </style>
 </head>
 <body>
 <div class="max-w-md mx-auto pb-24">
   <!-- HEADER -->
-  <div class="bg-green-600 text-white p-4 sticky top-0 z-10 rounded-b-2xl">
-    <div class="flex justify-between items-center">
-      <div><h1 class="font-extrabold text-lg leading-none">UD. BILAL</h1><p class="text-xs opacity-80 mt-1">Panel Admin Toko</p></div>
-      <a href="index.html" class="bg-white text-green-700 text-xs font-bold px-3 py-2 rounded-full">Lihat Toko →</a>
-    </div>
-    <!-- STATISTIK -->
-    <div class="info-admin-box grid grid-cols-3 gap-2 mt-3 text-center">
-      <div class="bg-white/20 rounded-xl p-2"><p class="text-[11px] opacity-80">Total Barang</p><p id="totalBarang" class="font-extrabold text-lg leading-none mt-1">0</p></div>
-      <div class="bg-white/20 rounded-xl p-2"><p class="text-[11px] opacity-80">Stok Menipis</p><p id="stokMenipis" class="font-extrabold text-lg leading-none mt-1">0</p></div>
-      <div class="bg-white/20 rounded-xl p-2"><p class="text-[11px] opacity-80">Total Stok</p><p id="totalStok" class="font-extrabold text-lg leading-none mt-1">0</p></div>
+  <div class="bg-green-600 text-white p-4 m-3 rounded-2xl shadow">
+    <div class="flex justify-between items-start">
+      <div>
+        <h1 class="font-extrabold text-2xl leading-none">UD. BILAL <span class="text-[11px] font-bold bg-white/20 px-2 py-1 rounded-full align-middle">ADMIN</span></h1>
+        <p class="text-xs text-green-200 mt-2">Halo Admin UD. BILAL</p>
+      </div>
+      <div class="flex gap-2 shrink-0">
+        <a href="index.html" class="bg-white text-green-700 text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1">👀 Toko</a>
+        <button onclick="logout()" class="bg-red-500 text-white text-xs font-bold px-3 py-2 rounded-lg">LOGOUT</button>
+      </div>
     </div>
   </div>
 
-  <!-- FORM TAMBAH / EDIT -->
-  <div class="p-3">
+  <!-- STATISTIK -->
+  <div class="grid grid-cols-3 gap-2 px-3">
+    <div class="bg-white rounded-xl p-3 text-center shadow-sm"><p id="totalProduk" class="font-extrabold text-lg leading-none">29</p><p class="text-[11px] text-gray-500 mt-1">TOTAL PRODUK</p></div>
+    <div class="bg-white rounded-xl p-3 text-center shadow-sm"><p id="totalUntung" class="font-extrabold text-lg leading-none text-green-600">Rp 415.000</p><p class="text-[11px] text-gray-500 mt-1">TOTAL UNTUNG</p></div>
+    <div class="bg-white rounded-xl p-3 text-center shadow-sm"><p id="stokMenipis" class="font-extrabold text-lg leading-none text-red-500">8</p><p class="text-[11px] text-gray-500 mt-1">STOK MENIPIS</p></div>
+  </div>
+
+  <!-- TAMBAH BARANG -->
+  <div class="px-3 mt-3">
+    <button onclick="bukaFormTambah()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow">+ Tambah Barang</button>
+  </div>
+
+  <!-- FORM TAMBAH / EDIT - DISEMBUNYIKAN DULU -->
+  <div id="formBarang" class="hidden px-3 mt-3">
     <div class="bg-white rounded-2xl p-4 shadow-sm">
       <h2 id="formTitle" class="font-bold mb-3">Tambah Barang Baru</h2>
       <input type="hidden" id="editId">
       <div class="space-y-2">
-        <input id="nama" placeholder="Nama Barang - cth: Beras Cap Ayam 5kg">
+        <input id="nama" placeholder="Nama Barang">
         <div class="grid grid-cols-2 gap-2">
-          <input id="harga" type="number" placeholder="Harga - cth: 65000">
-          <input id="stok" placeholder="Stok - cth: 5 Karung">
+          <input id="harga" type="number" placeholder="Harga Jual">
+          <input id="modal" type="number" placeholder="Modal">
         </div>
-        <input id="kategori" placeholder="Kategori - cth: Beras">
+        <input id="stok" placeholder="Stok - cth: 5 Karung">
+        <input id="kategori" placeholder="Kategori">
         <input id="gambar" placeholder="Link Gambar (boleh kosong)">
-        <textarea id="deskripsi" rows="2" placeholder="Deskripsi singkat (boleh kosong)"></textarea>
-        <button onclick="simpanBarang()" class="btn-simpan">💾 Simpan Barang</button>
-        <button id="btnBatal" onclick="batalEdit()" class="w-full text-sm text-gray-500 py-1 hidden">Batal Edit</button>
+        <textarea id="deskripsi" rows="2" placeholder="Deskripsi"></textarea>
+        <button onclick="simpanBarang()" class="w-full bg-green-600 text-white font-extrabold p-3 rounded-xl">💾 Simpan Barang</button>
+        <button onclick="tutupForm()" class="w-full text-sm text-gray-500 py-1">Batal</button>
       </div>
     </div>
-
-    <!-- CARI -->
-    <input id="cariAdmin" oninput="renderAdmin()" placeholder="🔍 Cari barang..." class="mt-3">
-
-    <!-- LIST BARANG -->
-    <h3 class="font-bold mt-4 mb-2 px-1">Daftar Barang</h3>
-    <div id="listBarangAdmin" class="space-y-2"></div>
-    <p class="text-center text-xs text-gray-400 mt-6">© UD. BILAL - Admin v122</p>
   </div>
+
+  <!-- CARI -->
+  <div class="px-3 mt-3">
+    <input id="cariAdmin" oninput="renderAdmin()" placeholder="🔍 Cari barang..." class="border-green-600 border-2">
+  </div>
+
+  <!-- LIST BARANG - 2 KOLOM KAYAK DI SCREENSHOT -->
+  <div id="listBarangAdmin" class="grid grid-cols-2 gap-3 p-3"></div>
+
+  <p class="text-center text-xs text-gray-400 mt-2">© UD. BILAL - Admin v124</p>
 </div>
-<script type="module" src="script.js?v=122"></script>
+<script type="module" src="script.js?v=124"></script>
 </body>
 </html>
