@@ -11,12 +11,25 @@
     #cropBox { width: 100%; height: 300px; overflow: hidden; position: relative; background: #000; touch-action: none; border-radius: 12px; }
     #cropImg { position: absolute; left: 50%; top: 50%; max-width: none; will-change: transform; touch-action: none; user-select: none; -webkit-user-drag: none; }
     #cropFrame { position: absolute; left: 50%; top: 50%; width: 92%; height: 82%; transform: translate(-50%,-50%); border: 2px dashed #fff; border-radius: 12px; box-shadow: 0 0 0 999px rgba(0,0,0,0.55); pointer-events: none; }
-    #tabel { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .kartu { background: #fff; border: 1px solid #eee; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 1px 6px rgba(0,0,0,0.05); }
+    #tabel { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .kartu { background: #fff; border: 1px solid #eee; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
     .kartu img.foto-produk { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; background: #f8f8f8; }
     .butuh-login { display: none !important; }
     #gateAdmin { position: fixed; inset: 0; background: #f3f4f6; z-index: 9998; display: flex; align-items: center; justify-content: center; padding: 20px; }
     #gateAdmin .box { background: #fff; border-radius: 16px; padding: 24px; max-width: 360px; width: 100%; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+    /* --- POLESAN BARU v119 --- */
+    .admin-header { background: linear-gradient(135deg, #166534 0%, #16a34a 100%); border-radius: 18px; padding: 16px; color: #fff; box-shadow: 0 4px 14px rgba(22,163,74,.35); }
+    .admin-header h1 { font-size: 22px; font-weight: 900; line-height: 1; letter-spacing: .3px; }
+    .admin-header p { font-size: 12px; opacity: .9; margin-top: 4px; }
+    .stat-card { background: #fff; border-radius: 14px; padding: 10px 8px; text-align: center; box-shadow: 0 1px 6px rgba(0,0,0,.06); border: 1px solid #f0f0f0; }
+    .stat-card b { font-size: 16px; display: block; line-height: 1.1; }
+    .stat-card span { font-size: 10px; color: #888; font-weight: 700; letter-spacing: .5px; }
+    .btn-tambah { background: #2563eb; color: #fff; width: 100%; padding: 13px; border-radius: 14px; font-weight: 800; font-size: 15px; box-shadow: 0 3px 10px rgba(37,99,235,.3); }
+    .search-admin { width: 100%; border: 2px solid #e5e7eb; padding: 12px 14px; border-radius: 14px; background: #fff; font-weight: 600; font-size: 14px; outline: none; }
+    .search-admin:focus { border-color: #16a34a; }
+    .info-admin-box { background: #f8fafc; border-top: 1px solid #eef2f7; padding: 10px 12px 8px; font-size: 12px; }
+    .btn-edit { flex: 1; background: #facc15; color: #422006; padding: 9px; border-radius: 10px; font-weight: 800; font-size: 13px; }
+    .btn-hapus { flex: 1; background: #ef4444; color: #fff; padding: 9px; border-radius: 10px; font-weight: 800; font-size: 13px; }
   </style>
 </head>
 <body class="bg-gray-100 p-3">
@@ -39,13 +52,28 @@
       </div>
     </div>
   </div>
-  <div class="flex justify-end items-center mb-3">
-    <a href="/toko/" target="_blank" rel="noopener" class="bg-green-500 text-white px-3 py-2 rounded-lg text-sm font-bold">Lihat Toko 👀</a>
+
+  <!-- HEADER DASHBOARD BARU -->
+  <div class="butuh-login admin-header mb-3">
+    <div class="flex justify-between items-start">
+      <div>
+        <h1>UD. BILAL <span style="font-size:11px;background:rgba(255,255,255,.22);padding:3px 8px;border-radius:99px;font-weight:700;vertical-align:middle;">ADMIN</span></h1>
+        <p id="statusLogin">Halo Admin UD. BILAL</p>
+      </div>
+      <div class="flex gap-2">
+        <a href="/toko/" target="_blank" rel="noopener" style="background:#fff;color:#166534;padding:8px 11px;border-radius:10px;font-weight:800;font-size:12px;text-decoration:none;">👀 Toko</a>
+        <button id="btnLogin" onclick="toggleLogin()" style="background:#ef4444;color:#fff;padding:8px 11px;border-radius:10px;font-weight:800;font-size:12px;border:none;">LOGOUT</button>
+      </div>
+    </div>
   </div>
-  <div class="bg-white p-3 rounded-xl shadow mb-3 flex justify-between items-center">
-    <span id="statusLogin" class="text-sm font-bold text-red-500">🔒 Mode Lihat Saja</span>
-    <button id="btnLogin" onclick="toggleLogin()" class="bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm">LOGIN</button>
+
+  <!-- 3 KOTAK RINGKASAN -->
+  <div class="butuh-login grid grid-cols-3 gap-2 mb-3" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+    <div class="stat-card"><b id="statTotalProduk">0</b><span>TOTAL PRODUK</span></div>
+    <div class="stat-card"><b id="statTotalUntung" style="color:#16a34a;">Rp 0</b><span>TOTAL UNTUNG</span></div>
+    <div class="stat-card"><b id="statStokMenipis" style="color:#ef4444;">0</b><span>STOK MENIPIS</span></div>
   </div>
+
   <div id="boxLogin" class="bg-yellow-50 border-2 border-yellow-300 p-4 rounded-xl shadow mb-3 space-y-3 hidden">
     <p class="font-bold text-center">Login Admin</p>
     <input id="inputEmail" type="email" placeholder="Email Admin" autocomplete="username" class="w-full border p-3 rounded-lg">
@@ -53,8 +81,10 @@
     <button onclick="doLogin()" class="w-full bg-green-500 text-white p-3 rounded-lg font-bold">MASUK</button>
     <button onclick="toggleLogin()" class="w-full bg-gray-300 p-3 rounded-lg">Batal</button>
   </div>
-  <button id="btnTambah" onclick="bukaForm()" class="butuh-login w-full bg-blue-500 text-white p-3 rounded-xl font-bold mb-3 hidden">+ Tambah Barang</button>
-  <input id="inputCari" oninput="cariBarang(this.value)" type="text" placeholder="🔍 Cari barang..." autocomplete="off" class="butuh-login w-full border-2 border-gray-300 p-3 rounded-xl mb-3 bg-white font-bold">
+
+  <button id="btnTambah" onclick="bukaForm()" class="butuh-login btn-tambah mb-3 hidden">+ Tambah Barang</button>
+  <input id="inputCari" oninput="cariBarang(this.value)" type="text" placeholder="🔍 Cari barang..." autocomplete="off" class="butuh-login search-admin mb-3">
+
   <div class="butuh-login bg-white p-3 rounded-xl shadow">
     <div id="tabel"></div>
     <div class="flex justify-between items-center mt-4">
@@ -64,6 +94,7 @@
     </div>
     <div class="footer text-center font-bold mt-3 text-sm border-t pt-3">Total Jenis Produk: 0</div>
   </div>
+
   <div id="popupForm" class="butuh-login fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-start justify-center p-3 pt-10" onclick="tutupForm()">
     <div class="bg-white p-4 rounded-xl shadow w-full max-w-md space-y-3" onclick="event.stopPropagation()">
       <div class="flex justify-between items-center">
@@ -103,7 +134,7 @@
       <button onclick="potongFoto()" class="w-full bg-green-500 text-white p-3 rounded-lg font-bold">✂️ POTONG & PAKAI FOTO INI</button>
     </div>
   </div>
-  <script type="module" src="script.js?v=117"></script>
+  <script type="module" src="script.js?v=119"></script>
   <script>
   (function(){
     try { localStorage.removeItem('bilal_cache_private'); } catch(e){}
@@ -151,6 +182,5 @@
     };
   })();
   </script>
-  <script type="module" src="script.js?v=118"></script>
 </body>
 </html>
