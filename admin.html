@@ -138,7 +138,7 @@
   </div>
 
   <script type="module" src="script.js?v=122"></script>
-  <script>
+    <script>
     function kembaliIntro() {
       document.getElementById('gateForm').style.display = 'none';
       document.getElementById('gateIntro').style.display = 'block';
@@ -154,7 +154,15 @@
       var ip = document.getElementById('inputPass');
       if(ie) ie.value = e ? e.value : '';
       if(ip) ip.value = p ? p.value : '';
-      if(window.doLogin){ window.doLogin(); }
+      if(window.doLogin){ 
+        window.doLogin().then(function(){
+          setTimeout(function(){
+            if(window.isLogin === true){
+              tampilkanKontenAdmin(true);
+            }
+          }, 300);
+        });
+      }
     };
 
     var daftarTersembunyi = Array.prototype.slice.call(document.querySelectorAll('.butuh-login'));
@@ -179,10 +187,14 @@
       }
     };
 
-    var origToggle = window.toggleLogin;
-    window.toggleLogin = function(){
-      if(origToggle) return origToggle.apply(this, arguments);
-    };
+    // Cek status login saat halaman dimuat
+    document.addEventListener('DOMContentLoaded', function(){
+      setTimeout(function(){
+        if(window.isLogin === true){
+          tampilkanKontenAdmin(true);
+        }
+      }, 500);
+    });
   </script>
 </body>
 </html>
