@@ -1,161 +1,147 @@
-// UD. BILAL - script.js v114 - OPTIMIZED: Firebase lazy-load + cache lokal, auth hanya di admin
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+// --- GANTI PAKE CONFIG ASLI ABANG ---
 const firebaseConfig = {
-  apiKey: "AIzaSyAhce1AyhPGe1cDkIzcBcgAFFOXC2Isxx0",
-  authDomain: "toko-bilal.firebaseapp.com",
-  projectId: "toko-bilal",
-  storageBucket: "toko-bilal.firebasestorage.app",
-  messagingSenderId: "507155195256",
-  appId: "1:507155195256:web:39185c267b272b5672948d"
+  apiKey: "ISI_APIKEY_ABANG",
+  authDomain: "ISI_AUTHDOMAIN_ABANG",
+  projectId: "ISI_PROJECTID_ABANG",
+  storageBucket: "ISI_STORAGE_ABANG",
+  messagingSenderId: "ISI_SENDER_ABANG",
+  appId: "ISI_APPID_ABANG"
 };
-const ADMIN_UID = "spaWNW7l2YSqBvhC7hkK6Sd3d7A3";
-const NOMOR_WA = "6281919194295";
-let barangPublic = [];
-let barangPrivate = {};
-let barang = [];
-let editId = null;
-let currentPage = 1;
-const perPage = 12;
-let isLogin = false;
-let kataCari = '';
-let unsubPrivate = null;
-window.FOTO_BARU = null;
-let qtyMap = {};
-const IS_ADMIN_PAGE = window.location.pathname.includes('admin');
-let sudahRenderPertama = false;
-let lastDataHash = '';
+// -----------------------------------
 
-// === Firebase lazy-load (tidak blokir tampilan pertama) ===
-let app = null, db = null, auth = null;
-let fb = {};        // fungsi firestore: collection, addDoc, deleteDoc, doc, setDoc, onSnapshot, query, orderBy
-let fbAuth = {};    // fungsi auth: signInWithEmailAndPassword, signOut, onAuthStateChanged
-let fbInitPromise = null;
-function initFirebase(){
-  if (fbInitPromise) return fbInitPromise;
-  fbInitPromise = (async () => {
-    const mods = await Promise.all([
-      import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"),
-      import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"),
-      IS_ADMIN_PAGE ? import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js") : Promise.resolve(null)
-    ]);
-    const { initializeApp } = mods[0];
-    const fs = mods[1];
-    app = initializeApp(firebaseConfig);
-    db = fs.getFirestore(app);
-    fb = {
-      collection: fs.collection, addDoc: fs.addDoc, deleteDoc: fs.deleteDoc,
-      doc: fs.doc, setDoc: fs.setDoc, onSnapshot: fs.onSnapshot, query: fs.query, orderBy: fs.orderBy
-    };
-    if (IS_ADMIN_PAGE) {
-      const fa = mods[2];
-      auth = fa.getAuth(app);
-      fbAuth = { signInWithEmailAndPassword: fa.signInWithEmailAndPassword, signOut: fa.signOut, onAuthStateChanged: fa.onAuthStateChanged };
-    }
-  })();
-  return fbInitPromise;
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+let allBarang = [];
+
+function angkaStok(s){
+  if(!s) return 0;
+  const m = String(s).match(/\d+/);
+  return m ? parseInt(m[0]) : 0;
 }
 
-function el(id){ return document.getElementById(id); }
-function toast(pesan){
-  let t = document.getElementById('toastBilal');
-  if(!t){ t = document.createElement('div'); t.id = 'toastBilal'; t.style.cssText = 'position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#16a34a;color:#fff;padding:12px 18px;border-radius:99px;font-weight:700;font-size:14px;z-index:9999;box-shadow:0 4px 15px rgba(0,0,0,0.3);max-width:90%;text-align:center;'; document.body.appendChild(t); }
-  t.style.background = '#16a34a'; t.innerText = pesan; t.style.display = 'block';
-  clearTimeout(t._timer); t._timer = setTimeout(()=>{ t.style.display='none'; }, 2000);
+async function loadBarang(){
+  const snap = await getDocs(collection(db, "barang"));
+  allBarang = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  renderAdmin();
+  if(document.getElementById("listBarang")) renderToko();
 }
-function toastError(pesan){
-  let t = document.getElementById('toastBilal'); if(!t){ toast(pesan); return; }
-  t.style.background = '#ef4444'; t.innerText = pesan; t.style.display = 'block';
-  clearTimeout(t._timer); t._timer = setTimeout(()=>{ t.style.display='none'; t.style.background='#16a34a'; }, 2500);
-}
-let cropScale = 1, cropX = 0, cropY = 0, cropImgW = 0, cropImgH = 0;
-let cropStartX = 0, cropStartY = 0, cropStartPX = 0, cropStartPY = 0, cropDragging = false, cropPointerId = null;
-function clampCrop(){
-  const box = el('cropBox'); if(!box) return;
-  const dispW = cropImgW * cropScale; const dispH = cropImgH * cropScale;
-  const frameW = box.clientWidth * 0.92; const frameH = box.clientHeight * 0.82;
-  const maxX = Math.max(0, (dispW - frameW) / 2); const maxY = Math.max(0, (dispH - frameH) / 2);
-  cropX = Math.max(-maxX, Math.min(maxX, cropX)); cropY = Math.max(-maxY, Math.min(maxY, cropY));
-}
-function updateCropTransform(){
-  clampCrop(); const img = el('cropImg'); if(!img) return;
-  img.style.transform = `translate(calc(-50% + ${cropX}px), calc(-50% + ${cropY}px)) scale(${cropScale})`;
-  const lbl = el('zoomLabel'); if(lbl) lbl.innerText = Math.round(cropScale*100) + '%';
-}
-window.aturZoom = (v) => { cropScale = Number(v)/100; if(cropScale<1) cropScale=1; if(cropScale>3) cropScale=3; updateCropTransform(); const sl=el('zoomSlider'); if(sl && Number(sl.value)!==Math.round(cropScale*100)) sl.value=Math.round(cropScale*100); };
-window.zoomTambah = () => { cropScale = Math.min(3, cropScale + 0.2); const sl=el('zoomSlider'); if(sl) sl.value=Math.round(cropScale*100); updateCropTransform(); };
-window.zoomKurang = () => { cropScale = Math.max(1, cropScale - 0.2); const sl=el('zoomSlider'); if(sl) sl.value=Math.round(cropScale*100); updateCropTransform(); };
-window.resetCrop = () => { cropScale=1; cropX=0; cropY=0; const sl=el('zoomSlider'); if(sl) sl.value=100; updateCropTransform(); };
-function bukaCrop(base64){
-  cropScale = 1; cropX = 0; cropY = 0; const img = el('cropImg'); if(!img) return; img.src = base64;
-  img.onload = () => { const box = el('cropBox'); const scaleFit = Math.max(box.clientWidth / img.naturalWidth, box.clientHeight / img.naturalHeight); cropImgW = img.naturalWidth * scaleFit; cropImgH = img.naturalHeight * scaleFit; img.style.width = cropImgW + 'px'; img.style.height = cropImgH + 'px'; updateCropTransform(); };
-  const sl = el('zoomSlider'); if(sl) sl.value = 100; const m=el('cropModal'); if(m) m.classList.remove('hidden');
-}
-window.batalCrop = () => { const m=el('cropModal'); if(m) m.classList.add('hidden'); const inp=el('fotoInput'); if(inp) inp.value=''; };
-window.potongFoto = () => {
-  const img = el('cropImg'); const box = el('cropBox'); if(!img||!box) return;
-  const frameW = box.clientWidth * 0.92; const frameH = box.clientHeight * 0.82;
-  const canvas = document.createElement('canvas'); canvas.width = 400; canvas.height = Math.round(400 * frameH / frameW);
-  const ctx = canvas.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,canvas.width,canvas.height);
-  const dispW = cropImgW * cropScale; const dispH = cropImgH * cropScale;
-  const imgLeft = box.clientWidth/2 + cropX - dispW/2; const imgTop = box.clientHeight/2 + cropY - dispH/2;
-  const frameLeft = box.clientWidth/2 - frameW/2; const frameTop = box.clientHeight/2 - frameH/2;
-  const sx = (frameLeft - imgLeft) / dispW * img.naturalWidth; const sy = (frameTop - imgTop) / dispH * img.naturalHeight;
-  const sw = frameW / dispW * img.naturalWidth; const sh = frameH / dispH * img.naturalHeight;
-  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-  // Kompres otomatis: WebP dulu (lebih kecil ~30%), kalau browser gak dukung fallback ke JPEG
-  let hasil = canvas.toDataURL('image/webp', 0.78);
-  if(!hasil.startsWith('data:image/webp')) hasil = canvas.toDataURL('image/jpeg', 0.72);
-  let ukKB = Math.round(hasil.length / 1024);
-  window.FOTO_BARU = hasil;
-  const prev = el('fotoPreview'); if(prev){ prev.src = hasil; prev.classList.remove('hidden'); }
-  const st = el('fotoStatus'); if(st) st.innerText = `✅ Foto otomatis dikompres jadi ${ukKB} KB (WebP), tinggal pencet UPDATE / SIMPAN!`;
-  const m=el('cropModal'); if(m) m.classList.add('hidden'); toast(`✅ Foto dikecilin jadi ${ukKB} KB, website tetap ngebut!`);
+
+window.renderAdmin = function(){
+  const list = document.getElementById("listBarangAdmin");
+  if(!list) return;
+  const q = (document.getElementById("cariAdmin")?.value || "").toLowerCase();
+  const filtered = allBarang.filter(b => (b.nama||"").toLowerCase().includes(q));
+
+  // STATISTIK PERSIS KAYAK SCREENSHOT
+  document.getElementById("totalProduk").textContent = allBarang.length;
+  let totalUntung = 0;
+  allBarang.forEach(b => { totalUntung += (Number(b.harga)||0) - (Number(b.modal)||0); });
+  document.getElementById("totalUntung").textContent = "Rp " + totalUntung.toLocaleString("id-ID");
+  document.getElementById("stokMenipis").textContent = allBarang.filter(b => angkaStok(b.stok) <= 5).length;
+
+  if(filtered.length === 0){
+    list.innerHTML = `<p class="text-center text-sm text-gray-400 py-6 col-span-2">Belum ada barang</p>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(b => {
+    const harga = Number(b.harga)||0;
+    const modal = Number(b.modal)||0;
+    const untung = harga - modal;
+    const stokAngka = angkaStok(b.stok);
+    const mauHabis = stokAngka <= 5 && stokAngka > 0;
+    return `
+    <div class="bg-white rounded-2xl shadow-sm overflow-hidden flex flex-col">
+      <div class="relative h-48 bg-white flex items-center justify-center overflow-hidden">
+        ${b.gambar ? `<img src="${b.gambar}" class="h-full w-full object-contain p-2">` : `<p class="text-gray-400 text-sm">Belum ada foto</p>`}
+        ${b.baru ? `<span class="absolute top-2 left-2 bg-red-500 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">BARU</span>` : ``}
+      </div>
+      <div class="p-3 flex flex-col flex-1">
+        <p class="font-bold text-[16px] leading-tight text-center">${b.nama||""}</p>
+        <p class="text-gray-400 text-center mt-3">Rp${harga.toLocaleString("id-ID")}</p>
+        <p class="text-gray-400 text-sm text-center mt-1">${b.deskripsi||"-"}</p>
+        <div class="border-t mt-3 pt-2 text-[13px] text-gray-500 space-y-0.5 mt-auto">
+          <div class="flex justify-between"><span>Modal</span><span class="text-black font-medium">Rp ${modal.toLocaleString("id-ID")}</span></div>
+          <div class="flex justify-between"><span>Untung</span><span class="text-green-600 font-medium">Rp ${untung.toLocaleString("id-ID")}</span></div>
+          <div class="flex justify-between"><span>Stok</span><span class="text-black font-medium">${b.stok||"-"}</span></div>
+          ${mauHabis ? `<p class="text-red-500 font-bold text-right text-[13px]">⚠️ MAU HABIS!</p>` : ``}
+        </div>
+        <div class="flex gap-2 mt-3"><button onclick="editBarang('${b.id}')" class="btn-edit"><span class="ico">✏️</span><span>Edit</span></button><button onclick="hapusBarang('${b.id}')" class="btn-hapus"><span class="ico">🗑️</span><span>Hapus</span></button></div>
+      </div>
+    </div>`;
+  }).join("");
 };
-function olahFoto(file){
-  if(!file) return;
-  const imgTemp = new Image();
-  const url = URL.createObjectURL(file);
-  imgTemp.onload = () => {
-    const max = 1000; let w = imgTemp.naturalWidth, h = imgTemp.naturalHeight;
-    if(w > max || h > max){ let r = Math.min(max/w, max/h); w = Math.round(w*r); h = Math.round(h*r); }
-    const c = document.createElement('canvas'); c.width = w; c.height = h;
-    c.getContext('2d').drawImage(imgTemp, 0, 0, w, h);
-    URL.revokeObjectURL(url);
-    bukaCrop(c.toDataURL('image/jpeg', 0.8));
+
+// BUAT TOKO (index.html)
+window.renderToko = function(){
+  const list = document.getElementById("listBarang");
+  if(!list) return;
+  list.innerHTML = allBarang.map(b => `
+    <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+      <div class="h-40 bg-white flex items-center justify-center">${b.gambar ? `<img src="${b.gambar}" class="h-full w-full object-contain p-2">` : `<p class="text-gray-400 text-sm">Belum ada foto</p>`}</div>
+      <div class="p-3"><p class="font-bold text-center">${b.nama}</p><p class="text-green-600 font-extrabold text-center mt-1">Rp ${(Number(b.harga)||0).toLocaleString("id-ID")}</p><p class="text-xs text-gray-400 text-center mt-1">Stok: ${b.stok||"-"}</p></div>
+    </div>`).join("");
+};
+
+window.bukaFormTambah = function(){
+  document.getElementById("editId").value = "";
+  document.getElementById("formTitle").textContent = "Tambah Barang Baru";
+  document.getElementById("formBarang").classList.remove("hidden");
+  window.scrollTo({top:0, behavior:"smooth"});
+};
+
+window.tutupForm = function(){
+  document.getElementById("formBarang").classList.add("hidden");
+  ["nama","harga","modal","stok","kategori","gambar","deskripsi"].forEach(i=>{ if(document.getElementById(i)) document.getElementById(i).value=""; });
+  document.getElementById("editId").value = "";
+};
+
+window.simpanBarang = async function(){
+  const id = document.getElementById("editId").value;
+  const data = {
+    nama: document.getElementById("nama").value,
+    harga: Number(document.getElementById("harga").value)||0,
+    modal: Number(document.getElementById("modal").value)||0,
+    stok: document.getElementById("stok").value,
+    kategori: document.getElementById("kategori").value,
+    gambar: document.getElementById("gambar").value,
+    deskripsi: document.getElementById("deskripsi").value
   };
-  imgTemp.src = url;
-}
-window.previewFoto = function(input){ if(input.files[0]) olahFoto(input.files[0]); };
-document.addEventListener('change', (e)=>{ if(e.target && e.target.id === 'fotoInput'){ if(e.target.files[0]) olahFoto(e.target.files[0]); } });
-document.addEventListener('DOMContentLoaded', () => {
-  const box = el('cropBox'); if(!box) return;
-  box.addEventListener('pointerdown', (e)=>{ cropDragging=true; cropPointerId=e.pointerId; cropStartX=e.clientX; cropStartY=e.clientY; cropStartPX=cropX; cropStartPY=cropY; box.setPointerCapture(e.pointerId); e.preventDefault(); });
-  box.addEventListener('pointermove', (e)=>{ if(!cropDragging || e.pointerId!==cropPointerId) return; cropX=cropStartPX+(e.clientX-cropStartX); cropY=cropStartPY+(e.clientY-cropStartY); updateCropTransform(); e.preventDefault(); });
-  const endDrag=(e)=>{ if(e.pointerId===cropPointerId){ cropDragging=false; cropPointerId=null; } };
-  box.addEventListener('pointerup', endDrag); box.addEventListener('pointercancel', endDrag);
-});
-function getTanggalHariIni() { return new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }); }
-function isHariIni(tgl) { if (!tgl) return false; return tgl === getTanggalHariIni(); }
-function bersihKet(teks) { if (!teks) return ''; return teks.toString().replace(/^\s*\/\s*/, '').trim(); }
-function aman(teks) { return String(teks ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-function tampilStok(b) { let s = (b.stok ?? '').toString().trim(); if (!s) return '0'; return s; }
-function gabungData() { barang = barangPublic.map(p => ({ ...p, modal: (barangPrivate[p.id] ? barangPrivate[p.id].modal : 0) })); render(); }
-function mulaiDengarPrivate() {
-  if (unsubPrivate) return;
-  unsubPrivate = fb.onSnapshot(fb.query(fb.collection(db, "barang_private")), (snap) => {
-    barangPrivate = {}; snap.docs.forEach(d => { barangPrivate[d.id] = d.data(); });
-    try { localStorage.setItem('bilal_cache_private', JSON.stringify(barangPrivate)); } catch(e){}
-    gabungData();
-  });
-}
-function updateUI() {
-  const st = el('statusLogin'); if(st){ st.innerText = isLogin ? 'Halo Admin UD. BILAL' : '🔒 Mode Lihat Saja'; st.className = isLogin ? 'text-sm font-bold text-green-600' : 'text-sm font-bold text-red-500'; }
-  const bl = el('btnLogin'); if(bl) bl.innerText = isLogin ? 'LOGOUT' : 'LOGIN';
-  const bt = el('btnTambah'); if(bt){ if(isLogin) bt.classList.remove('hidden'); else bt.classList.add('hidden'); }
-  const saved = localStorage.getItem('emailAdminBilal'); const inpE = el('inputEmail'); if(inpE && saved) inpE.value = saved;
-}
-window.toggleLogin = async () => { if (!IS_ADMIN_PAGE) return; await initFirebase(); if (isLogin) { await fbAuth.signOut(auth); toast('Berhasil Logout'); return; } const b=el('boxLogin'); if(b) b.classList.toggle('hidden'); };
-window.doLogin = async () => {
-  await initFirebase();
-  let email = el('inputEmail') ? el('inputEmail').value.trim() : ''; let pass = el('inputPass') ? el('inputPass').value : '';
-  if (!email || !pass){ toastError("Isi Email & Password dulu!"); return; }
-  try { let hasil = await fbAuth.signInWithEmailAndPassword(auth, email, pass); if (hasil.user.uid !== ADMIN_UID) { await fbAuth.signOut(auth); toastError("Akun ini bukan Admin!"); return; } const b=el('boxLogin'); if(b) b.classList.add('hidden'); if(el('inputPass')) el('inputPass').value = ''; toast('Login Berhasil!'); } catch (e) { toastError('Gagal Login!');
+  if(!data.nama) return alert("Nama barang wajib diisi!");
+  if(id) await updateDoc(doc(db,"barang",id), data);
+  else await addDoc(collection(db,"barang"), data);
+  tutupForm();
+  loadBarang();
+};
+
+window.editBarang = function(id){
+  const b = allBarang.find(x=>x.id===id);
+  if(!b) return;
+  document.getElementById("editId").value = b.id;
+  document.getElementById("nama").value = b.nama||"";
+  document.getElementById("harga").value = b.harga||"";
+  document.getElementById("modal").value = b.modal||"";
+  document.getElementById("stok").value = b.stok||"";
+  document.getElementById("kategori").value = b.kategori||"";
+  document.getElementById("gambar").value = b.gambar||"";
+  document.getElementById("deskripsi").value = b.deskripsi||"";
+  document.getElementById("formTitle").textContent = "Edit Barang";
+  document.getElementById("formBarang").classList.remove("hidden");
+  window.scrollTo({top:0, behavior:"smooth"});
+};
+
+window.hapusBarang = async function(id){
+  if(!confirm("Yakin hapus barang ini?")) return;
+  await deleteDoc(doc(db,"barang",id));
+  loadBarang();
+};
+
+window.logout = function(){
+  localStorage.removeItem("admin");
+  window.location.href = "index.html";
+};
+
+loadBarang();
