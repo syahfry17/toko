@@ -1,4 +1,4 @@
-// UD. BILAL - script.js v118 - OPTIMIZED: Firebase lazy-load + cache lokal, auth hanya di admin - TANPA QTY, TANPA STOK PENGUNJUNG
+// UD. BILAL - script.js v119 - ADMIN DIPoles: tanpa WA di admin, stat dashboard, stok menipis merah
 const firebaseConfig = {
   apiKey: "AIzaSyAhce1AyhPGe1cDkIzcBcgAFFOXC2Isxx0",
   authDomain: "toko-bilal.firebaseapp.com",
@@ -23,7 +23,7 @@ const IS_ADMIN_PAGE = window.location.pathname.includes('admin');
 let sudahRenderPertama = false;
 let lastDataHash = '';
 
-// === Firebase lazy-load (tidak blokir tampilan pertama) ===
+// === Firebase lazy-load ===
 let app = null, db = null, auth = null;
 let fb = {};
 let fbAuth = {};
@@ -169,7 +169,6 @@ window.bukaZoomFoto = (id) => {
   modal.innerHTML = `<img src="${b.foto}" style="max-width:95%;max-height:90%;"><button onclick="document.getElementById('modalZoomFoto').remove()" style="position:absolute;top:15px;right:15px;background:white;width:36px;height:36px;border-radius:50%;font-weight:bold;">✕</button>`;
   modal.addEventListener('click', (e)=>{ if(e.target === modal) modal.remove(); }); document.body.appendChild(modal);
 };
-// TANPA QTY: Pesan WA selalu Jumlah 1
 window.beliSekarang = (id) => {
   const b = barang.find(x => x.id === id); if(!b) return; let q = 1; let j = b.jual || b.harga || 0; let total = q * j;
   let pesan = `Halo UD. BILAL, saya mau pesan:\n- ${b.nama}\n- Jumlah: ${q}\n- Harga: Rp ${Number(j).toLocaleString('id-ID')} / pcs\n- Total: Rp ${Number(total).toLocaleString('id-ID')}`;
@@ -179,18 +178,34 @@ function render() {
   sudahRenderPertama = true;
   updateUI();
   let totalUntung = 0;
-  if (isLogin) { barang.forEach(b => { let j = b.jual || b.harga || 0; let stokAngka = parseFloat(String(b.stok ?? '').replace(',', '.')) || 0; totalUntung += (j - (b.modal || 0)) * stokAngka; }); }
+  let stokMenipis = 0;
+  barang.forEach(b => {
+    let j = b.jual || b.harga || 0;
+    let stokAngka = parseFloat(String(b.stok ?? '').replace(',', '.')) || 0;
+    if (isLogin) totalUntung += (j - (b.modal || 0)) * stokAngka;
+    if (stokAngka <= 5) stokMenipis++;
+  });
+  // Isi 3 kotak ringkasan di admin
+  if (el('statTotalProduk')) el('statTotalProduk').innerText = barang.length;
+  if (el('statTotalUntung')) el('statTotalUntung').innerText = 'Rp ' + totalUntung.toLocaleString('id-ID');
+  if (el('statStokMenipis')) el('statStokMenipis').innerText = stokMenipis;
+
   let hasilCari = barang.filter(b => b.nama.toLowerCase().includes(kataCari) || (b.keterangan || '').toLowerCase().includes(kataCari));
   let totalPage = Math.max(1, Math.ceil(hasilCari.length / perPage)); if (currentPage > totalPage) currentPage = totalPage;
   let list = hasilCari.slice((currentPage - 1) * perPage, currentPage * perPage); let html = '';
   list.forEach(b => {
-    let j = b.jual || b.harga || 0; let modal = b.modal || 0; let u = j - modal; let ket = bersihKet(b.keterangan); let tgl = b.tanggalUpdate || '-';
+    let j = b.jual || b.harga || 0; let modal = b.modal || 0; let u = j - modal; let ket = bersihKet(b.keterangan);
     let badgeBaru = isHariIni(b.tanggalUpdate) ? `<span class="badge-baru">BARU</span>` : '';
+    let stokAngka = parseFloat(String(b.stok ?? '').replace(',', '.')) || 0;
+    let stokWarn = stokAngka <= 5 ? `<span style="color:#ef4444;font-weight:800;">⚠️ MAU HABIS!</span>` : '';
     let foto = b.foto ? `<img loading="lazy" decoding="async" src="${b.foto}" onclick="bukaZoomFoto('${b.id}')" class="foto-produk cursor-pointer" alt="${aman(b.nama)}">` : `<div class="w-full flex items-center justify-center text-gray-400 text-xs" style="aspect-ratio:1/1;background:#f8f8f8;">Belum ada foto</div>`;
-    let isiKartu = `<div class="p-2 text-center flex-1 flex flex-col"><p class="font-bold text-[15px] leading-tight line-clamp-2 min-h-[38px]">${aman(b.nama)}</p><p class="text-gray-400 font-bold text-[14px] mt-1">Rp${Number(j).toLocaleString('id-ID')}</p><p class="text-[12px] text-gray-500 mt-1 min-h-[18px]">${ket ? aman(ket) : '-'}</p><button onclick="beliSekarang('${b.id}')" class="w-full mt-2 py-2.5 rounded-lg font-bold text-white text-[13px]" style="background:#7cb342;">💬 Pesan via WA</button>${IS_ADMIN_PAGE ? '<p class="last-update mt-1">Update 23 Nov 2026</p>' : ''}</div>`;
+    // ADMIN: tanpa tombol WA, tanpa tanggal Update. PENGUNJUNG: tetap ada WA
+    let tombolWA = IS_ADMIN_PAGE ? '' : `<button onclick="beliSekarang('${b.id}')" class="w-full mt-2 py-2.5 rounded-lg font-bold text-white text-[13px]" style="background:#7cb342;">💬 Pesan via WA</button>`;
+    let isiKartu = `<div class="p-2 text-center flex-1 flex flex-col"><p class="font-bold text-[15px] leading-tight line-clamp-2 min-h-[38px]">${aman(b.nama)}</p><p class="text-gray-400 font-bold text-[14px] mt-1">Rp${Number(j).toLocaleString('id-ID')}</p><p class="text-[12px] text-gray-500 mt-1 min-h-[18px]">${ket ? aman(ket) : '-'}</p>${tombolWA}</div>`;
     let infoAdmin = '';
-    if (IS_ADMIN_PAGE) { infoAdmin = `<div class="px-2 pb-1 text-[11px] text-gray-500 space-y-0.5 border-t pt-1"><div class="flex justify-between"><span>Modal</span><b>Rp ${Number(modal).toLocaleString('id-ID')}</b></div><div class="flex justify-between"><span>Untung</span><b class="${u>=0?'text-green-600':'text-red-600'}">Rp ${u.toLocaleString('id-ID')}</b></div><div class="flex justify-between"><span>Stok</span><b>${aman(tampilStok(b))}</b></div></div><div class="flex gap-1 px-2 pb-2"><button onclick="editBarang('${b.id}')" class="flex-1 bg-yellow-400 text-white py-1.5 rounded-lg text-xs font-bold">✏️ Edit</button><button onclick="hapus('${b.id}')" class="flex-1 bg-red-500 text-white py-1.5 rounded-lg text-xs font-bold">🗑️ Hapus</button></div>`; }
-    else { infoAdmin = ``; }
+    if (IS_ADMIN_PAGE) {
+      infoAdmin = `<div class="info-admin-box"><div class="flex justify-between"><span style="color:#888;">Modal</span><b>Rp ${Number(modal).toLocaleString('id-ID')}</b></div><div class="flex justify-between mt-0.5"><span style="color:#888;">Untung</span><b class="${u>=0?'text-green-600':'text-red-600'}">Rp ${u.toLocaleString('id-ID')}</b></div><div class="flex justify-between mt-0.5"><span style="color:#888;">Stok</span><b class="${stokAngka<=5?'text-red-600':''}">${aman(tampilStok(b))} ${stokWarn}</b></div></div><div class="flex gap-2 px-2 pb-2 pt-1"><button onclick="editBarang('${b.id}')" class="btn-edit">✏️ Edit</button><button onclick="hapus('${b.id}')" class="btn-hapus">🗑️ Hapus</button></div>`;
+    } else { infoAdmin = ``; }
     html += `<div class="kartu"><div class="relative">${foto}<div class="absolute top-1 left-1">${badgeBaru}</div></div>${isiKartu}${infoAdmin}</div>`;
   });
   if (hasilCari.length === 0) html = `<p class="text-center text-gray-400 py-4 col-span-2">Barang gak ketemu, coba kata lain</p>`;
@@ -221,7 +236,7 @@ window.editBarang = (id) => {
 window.hapus = async (id) => { await initFirebase(); if (!isLogin){ toastError("Harus Login dulu!"); return; } if (confirm("Hapus?")) { await fb.deleteDoc(fb.doc(db, "barang_public", id)); await fb.deleteDoc(fb.doc(db, "barang_private", id)); toast('Barang dihapus'); } };
 window.batalEdit = () => { editId = null; window.FOTO_BARU = null; const prev = el('fotoPreview'); if(prev){ prev.src=''; prev.classList.add('hidden'); } const inpFoto = el('fotoInput'); if(inpFoto) inpFoto.value=''; const st = el('fotoStatus'); if(st) st.innerText=''; if(el('nama')) el('nama').value=''; if(el('modal')) el('modal').value=''; if(el('harga')) el('harga').value=''; if(el('keterangan')) el('keterangan').value=''; if(el('stok')) el('stok').value=''; if(el('btnSimpan')) el('btnSimpan').innerText = "SIMPAN"; const pf=el('popupForm'); if(pf) pf.classList.add('hidden'); };
 
-// === Render instan dari cache lokal, lalu Firebase dimuat di background ===
+// === Render instan dari cache lokal ===
 try {
   const cachePub = JSON.parse(localStorage.getItem('bilal_cache_public') || 'null');
   if (cachePub && Array.isArray(cachePub)) { barangPublic = cachePub; gabungData(); }
