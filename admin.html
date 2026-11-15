@@ -17,7 +17,6 @@
     .butuh-login { display: none !important; }
     #gateAdmin { position: fixed; inset: 0; background: #f3f4f6; z-index: 9998; display: flex; align-items: center; justify-content: center; padding: 20px; }
     #gateAdmin .box { background: #fff; border-radius: 16px; padding: 24px; max-width: 360px; width: 100%; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-    /* --- POLESAN BARU v119 --- */
     .admin-header { background: linear-gradient(135deg, #166534 0%, #16a34a 100%); border-radius: 18px; padding: 16px; color: #fff; box-shadow: 0 4px 14px rgba(22,163,74,.35); }
     .admin-header h1 { font-size: 22px; font-weight: 900; line-height: 1; letter-spacing: .3px; }
     .admin-header p { font-size: 12px; opacity: .9; margin-top: 4px; }
@@ -28,11 +27,8 @@
     .search-admin { width: 100%; border: 2px solid #e5e7eb; padding: 12px 14px; border-radius: 14px; background: #fff; font-weight: 600; font-size: 14px; outline: none; }
     .search-admin:focus { border-color: #16a34a; }
     .info-admin-box { background: #f8fafc; border-top: 1px solid #eef2f7; padding: 10px 12px 8px; font-size: 12px; }
-
-    /* --- TOMBOL EDIT / HAPUS - VERSI KECIL, ICON DI KIRI --- */
     .btn-edit { flex: 1; background: #facc15; color: #422006; padding: 7px 2px; border-radius: 8px; font-weight: 800; font-size: 11px; display: inline-flex; flex-direction: row; align-items: center; justify-content: center; gap: 4px; white-space: nowrap; border: none; cursor: pointer; }
     .btn-hapus { flex: 1; background: #ef4444; color: #fff; padding: 7px 2px; border-radius: 8px; font-weight: 800; font-size: 11px; display: inline-flex; flex-direction: row; align-items: center; justify-content: center; gap: 4px; white-space: nowrap; border: none; cursor: pointer; }
-    /* PAKSA TOMBOL DARI script.js v114 BIAR KECIL & GAK NUMPUK */
     .kartu .flex.gap-1 { display: flex !important; gap: 6px !important; }
     .kartu .flex.gap-1 button { display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: center !important; gap: 4px !important; white-space: nowrap !important; flex: 1 !important; min-width: 0 !important; padding: 7px 2px !important; font-size: 11px !important; font-weight: 800 !important; border-radius: 8px !important; }
   </style>
@@ -50,15 +46,14 @@
       <div id="gateForm" style="text-align:left;">
         <p class="font-bold text-center" style="margin:0 0 4px;font-size:18px;color:#166534;">🔑 Login Admin</p>
         <p style="font-size:12px;color:#666;text-align:center;margin:0 0 14px;">Khusus pemilik UD. BILAL</p>
-        <input id="gateEmail" type="email" placeholder="Email Admin" autocomplete="username" class="w-full border p-3 rounded-lg" style="width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;margin-bottom:10px;box-sizing:border-box;font-size:15px;">
-        <input id="gatePass" type="password" placeholder="Password" autocomplete="current-password" class="w-full border p-3 rounded-lg" style="width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;margin-bottom:12px;box-sizing:border-box;font-size:15px;">
+        <input id="gateEmail" type="email" placeholder="Email Admin" autocomplete="username" style="width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;margin-bottom:10px;box-sizing:border-box;font-size:15px;">
+        <input id="gatePass" type="password" placeholder="Password" autocomplete="current-password" style="width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;margin-bottom:12px;box-sizing:border-box;font-size:15px;">
         <button data-login-submit onclick="gateMasuk()" style="width:100%;background:#16a34a;color:#fff;border:none;padding:12px;border-radius:10px;font-weight:700;font-size:15px;cursor:pointer;">MASUK</button>
         <a href="./index.html" style="display:block;text-align:center;margin-top:10px;font-size:12px;color:#666;text-decoration:none;">← Kembali ke Toko</a>
       </div>
     </div>
   </div>
 
-  <!-- HEADER DASHBOARD BARU -->
   <div class="butuh-login admin-header mb-3">
     <div class="flex justify-between items-start">
       <div>
@@ -72,7 +67,6 @@
     </div>
   </div>
 
-  <!-- 3 KOTAK RINGKASAN -->
   <div class="butuh-login grid grid-cols-3 gap-2 mb-3" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
     <div class="stat-card"><b id="statTotalProduk">0</b><span>TOTAL PRODUK</span></div>
     <div class="stat-card"><b id="statTotalUntung" style="color:#16a34a;">Rp 0</b><span>TOTAL UNTUNG</span></div>
@@ -139,7 +133,10 @@
       <button onclick="potongFoto()" class="w-full bg-green-500 text-white p-3 rounded-lg font-bold">✂️ POTONG & PAKAI FOTO INI</button>
     </div>
   </div>
-  <script type="module" src="script.js?v=124"></script>
 
+  <!-- Iframe Bridge Google Drive -->
+  <iframe id="driveBridge" style="display:none;" aria-hidden="true"></iframe>
+
+  <script type="module" src="script.js?v=125"></script>
 </body>
 </html>
