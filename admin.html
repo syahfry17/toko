@@ -17,7 +17,6 @@
     .butuh-login { display: none !important; }
     #gateAdmin { position: fixed; inset: 0; background: #f3f4f6; z-index: 9998; display: flex; align-items: center; justify-content: center; padding: 20px; }
     #gateAdmin .box { background: #fff; border-radius: 16px; padding: 24px; max-width: 360px; width: 100%; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-    /* --- POLESAN BARU v119 --- */
     .admin-header { background: linear-gradient(135deg, #166534 0%, #16a34a 100%); border-radius: 18px; padding: 16px; color: #fff; box-shadow: 0 4px 14px rgba(22,163,74,.35); }
     .admin-header h1 { font-size: 22px; font-weight: 900; line-height: 1; letter-spacing: .3px; }
     .admin-header p { font-size: 12px; opacity: .9; margin-top: 4px; }
@@ -28,37 +27,37 @@
     .search-admin { width: 100%; border: 2px solid #e5e7eb; padding: 12px 14px; border-radius: 14px; background: #fff; font-weight: 600; font-size: 14px; outline: none; }
     .search-admin:focus { border-color: #16a34a; }
     .info-admin-box { background: #f8fafc; border-top: 1px solid #eef2f7; padding: 10px 12px 8px; font-size: 12px; }
-
-    /* --- TOMBOL EDIT / HAPUS - VERSI KECIL, ICON DI KIRI --- */
     .btn-edit { flex: 1; background: #facc15; color: #422006; padding: 7px 2px; border-radius: 8px; font-weight: 800; font-size: 11px; display: inline-flex; flex-direction: row; align-items: center; justify-content: center; gap: 4px; white-space: nowrap; border: none; cursor: pointer; }
     .btn-hapus { flex: 1; background: #ef4444; color: #fff; padding: 7px 2px; border-radius: 8px; font-weight: 800; font-size: 11px; display: inline-flex; flex-direction: row; align-items: center; justify-content: center; gap: 4px; white-space: nowrap; border: none; cursor: pointer; }
-    /* PAKSA TOMBOL DARI script.js v114 BIAR KECIL & GAK NUMPUK */
     .kartu .flex.gap-1 { display: flex !important; gap: 6px !important; }
     .kartu .flex.gap-1 button { display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: center !important; gap: 4px !important; white-space: nowrap !important; flex: 1 !important; min-width: 0 !important; padding: 7px 2px !important; font-size: 11px !important; font-weight: 800 !important; border-radius: 8px !important; }
+    .pesan-error { color: #dc2626; font-size: 13px; margin-top: 10px; display: none; text-align: center; }
   </style>
 </head>
 <body class="bg-gray-100 p-3">
   <div id="gateAdmin">
     <div class="box">
-      <div id="gateIntro" style="display:none;">
+      <div id="gateIntro">
         <div style="font-size:48px;">🔒</div>
         <h2 style="font-weight:900;color:#166534;margin:8px 0 4px;">HALAMAN ADMIN</h2>
         <p style="font-size:13px;color:#666;margin-bottom:16px;">Khusus pemilik UD. BILAL. Login dulu ya.</p>
         <button onclick="document.getElementById('gateIntro').style.display='none';document.getElementById('gateForm').style.display='block';" style="width:100%;background:#16a34a;color:#fff;border:none;padding:12px;border-radius:10px;font-weight:700;font-size:15px;cursor:pointer;">🔑 LOGIN ADMIN</button>
-        <a href="/toko/" style="display:block;margin-top:10px;font-size:12px;color:#666;text-decoration:none;">← Kembali ke Toko</a>
+        <a href="index.html" style="display:block;margin-top:10px;font-size:12px;color:#666;text-decoration:none;">← Kembali ke Toko</a>
       </div>
-      <div id="gateForm" style="text-align:left;">
+      <div id="gateForm" style="display:none;text-align:left;">
         <p class="font-bold text-center" style="margin:0 0 4px;font-size:18px;color:#166534;">🔑 Login Admin</p>
         <p style="font-size:12px;color:#666;text-align:center;margin:0 0 14px;">Khusus pemilik UD. BILAL</p>
         <input id="gateEmail" type="email" placeholder="Email Admin" autocomplete="username" class="w-full border p-3 rounded-lg" style="width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;margin-bottom:10px;box-sizing:border-box;font-size:15px;">
         <input id="gatePass" type="password" placeholder="Password" autocomplete="current-password" class="w-full border p-3 rounded-lg" style="width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;margin-bottom:12px;box-sizing:border-box;font-size:15px;">
         <button onclick="gateMasuk()" style="width:100%;background:#16a34a;color:#fff;border:none;padding:12px;border-radius:10px;font-weight:700;font-size:15px;cursor:pointer;">MASUK</button>
-        <a href="/toko/" style="display:block;text-align:center;margin-top:10px;font-size:12px;color:#666;text-decoration:none;">← Kembali ke Toko</a>
+        <div id="pesanSalah" class="pesan-error">Email atau kata sandi salah. Coba lagi.</div>
+        <div id="pesanKunci" class="pesan-error">Terlalu banyak percobaan. Silakan tunggu 5 menit.</div>
+        <button onclick="kembaliIntro()" style="width:100%;background:#e5e7eb;color:#333;border:none;padding:10px;border-radius:10px;font-size:13px;margin-top:8px;cursor:pointer;">← Kembali</button>
+        <a href="index.html" style="display:block;text-align:center;margin-top:8px;font-size:12px;color:#666;text-decoration:none;">← Kembali ke Toko</a>
       </div>
     </div>
   </div>
 
-  <!-- HEADER DASHBOARD BARU -->
   <div class="butuh-login admin-header mb-3">
     <div class="flex justify-between items-start">
       <div>
@@ -66,30 +65,27 @@
         <p id="statusLogin">Halo Admin UD. BILAL</p>
       </div>
       <div class="flex gap-2">
-        <a href="/toko/" target="_blank" rel="noopener" style="background:#fff;color:#166534;padding:8px 11px;border-radius:10px;font-weight:800;font-size:12px;text-decoration:none;">👀 Toko</a>
+        <a href="index.html" target="_blank" rel="noopener" style="background:#fff;color:#166534;padding:8px 11px;border-radius:10px;font-weight:800;font-size:12px;text-decoration:none;">👀 Toko</a>
         <button id="btnLogin" onclick="toggleLogin()" style="background:#ef4444;color:#fff;padding:8px 11px;border-radius:10px;font-weight:800;font-size:12px;border:none;">LOGOUT</button>
       </div>
     </div>
   </div>
 
-  <!-- 3 KOTAK RINGKASAN -->
   <div class="butuh-login grid grid-cols-3 gap-2 mb-3" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
     <div class="stat-card"><b id="statTotalProduk">0</b><span>TOTAL PRODUK</span></div>
     <div class="stat-card"><b id="statTotalUntung" style="color:#16a34a;">Rp 0</b><span>TOTAL UNTUNG</span></div>
     <div class="stat-card"><b id="statStokMenipis" style="color:#ef4444;">0</b><span>STOK MENIPIS</span></div>
   </div>
 
-  <div id="boxLogin" class="bg-yellow-50 border-2 border-yellow-300 p-4 rounded-xl shadow mb-3 space-y-3 hidden">
-    <p class="font-bold text-center">Login Admin</p>
-    <input id="inputEmail" type="email" placeholder="Email Admin" autocomplete="username" class="w-full border p-3 rounded-lg">
-    <input id="inputPass" type="password" placeholder="Password" autocomplete="current-password" class="w-full border p-3 rounded-lg">
-    <button onclick="doLogin()" class="w-full bg-green-500 text-white p-3 rounded-lg font-bold">MASUK</button>
-    <button onclick="toggleLogin()" class="w-full bg-gray-300 p-3 rounded-lg">Batal</button>
+  <!-- Form login tersembunyi untuk script.js -->
+  <div id="boxLogin" class="hidden">
+    <input id="inputEmail" type="email" placeholder="Email Admin" autocomplete="username">
+    <input id="inputPass" type="password" placeholder="Password" autocomplete="current-password">
   </div>
 
   <button id="btnTambah" onclick="bukaForm()" class="butuh-login btn-tambah mb-3 hidden">+ Tambah Barang</button>
   <input id="inputCari" oninput="cariBarang(this.value)" type="text" placeholder="🔍 Cari barang..." autocomplete="off" class="butuh-login search-admin mb-3">
-
+  
   <div class="butuh-login bg-white p-3 rounded-xl shadow">
     <div id="tabel"></div>
     <div class="flex justify-between items-center mt-4">
@@ -121,6 +117,7 @@
       </div>
     </div>
   </div>
+
   <div id="cropModal" class="butuh-login fixed inset-0 bg-black bg-opacity-90 z-[100] hidden flex items-center justify-center p-3">
     <div class="bg-white p-4 rounded-xl w-full max-w-md space-y-3">
       <h2 class="font-bold text-center">✂️ Crop Foto</h2>
@@ -139,10 +136,27 @@
       <button onclick="potongFoto()" class="w-full bg-green-500 text-white p-3 rounded-lg font-bold">✂️ POTONG & PAKAI FOTO INI</button>
     </div>
   </div>
-  <script type="module" src="script.js?v=119"></script>
+
+  <script type="module" src="script.js?v=122"></script>
   <script>
-  (function(){
-    try { localStorage.removeItem('bilal_cache_private'); } catch(e){}
+    function kembaliIntro() {
+      document.getElementById('gateForm').style.display = 'none';
+      document.getElementById('gateIntro').style.display = 'block';
+      document.getElementById('gatePass').value = '';
+      document.getElementById('pesanSalah').style.display = 'none';
+      document.getElementById('pesanKunci').style.display = 'none';
+    }
+
+    window.gateMasuk = function(){
+      var e = document.getElementById('gateEmail');
+      var p = document.getElementById('gatePass');
+      var ie = document.getElementById('inputEmail');
+      var ip = document.getElementById('inputPass');
+      if(ie) ie.value = e ? e.value : '';
+      if(ip) ip.value = p ? p.value : '';
+      if(window.doLogin){ window.doLogin(); }
+    };
+
     var daftarTersembunyi = Array.prototype.slice.call(document.querySelectorAll('.butuh-login'));
     function setTampil(tampil){
       daftarTersembunyi.forEach(function(el){
@@ -153,39 +167,22 @@
         try { localStorage.removeItem('bilal_cache_private'); } catch(e){}
       }
     }
-    var terakhirLogin = null;
-    setInterval(function(){
-      var st = document.getElementById('statusLogin');
-      if(!st) return;
-      var sudahLogin = st.innerText.indexOf('Halo Admin') !== -1;
-      if(sudahLogin === terakhirLogin) return;
-      terakhirLogin = sudahLogin;
-      if(sudahLogin){
-        var gate = document.getElementById('gateAdmin');
+
+    window.tampilkanKontenAdmin = function(tampil) {
+      const gate = document.getElementById('gateAdmin');
+      if (tampil) {
         if(gate) gate.style.display = 'none';
         setTampil(true);
       } else {
         setTampil(false);
-        var gate2 = document.getElementById('gateAdmin');
-        if(gate2) gate2.style.display = 'flex';
+        if(gate) gate.style.display = 'flex';
       }
-    }, 400);
-    window.gateMasuk = function(){
-      var e = document.getElementById('gateEmail');
-      var p = document.getElementById('gatePass');
-      var ie = document.getElementById('inputEmail');
-      var ip = document.getElementById('inputPass');
-      if(ie) ie.value = e ? e.value : '';
-      if(ip) ip.value = p ? p.value : '';
-      if(window.doLogin){ window.doLogin(); }
     };
+
     var origToggle = window.toggleLogin;
     window.toggleLogin = function(){
-      var gate = document.getElementById('gateAdmin');
-      if(gate) gate.style.display = 'none';
       if(origToggle) return origToggle.apply(this, arguments);
     };
-  })();
   </script>
 </body>
 </html>
