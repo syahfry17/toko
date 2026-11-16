@@ -1,4 +1,4 @@
-// UD BILAL — Foto Drive v129. Tanpa API key server atau kredensial di file ini.
+// UD BILAL — Foto Drive v130 (Dengan LocalStorage Cache)
 const DRIVE_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyCDX2gpPljtgIZAeMlhxCoiKOKsS3qQZeWMeDP8-at6_fkMn8-_Yo45j8qpQpvBVn_/exec';
 let bridge=null;
 function randomId(){return Array.from(crypto.getRandomValues(new Uint8Array(16)),v=>v.toString(16).padStart(2,'0')).join('');}
@@ -44,25 +44,71 @@ export async function uploadDrive(dataUrl,idToken){
   if(!result?.ok||!validDriveId(result.id))throw Error(result?.error||'Upload Drive gagal. Produk belum disimpan.');
   return result.id;
 }
-const photos=new Map(),queue=[];let running=0;
+
+const memoryPhotos = new Map(), queue = []; let running = 0;
 function pump(){
   while(running<3&&queue.length){const job=queue.shift();running++;job().finally(()=>{running--;pump();});}
 }
+
+// Fungsi helper untuk simpan ke localStorage dengan aman (mencegah kuota penuh)
+function getLocalCache(id) {
+  try {
+    const item = localStorage.getItem('bilal_img_' + id);
+    if (item) return item;
+  } catch(e) {}
+  return null;
+}
+
+function setLocalCache(id, dataUrl) {
+  try {
+    localStorage.setItem('bilal_img_' + id, dataUrl);
+  } catch(e) {
+    // Jika localStorage penuh, bersihkan cache lama berawalan bilal_img_
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('bilal_img_')) {
+          localStorage.removeItem(key);
+          break;
+        }
+      }
+      localStorage.setItem('bilal_img_' + id, dataUrl);
+    } catch(err) {}
+  }
+}
+
 export function readDrive(id){
   if(!validDriveId(id))return Promise.reject(Error('ID foto Drive tidak valid.'));
-  if(photos.has(id)){const cached=photos.get(id);photos.delete(id);photos.set(id,cached);return cached;}
+  
+  // 1. Cek dari memory cache
+  if(memoryPhotos.has(id)){const cached=memoryPhotos.get(id);memoryPhotos.delete(id);memoryPhotos.set(id,cached);return cached;}
+  
+  // 2. Cek dari localStorage browser (biar instan tanpa request ke Drive)
+  const localCached = getLocalCache(id);
+  if (localCached) {
+    const p = Promise.resolve(localCached);
+    memoryPhotos.set(id, p);
+    return p;
+  }
+
+  // 3. Jika belum ada, ambil dari Google Drive via bridge
   const promise=new Promise((resolve,reject)=>{queue.push(async()=>{
     try{
       const result=await driveRequest('photo',{id});
       if(!result?.ok)throw Error(result?.error||'Foto belum dapat dimuat.');
       if(typeof result.base64!=='string'||result.base64.length>273068||!/^[/+A-Za-z0-9]+={0,2}$/.test(result.base64))throw Error('Balasan foto tidak valid.');
-      resolve('data:image/jpeg;base64,'+result.base64);
-    }catch(error){photos.delete(id);reject(error);}
+      
+      const finalUrl = 'data:image/jpeg;base64,' + result.base64;
+      setLocalCache(id, finalUrl); // Simpan ke localStorage
+      resolve(finalUrl);
+    }catch(error){memoryPhotos.delete(id);reject(error);}
   });pump();});
-  photos.set(id,promise);
-  if(photos.size>48)photos.delete(photos.keys().next().value);
+  
+  memoryPhotos.set(id,promise);
+  if(memoryPhotos.size>48)memoryPhotos.delete(memoryPhotos.keys().next().value);
   return promise;
 }
+
 export async function verifyDrive(id){
   const url=await readDrive(id);
   const image=new Image();image.src=url;
