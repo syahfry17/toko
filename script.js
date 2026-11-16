@@ -1,5 +1,4 @@
-// UD. BILAL - v129: foto baru ke Drive; foto lama tetap didukung.
-import { uploadDrive, readDrive, verifyDrive, validDriveId } from './drive.js?v=129';
+// UD. BILAL - script.js v128 (Simpan Langsung Base64 ke Firestore)
 const firebaseConfig = {
   apiKey: "AIzaSyAhce1AyhPGe1cDkIzcBcgAFFOXC2Isxx0",
   authDomain: "toko-bilal.firebaseapp.com",
@@ -39,23 +38,6 @@ function pesanError(e){
 function fotoAman(value){
   const v = String(value || '').trim();
   return /^(https?:\/\/|data:image\/(?:png|jpe?g|webp|gif);base64,)/i.test(v) || /^(?:\.\.?\/)?[\w/-]+\.(?:png|jpe?g|webp|gif)$/i.test(v) ? v : '';
-}
-const FOTO_KOSONG = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600"><rect width="600" height="600" fill="#f8f8f8"/><text x="300" y="300" text-anchor="middle" fill="#888" font-size="24">Memuat foto…</text></svg>');
-function sumberFoto(b){ return fotoAman(b.foto) || FOTO_KOSONG; }
-function adaFoto(b){ return validDriveId(b.fotoDriveId) || !!fotoAman(b.foto); }
-function muatFoto(img,b){
-  const request = validDriveId(b.fotoDriveId) ? b.fotoDriveId : '';
-  img.dataset.fotoRequest = request;
-  img.src = sumberFoto(b);
-  if(!request)return;
-  readDrive(request).then(src=>{
-    if(img.isConnected && img.dataset.fotoRequest === request){img.src=src;img.title='';}
-  }).catch(()=>{
-    if(img.isConnected && img.dataset.fotoRequest === request){
-      img.title='Foto Drive belum dapat dimuat. Muat ulang halaman untuk mencoba lagi.';
-      if(!fotoAman(b.foto)) img.src='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600"><rect width="600" height="600" fill="#f8f8f8"/><text x="300" y="300" text-anchor="middle" fill="#888" font-size="24">Foto belum tersedia</text></svg>');
-    }
-  });
 }
 function aksi(nama, id){ return aman(nama + '(' + JSON.stringify(String(id)) + ')'); }
 
@@ -131,7 +113,7 @@ window.batalCrop = () => { const m=el('cropModal'); if(m) m.classList.add('hidde
 window.potongFoto = () => {
   const img = el('cropImg'); const box = el('cropBox'); if(!img||!box||!img.complete||!img.naturalWidth||!cropImgW) return;
   const frameW = box.clientWidth * 0.92; const frameH = box.clientHeight * 0.82;
-  const canvas = document.createElement('canvas'); canvas.width = 600; canvas.height = Math.round(600 * frameH / frameW);
+  const canvas = document.createElement('canvas'); canvas.width = 400; canvas.height = Math.round(400 * frameH / frameW);
   const ctx = canvas.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,canvas.width,canvas.height);
   const dispW = cropImgW * cropScale; const dispH = cropImgH * cropScale;
   const imgLeft = box.clientWidth/2 + cropX - dispW/2; const imgTop = box.clientHeight/2 + cropY - dispH/2;
@@ -140,12 +122,10 @@ window.potongFoto = () => {
   const sw = frameW / dispW * img.naturalWidth; const sh = frameH / dispH * img.naturalHeight;
   ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
   
-  let kualitas = 0.78, hasil = canvas.toDataURL('image/jpeg', kualitas);
-  while(atob(hasil.split(',')[1]).length > 200*1024 && kualitas > 0.4){ kualitas -= 0.08; hasil=canvas.toDataURL('image/jpeg', kualitas); }
-  if(atob(hasil.split(',')[1]).length > 200*1024){toastError('Foto terlalu besar. Pilih foto lain.');return;}
-  let ukKB = Math.ceil(atob(hasil.split(',')[1]).length / 1024);
+  let hasil = canvas.toDataURL('image/jpeg', 0.78);
+  let ukKB = Math.round(hasil.length / 1024);
   window.FOTO_BARU = hasil;
-  const prev = el('fotoPreview'); if(prev){ prev.dataset.fotoRequest = ''; prev.src = hasil; prev.classList.remove('hidden'); }
+  const prev = el('fotoPreview'); if(prev){ prev.src = hasil; prev.classList.remove('hidden'); }
   const st = el('fotoStatus'); if(st) st.innerText = `✅ Foto otomatis dikompres jadi ${ukKB} KB, siap disimpan!`;
   const m=el('cropModal'); if(m) m.classList.add('hidden'); toast(`✅ Foto siap (${ukKB} KB)`);
 };
@@ -241,11 +221,11 @@ let cariTimer = null;
 window.cariBarang = (teks) => { clearTimeout(cariTimer); cariTimer = setTimeout(()=>{ kataCari = teks.toLowerCase().trim(); currentPage = 1; render(); }, 250); };
 
 window.bukaZoomFoto = (id) => {
-  const b = barang.find(x => x.id === id); if(!b || !adaFoto(b)) return;
+  const b = barang.find(x => x.id === id); if(!b || !b.foto) return;
   let modal = document.getElementById('modalZoomFoto'); if(modal) modal.remove();
   modal = document.createElement('div'); modal.id = 'modalZoomFoto'; modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:100;display:flex;align-items:center;justify-content:center;';
-  modal.innerHTML = `<img src="${aman(sumberFoto(b))}" style="max-width:95%;max-height:90%;"><button onclick="document.getElementById('modalZoomFoto').remove()" style="position:absolute;top:15px;right:15px;background:white;width:36px;height:36px;border-radius:50%;font-weight:bold;">✕</button>`;
-  modal.addEventListener('click', (e)=>{ if(e.target === modal) modal.remove(); }); document.body.appendChild(modal); muatFoto(modal.querySelector('img'), b);
+  modal.innerHTML = `<img src="${aman(fotoAman(b.foto))}" style="max-width:95%;max-height:90%;"><button onclick="document.getElementById('modalZoomFoto').remove()" style="position:absolute;top:15px;right:15px;background:white;width:36px;height:36px;border-radius:50%;font-weight:bold;">✕</button>`;
+  modal.addEventListener('click', (e)=>{ if(e.target === modal) modal.remove(); }); document.body.appendChild(modal);
 };
 
 window.beliSekarang = (id) => {
@@ -276,7 +256,7 @@ function render() {
     let j = b.jual ?? b.harga ?? 0; let modal = b.modal || 0; let u = j - modal; let ket = bersihKet(b.keterangan);
     let badgeBaru = isHariIni(b.tanggalUpdate) ? `<span class="badge-baru">BARU</span>` : '';
     let stokAngka = parseFloat(String(b.stok ?? '').replace(',', '.')) || 0;
-    let foto = adaFoto(b) ? `<img loading="lazy" decoding="async" src="${aman(sumberFoto(b))}" data-foto-produk="${aman(b.id)}" onclick="${aksi('bukaZoomFoto', b.id)}" class="foto-produk cursor-pointer" alt="${aman(b.nama)}">` : `<div class="w-full flex items-center justify-center text-gray-400 text-xs" style="aspect-ratio:1/1;background:#f8f8f8;">Belum ada foto</div>`;
+    let foto = b.foto ? `<img loading="lazy" decoding="async" src="${aman(fotoAman(b.foto))}" onclick="${aksi('bukaZoomFoto', b.id)}" class="foto-produk cursor-pointer" alt="${aman(b.nama)}">` : `<div class="w-full flex items-center justify-center text-gray-400 text-xs" style="aspect-ratio:1/1;background:#f8f8f8;">Belum ada foto</div>`;
     let tombolWA = IS_ADMIN_PAGE ? '' : `<button onclick="${aksi('beliSekarang', b.id)}" class="w-full mt-2 py-2.5 rounded-lg font-bold text-white text-[13px]" style="background:#25D366;box-shadow:0 3px 10px rgba(37,211,102,.4);">💬 Pesan via WA</button>`;
     let isiKartu = `<div class="p-2 text-center flex-1 flex flex-col"><p class="font-bold text-[15px] leading-tight line-clamp-2 min-h-[38px]">${aman(b.nama)}</p><p class="text-gray-400 font-bold text-[14px] mt-1">Rp${Number(j).toLocaleString('id-ID')}</p><p class="text-[12px] text-gray-500 mt-1 min-h-[18px]">${ket ? aman(ket) : '-'}</p>${tombolWA}</div>`;
     let infoAdmin = '';
@@ -286,14 +266,14 @@ function render() {
     html += `<div class="kartu"><div class="relative">${foto}<div class="absolute top-1 left-1">${badgeBaru}</div></div>${isiKartu}${infoAdmin}</div>`;
   });
   if (hasilCari.length === 0) html = `<p class="text-center text-gray-400 py-4 col-span-2">Barang gak ketemu, coba kata lain</p>`;
-  const tabel = el('tabel'); if(tabel){ tabel.innerHTML = html; tabel.querySelectorAll('[data-foto-produk]').forEach(img => { const b=list.find(item=>item.id===img.dataset.fotoProduk); if(b)muatFoto(img,b); }); }
+  const tabel = el('tabel'); if(tabel) tabel.innerHTML = html;
   const info = el('infoPage'); if(info) info.innerText = `Page ${currentPage} / ${totalPage} (Total ${hasilCari.length} barang)`;
   const foot = document.querySelector('.footer'); if(foot) foot.innerHTML = (IS_ADMIN_PAGE && isLogin) ? `Total Jenis Produk: ${barang.length} | Total Untung: Rp ${totalUntung.toLocaleString('id-ID')}` : `Total Jenis Produk: ${barang.length}`;
 }
 
 window.gantiPage = (n) => { let tp = Math.max(1, Math.ceil(barang.length / perPage)); currentPage += n; if (currentPage < 1) currentPage = 1; if (currentPage > tp) currentPage = tp; render(); window.scrollTo(0, 0); };
 
-// --- SIMPAN: upload dan verifikasi Drive dahulu, baru commit data produk. ---
+// --- FUNGSI SIMPAN (Menyimpan Langsung Base64 Foto ke Database) ---
 window.simpan = async () => {
   if (!bolehKelola()){ toastError('Harus Login dulu!'); return; }
   if (writeBusy) return;
@@ -325,16 +305,9 @@ window.simpan = async () => {
       tanggalUpdate: getTanggalHariIni() 
     };
     
-    // Field foto lama dipertahankan sebagai cadangan; foto baru hanya menyimpan ID Drive.
+    // Jika ada foto baru yang dipilih/dipotong, simpan string base64-nya langsung ke database
     if (window.FOTO_BARU) {
-      button.innerText = 'UPLOAD FOTO...';
-      if(el('fotoStatus')) el('fotoStatus').innerText = 'Mengupload foto ke Google Drive…';
-      const idToken = await auth.currentUser.getIdToken();
-      data.fotoDriveId = await uploadDrive(window.FOTO_BARU, idToken);
-      if(el('fotoStatus')) el('fotoStatus').innerText = 'Memeriksa foto yang tersimpan di Drive…';
-      await verifyDrive(data.fotoDriveId);
-      if(!bolehKelola())throw Error('Sesi berubah. Login ulang sebelum menyimpan.');
-      button.innerText = 'MENYIMPAN...';
+      data.foto = window.FOTO_BARU;
     }
 
     const batch = fb.writeBatch(db);
@@ -346,7 +319,6 @@ window.simpan = async () => {
     window.batalEdit(); 
     toast('✅ Berhasil disimpan!');
   } catch(e){ 
-    if(el('fotoStatus')) el('fotoStatus').innerText = e.message || pesanError(e);
     toastError(e.message || pesanError(e)); 
   } finally { 
     writeBusy = false; 
@@ -363,7 +335,7 @@ window.editBarang = (id) => {
   el('nama').value = b.nama; el('modal').value = b.modal ?? ''; el('harga').value = b.jual ?? b.harga ?? 0; el('keterangan').value = bersihKet(b.keterangan); el('stok').value = b.stok; window.FOTO_BARU = null;
   const prev = el('fotoPreview'); const st = el('fotoStatus'); 
   if(prev){ 
-    if(adaFoto(b)){ muatFoto(prev,b); prev.classList.remove('hidden'); if(st) st.innerText='Foto lama aktif. Pilih foto baru jika ingin mengganti.'; } 
+    if(b.foto){ prev.src=b.foto; prev.classList.remove('hidden'); if(st) st.innerText='Foto lama aktif. Pilih foto baru jika ingin mengganti.'; } 
     else { prev.src=''; prev.classList.add('hidden'); if(st) st.innerText='Belum ada foto.'; } 
   }
   const inpFoto = el('fotoInput'); if(inpFoto) inpFoto.value=''; editId = id; 
@@ -389,7 +361,7 @@ window.batalEdit = () => {
   if(writeBusy) return; 
   editId = null; 
   window.FOTO_BARU = null; 
-  const prev = el('fotoPreview'); if(prev){ prev.dataset.fotoRequest=''; prev.src=''; prev.classList.add('hidden'); } 
+  const prev = el('fotoPreview'); if(prev){ prev.src=''; prev.classList.add('hidden'); } 
   const inpFoto = el('fotoInput'); if(inpFoto) inpFoto.value=''; 
   const st = el('fotoStatus'); if(st) st.innerText=''; 
   if(el('nama')) el('nama').value=''; 
@@ -420,10 +392,13 @@ function mulaiFirebase(){
       fbAuth.onAuthStateChanged(auth, (user) => {
         let loginBaru = !!user && user.uid === ADMIN_UID;
         isLogin = loginBaru;
-        if (isLogin) mulaiDengarPrivate(); 
-        else { 
+        if (isLogin) {
+          mulaiDengarPrivate(); 
+        } else { 
           if(unsubPrivate){ unsubPrivate(); unsubPrivate=null; } 
-          barangPrivate={}; privateReady=false; window.batalEdit(); 
+          barangPrivate = {}; 
+          privateReady = false; // <-- PENTING: Reset status private agar sinkron saat login ulang
+          window.batalEdit(); 
           ['popupForm','cropModal','boxLogin'].forEach(id => el(id)?.classList.add('hidden')); 
           ['gatePass','inputPass'].forEach(id => { if(el(id)) el(id).value = ''; }); 
         }
