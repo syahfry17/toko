@@ -1,7 +1,6 @@
-<!DOCTYPE html>
-<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Catatan Hutang</title><style>
-*{box-sizing:border-box}body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:0;background:#f6f7f9;color:#111}
+*{box-sizing:border-box}body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:0;background:#f6f7f9;color:#111;padding-bottom:90px}
 .wrap{max-width:560px;margin:0 auto;padding:16px}.card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:12px}
 h1{font-size:22px;margin:0 0 4px}.muted{color:#666;font-size:13px}.big{font-size:32px;font-weight:800;margin:6px 0 0}
 .row{display:flex;gap:8px}.row>*{flex:1}label{display:block;font-size:13px;font-weight:600;margin:10px 0 4px}
@@ -13,19 +12,27 @@ button{border:0;border-radius:10px;padding:11px 14px;font-size:15px;font-weight:
 .badge{font-size:12px;padding:4px 8px;border-radius:99px;background:#fef3c7}.ok{background:#dcfce7}
 pre{white-space:pre-wrap;background:#0f172a;color:#e2e8f0;padding:12px;border-radius:10px;font-size:12px;overflow:auto}
 .small{font-size:12px;color:#666;line-height:1.6}
+#fab{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:20;background:#111;color:#fff;padding:15px 22px;font-size:16px;border-radius:99px;box-shadow:0 6px 20px rgba(0,0,0,.25);width:auto;max-width:calc(100% - 32px)}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:30;align-items:flex-end;justify-content:center}
+.sheet{background:#fff;width:100%;max-width:560px;border-radius:20px 20px 0 0;padding:18px 16px 28px;max-height:88vh;overflow:auto}
 </style></head><body><div class="wrap">
 <div class="card"><h1>Catatan Hutang</h1><div class="muted">Total Belum Lunas</div><div class="big" id="total">Rp 0</div><div class="muted" id="ringkas" style="margin-top:8px"></div></div>
-<div class="card"><label>Nama</label><input id="nama" placeholder="Nama orang" list="daftarNama"><datalist id="daftarNama"></datalist>
-<label>Jumlah (Rp)</label><input id="jumlah" type="number" inputmode="numeric" placeholder="0">
-<div class="row"><div><label>Tanggal</label><input id="tanggal" type="date"></div><div><label>Status</label><select id="status"><option>Belum Lunas</option><option>Lunas</option></select></div></div>
-<label>Keterangan (opsional)</label><input id="ket" placeholder="Misal: Minyak kita">
-<button class="btn" onclick="simpan()" style="margin-top:14px">Simpan</button></div>
 <div class="card"><div class="row"><input id="cari" placeholder="Cari nama..." oninput="render()"><select id="filter" onchange="render()"><option>Semua</option><option>Belum Lunas</option><option>Lunas</option></select></div>
-<div class="muted" style="margin:10px 0 4px">Daftar digabung per orang. Ketuk nama untuk lihat rinciannya.</div><div id="list"></div></div>
-<div class="card"><b>Pengaturan Google Sheet</b><p class="small">Tempel URL Web App dari Google Apps Script. Kalau kosong, data disimpan di HP/browser ini saja.</p>
-<input id="url" placeholder="https://script.google.com/macros/s/.../exec"><button class="btn2" onclick="simpanUrl()" style="margin-top:8px;width:100%">Simpan URL & Muat dari Sheet</button>
-<details><summary><b>Cara setup Google Sheet (3 langkah)</b></summary><p class="small">1. Buat Sheet baru, baris 1 isi: Nama | Jumlah | Tanggal | Keterangan | Status<br>2. Extensions &gt; Apps Script, paste kode, Save.<br>3. Deploy &gt; Web app, Execute as: Me, Who has access: Anyone, Deploy. Copy URL-nya ke atas.</p><pre id="kode"></pre><button class="btn2" onclick="copyKode()">Copy Kode Apps Script</button></details></div>
-</div><script>
+<div class="muted" style="margin:10px 0 4px">Ketuk nama untuk lihat rincian. Ketuk tombol + di bawah untuk tambah.</div><div id="list"></div></div>
+<div class="card"><details><summary><b>Pengaturan Google Sheet</b></summary><p class="small">Tempel URL Web App dari Google Apps Script.</p><input id="url" placeholder="https://script.google.com/macros/s/.../exec"><button class="btn2" onclick="simpanUrl()" style="margin-top:8px;width:100%">Simpan URL & Muat dari Sheet</button><p class="small">Setup: Sheet baris 1: Nama | Jumlah | Tanggal | Keterangan | Status, lalu Extensions &gt; Apps Script, Deploy &gt; Web app, Me, Anyone.</p><pre id="kode"></pre><button class="btn2" onclick="copyKode()">Copy Kode Apps Script</button></details></div>
+</div>
+<button id="fab" onclick="bukaPopup()">+ Tambah Hutang</button>
+<div id="popup" class="overlay" onclick="if(event.target===this) tutupPopup()"><div class="sheet"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:18px">Tambah Hutang</b><button class="btn3" onclick="tutupPopup()" style="width:40px">✕</button></div>
+<label>Nama</label><input id="nama" placeholder="Nama orang, misal: Kak Imur" list="daftarNama"><datalist id="daftarNama"></datalist>
+<div class="row"><div><label>Tanggal</label><input id="tanggal" type="date"></div><div><label>Status</label><select id="status"><option>Belum Lunas</option><option>Lunas</option></select></div></div>
+<label>Daftar Barang — isi 1 atau banyak sekaligus</label>
+<div id="barangList"></div>
+<button class="btn2" onclick="tambahBaris()" style="width:100%;margin-top:8px">+ Tambah Barang Lagi</button>
+<div style="display:flex;justify-content:space-between;margin-top:14px;font-size:17px"><b>Total</b><b id="totalPopup">Rp 0</b></div>
+<button class="btn" onclick="simpan()" style="margin-top:10px">Simpan Semua Barang</button>
+<div class="muted" style="margin-top:8px">Contoh: Kak Imur ambil 5 barang, isi 5 baris, sekali Simpan langsung masuk semua.</div>
+</div></div>
+<script>
 const KODE=`function doGet(){const s=SpreadsheetApp.openById("1CPXrWgkie3-ERuQNdF5Oe6WxRbZowTDRovNNmYj1GI8").getSheetByName("Hutang");const v=s.getDataRange().getValues();const out=[];for(let i=1;i<v.length;i++){if(!v[i][0])continue;out.push({id:i,nama:v[i][0],jumlah:v[i][1],tanggal:v[i][2],ket:v[i][3],status:v[i][4]})}return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON)}
 function doPost(e){const d=JSON.parse(e.postData.contents);const s=SpreadsheetApp.openById("1CPXrWgkie3-ERuQNdF5Oe6WxRbZowTDRovNNmYj1GI8").getSheetByName("Hutang");if(d.action==="add"){s.appendRow([d.nama,d.jumlah,d.tanggal,d.ket,d.status])}if(d.action==="delete"){s.deleteRow(d.id+1)}if(d.action==="toggle"){s.getRange(d.id+1,5).setValue(d.status)}return ContentService.createTextOutput("OK")}`;
 document.getElementById('kode').textContent=KODE;
@@ -37,10 +44,47 @@ function rp(n){return 'Rp '+(Number(n)||0).toLocaleString('id-ID')}
 function fmtTgl(t){ if(!t) return ''; if(String(t).includes('T')) return String(t).slice(0,10); return String(t); }
 async function sync(){const u=localStorage.getItem('sheetUrl');if(!u)return;try{const r=await fetch(u);data=await r.json();localStorage.setItem('hutang',JSON.stringify(data));}catch(e){}}
 async function kirim(body){const u=localStorage.getItem('sheetUrl');if(!u)return false;try{await fetch(u,{method:'POST',body:JSON.stringify(body)});return true}catch(e){return false}}
-async function simpan(){const nama=document.getElementById('nama').value.trim();const jumlah=document.getElementById('jumlah').value;if(!nama||!jumlah)return alert('Isi nama & jumlah');const item={id:Date.now(),nama,jumlah:Number(jumlah),tanggal:document.getElementById('tanggal').value,ket:document.getElementById('ket').value,status:document.getElementById('status').value};data.unshift(item);localStorage.setItem('hutang',JSON.stringify(data));await kirim({action:'add',...item});document.getElementById('nama').value='';document.getElementById('jumlah').value='';document.getElementById('ket').value='';render()}
+let barangRows = [];
+function barangHTML(i){
+  return `<div class="brow" data-i="${i}" style="display:flex;gap:6px;margin-bottom:8px"><input class="bket" placeholder="Barang ${i+1} — misal: Beras 3kg" style="flex:2"><input class="bjml" type="number" inputmode="numeric" placeholder="Harga" style="flex:1" oninput="hitungTotalPopup()"><button type="button" class="btn3" onclick="hapusBaris(${i})" style="width:38px;padding:8px">✕</button></div>`;
+}
+function renderBarang(){
+  document.getElementById('barangList').innerHTML = barangRows.map((_,i)=>barangHTML(i)).join('');
+  // restore values
+  document.querySelectorAll('.brow').forEach((el,idx)=>{ el.querySelector('.bket').value=barangRows[idx].ket||''; el.querySelector('.bjml').value=barangRows[idx].jumlah||''; });
+  hitungTotalPopup();
+}
+function tambahBaris(ket='', jumlah=''){ barangRows.push({ket, jumlah}); renderBarang(); }
+function hapusBaris(i){ if(barangRows.length<=1) return alert('Minimal 1 barang'); barangRows.splice(i,1); renderBarang(); }
+function hitungTotalPopup(){
+  // sync from inputs
+  document.querySelectorAll('.brow').forEach((el,idx)=>{ barangRows[idx]={ket:el.querySelector('.bket').value, jumlah:el.querySelector('.bjml').value}; });
+  let t = barangRows.reduce((a,b)=>a+(Number(b.jumlah)||0),0);
+  document.getElementById('totalPopup').textContent = rp(t);
+}
+function resetPopup(){
+  barangRows=[{ket:'',jumlah:''},{ket:'',jumlah:''}];
+  document.getElementById('nama').value=''; document.getElementById('ket') && (document.getElementById('ket').value='');
+  renderBarang();
+}
+async function simpan(){
+  hitungTotalPopup();
+  const nama=document.getElementById('nama').value.trim();
+  const items=barangRows.filter(b=>b.ket.trim() && Number(b.jumlah)>0);
+  if(!nama) return alert('Isi nama dulu');
+  if(items.length===0) return alert('Isi minimal 1 barang + harganya');
+  const tanggal=document.getElementById('tanggal').value;
+  const status=document.getElementById('status').value;
+  for(const it of items){
+    const item={id:Date.now()+Math.floor(Math.random()*1000), nama, jumlah:Number(it.jumlah), tanggal, ket:it.ket.trim(), status};
+    data.unshift(item); localStorage.setItem('hutang',JSON.stringify(data)); await kirim({action:'add',...item});
+  }
+  alert(items.length+' barang tersimpan untuk '+nama);
+  tutupPopup(); resetPopup(); render();
+}
 async function hapus(idx){if(!confirm('Hapus item ini?'))return;const it=data[idx];data.splice(idx,1);localStorage.setItem('hutang',JSON.stringify(data));await kirim({action:'delete',id:it.id});render()}
 async function toggle(idx){data[idx].status=data[idx].status==='Lunas'?'Belum Lunas':'Lunas';localStorage.setItem('hutang',JSON.stringify(data));await kirim({action:'toggle',id:data[idx].id,status:data[idx].status});render()}
-function simpanUrl(){const u=document.getElementById('url').value.trim();localStorage.setItem('sheetUrl',u);alert('URL tersimpan');sync().then(render)}
+function bukaPopup(){ if(barangRows.length===0) resetPopup(); else renderBarang(); document.getElementById('popup').style.display='flex';setTimeout(()=>document.getElementById('nama').focus(),100);} function tutupPopup(){document.getElementById('popup').style.display='none';} function simpanUrl(){const u=document.getElementById('url').value.trim();localStorage.setItem('sheetUrl',u);alert('URL tersimpan');sync().then(render)}
 function copyKode(){navigator.clipboard.writeText(KODE).then(()=>alert('Kode tercopy'))}
 function tagihWA(nama, items){
   let total=items.filter(x=>x.status!=='Lunas').reduce((a,b)=>a+Number(b.jumlah),0);
@@ -80,5 +124,5 @@ function render(){
   });
   document.getElementById('list').innerHTML=h||'<p class="muted">Belum ada catatan.</p>';
 }
-sync().then(render); render();
+barangRows=[{ket:'',jumlah:''}]; sync().then(render); render();
 </script></body></html>
