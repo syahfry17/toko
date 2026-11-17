@@ -23,7 +23,8 @@
     .stat-card { background: #fff; border-radius: 14px; padding: 10px 8px; text-align: center; box-shadow: 0 1px 6px rgba(0,0,0,.06); border: 1px solid #f0f0f0; }
     .stat-card b { font-size: 16px; display: block; line-height: 1.1; }
     .stat-card span { font-size: 10px; color: #888; font-weight: 700; letter-spacing: .5px; }
-    .btn-tambah { background: #2563eb; color: #fff; width: 100%; padding: 13px; border-radius: 14px; font-weight: 800; font-size: 15px; box-shadow: 0 3px 10px rgba(37,99,235,.3); }
+    .btn-tambah { background: #2563eb; color: #fff; flex: 1; padding: 13px 10px; border-radius: 14px; font-weight: 800; font-size: 14px; box-shadow: 0 3px 10px rgba(37,99,235,.3); border: none; cursor: pointer; text-align: center; }
+    .btn-hutang { background: #f59e0b; color: #fff; flex: 1; padding: 13px 10px; border-radius: 14px; font-weight: 800; font-size: 14px; box-shadow: 0 3px 10px rgba(245,158,11,.3); text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
     .search-admin { width: 100%; border: 2px solid #e5e7eb; padding: 12px 14px; border-radius: 14px; background: #fff; font-weight: 600; font-size: 14px; outline: none; }
     .search-admin:focus { border-color: #16a34a; }
     .info-admin-box { background: #f8fafc; border-top: 1px solid #eef2f7; padding: 10px 12px 8px; font-size: 12px; }
@@ -81,7 +82,10 @@
     <button onclick="toggleLogin()" class="w-full bg-gray-300 p-3 rounded-lg">Batal</button>
   </div>
 
-  <button id="btnTambah" onclick="bukaForm()" class="butuh-login btn-tambah mb-3 hidden">+ Tambah Barang</button>
+  <div class="butuh-login mb-3" style="display:flex;gap:8px;">
+    <button id="btnTambah" onclick="bukaForm()" class="btn-tambah hidden">+ Tambah Barang</button>
+    <a href="./note-v7.html" class="btn-hutang">📒 Catatan Hutang</a>
+  </div>
   <input id="inputCari" oninput="cariBarang(this.value)" type="text" placeholder="🔍 Cari barang..." autocomplete="off" class="butuh-login search-admin mb-3">
 
   <div class="butuh-login bg-white p-3 rounded-xl shadow">
