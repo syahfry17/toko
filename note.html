@@ -83,6 +83,22 @@ async function simpan(){
   tutupPopup(); resetPopup(); render();
 }
 async function hapus(idx){if(!confirm('Hapus item ini?'))return;const it=data[idx];data.splice(idx,1);localStorage.setItem('hutang',JSON.stringify(data));await kirim({action:'delete',id:it.id});render()}
+async function lunasSemua(nama){
+  if(!confirm('Tandai SEMUA hutang '+nama+' jadi Lunas?')) return;
+  let items = data.filter(d=>d.nama===nama && d.status!=='Lunas');
+  for(const it of items){ it.status='Lunas'; await kirim({action:'toggle', id:it.id, status:'Lunas'}); }
+  localStorage.setItem('hutang',JSON.stringify(data)); render();
+}
+async function hapusOrang(nama){
+  let items = data.filter(d=>d.nama===nama);
+  if(items.length===0) return;
+  if(!confirm('Hapus SEMUA ('+items.length+' barang) milik '+nama+'? Ini tidak bisa dibatalkan.')) return;
+  // Hapus dari bawah ke atas supaya nomor baris Sheet tidak geser
+  let sorted = [...items].sort((a,b)=>b.id-a.id);
+  for(const it of sorted){ await kirim({action:'delete', id:it.id}); }
+  data = data.filter(d=>d.nama!==nama);
+  localStorage.setItem('hutang',JSON.stringify(data)); render();
+}
 async function toggle(idx){data[idx].status=data[idx].status==='Lunas'?'Belum Lunas':'Lunas';localStorage.setItem('hutang',JSON.stringify(data));await kirim({action:'toggle',id:data[idx].id,status:data[idx].status});render()}
 function bukaPopup(){ if(barangRows.length===0) resetPopup(); else renderBarang(); document.getElementById('popup').style.display='flex';setTimeout(()=>document.getElementById('nama').focus(),100);} function tutupPopup(){document.getElementById('popup').style.display='none';} function simpanUrl(){const u=document.getElementById('url').value.trim();localStorage.setItem('sheetUrl',u);alert('URL tersimpan');sync().then(render)}
 function copyKode(){navigator.clipboard.writeText(KODE).then(()=>alert('Kode tercopy'))}
@@ -118,6 +134,8 @@ function render(){
       h+=`<div class="detail">`;
       items.forEach(d=>{ h+=`<div class="drow"><div><b>${d.ket||'(tanpa keterangan)'}</b> <span class="badge ${d.status==='Lunas'?'ok':''}">${d.status}</span><div class="muted">${fmtTgl(d.tanggal)}</div></div><div style="text-align:right"><b>${rp(d.jumlah)}</b><div><button class="btn2" onclick="toggle(${d._idx})">✓</button> <button class="btn3" onclick="hapus(${d._idx})">✕</button></div></div></div>`; });
       if(totalBelum>0) h+=`<button class="btnWA" onclick='tagihWA("${nama}", ${JSON.stringify(groups[nama]).replace(/'/g,"")})'>Tagih via WhatsApp</button>`;
+      if(totalBelum>0) h+=`<button onclick="lunasSemua('${nama.replace(/'/g,"")}')" style="width:100%;margin-top:8px;background:#dcfce7">✓ Lunaskan Semua (${rp(totalBelum)})</button>`;
+      h+=`<button onclick="hapusOrang('${nama.replace(/'/g,"")}')" style="width:100%;margin-top:8px;background:#fee2e2">🗑 Hapus Semua Milik ${nama}</button>`;
       h+=`</div>`;
     }
     h+=`</div>`;
