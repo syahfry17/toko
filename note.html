@@ -114,16 +114,10 @@ button:disabled{opacity:.55;cursor:not-allowed}
       <b style="font-size:18px">Tambah Hutang</b>
       <button class="btn3" onclick="tutupPopup()" style="width:40px;padding:8px">✕</button>
     </div>
-    <div class="row">
-      <div style="flex:1.3" class="suggestBox">
-        <label>Nama Pelanggan</label>
-        <input id="nama" autocomplete="off" placeholder="Misal: Bilal" oninput="onInputNama()" onfocus="onInputNama()" onblur="setTimeout(tutupSuggest,150)">
-        <div id="suggestList" class="suggestList"></div>
-      </div>
-      <div style="flex:1">
-        <label>No. WA (Opsional)</label>
-        <input id="nowa" type="tel" inputmode="tel" placeholder="0812...">
-      </div>
+    <div class="suggestBox">
+      <label>Nama Pelanggan</label>
+      <input id="nama" autocomplete="off" placeholder="Misal: Bilal" oninput="onInputNama()" onfocus="onInputNama()" onblur="setTimeout(tutupSuggest,150)">
+      <div id="suggestList" class="suggestList"></div>
     </div>
     <div class="row">
       <div><label>Tanggal</label><input id="tanggal" type="date"></div>
@@ -290,16 +284,7 @@ function hitungTotalPopup() {
   document.getElementById('totalPopup').textContent = rp(t);
 }
 
-function isiAutoWA() {
-  const namaInput = titleCase(document.getElementById('nama').value);
-  const found = data.find(d => titleCase(d.nama) === namaInput && d.nowa);
-  if (found && !document.getElementById('nowa').value) {
-    document.getElementById('nowa').value = found.nowa;
-  }
-}
-
 function onInputNama() {
-  isiAutoWA();
   const q = document.getElementById('nama').value.trim().toLowerCase();
   const box = document.getElementById('suggestList');
   if (!q) {
@@ -318,7 +303,6 @@ function onInputNama() {
 
 function pilihNama(n) {
   document.getElementById('nama').value = n;
-  isiAutoWA();
   tutupSuggest();
 }
 
@@ -330,18 +314,15 @@ function tutupSuggest() {
 function resetPopup(presetNama = '') {
   barangRows = [{ ket: '', jumlah: '' }, { ket: '', jumlah: '' }];
   document.getElementById('nama').value = presetNama;
-  document.getElementById('nowa').value = '';
   document.getElementById('tanggal').valueAsDate = new Date();
   document.getElementById('status').value = 'Belum Lunas';
   tutupSuggest();
-  if (presetNama) isiAutoWA();
   renderBarang();
 }
 
 async function simpan() {
   hitungTotalPopup();
   const nama = titleCase(document.getElementById('nama').value);
-  const nowa = document.getElementById('nowa').value.trim();
   const items = barangRows.filter(b => b.ket.trim() && Number(b.jumlah) > 0);
   if (!nama) return alert('Isi nama pelanggan dulu');
   if (items.length === 0) return alert('Isi minimal 1 barang + harganya');
@@ -360,8 +341,7 @@ async function simpan() {
       jumlah: Number(it.jumlah),
       tanggal,
       ket: it.ket.trim(),
-      status,
-      nowa
+      status
     };
     data.unshift(item);
     await kirim({ action: 'add', ...item });
@@ -410,15 +390,13 @@ async function simpanCicil() {
   btn.disabled = true;
   btn.textContent = 'Menyimpan...';
 
-  const foundWA = (data.find(d => titleCase(d.nama) === targetCicilNama && d.nowa) || {}).nowa || '';
   const item = {
     id: Date.now(),
     nama: targetCicilNama,
     jumlah: -Math.abs(nominal),
     tanggal,
     ket: `Bayar: ${ket}`,
-    status: 'Belum Lunas',
-    nowa: foundWA
+    status: 'Belum Lunas'
   };
 
   data.unshift(item);
@@ -532,9 +510,9 @@ function tutupPopup() {
 
 function exportCSV() {
   if (data.length === 0) return alert('Belum ada data untuk di-export');
-  let csv = 'Nama,Jumlah,Tanggal,Keterangan,Status,NoWA\n';
+  let csv = 'Nama,Jumlah,Tanggal,Keterangan,Status\n';
   data.forEach(d => {
-    csv += `"${(d.nama||'').replace(/"/g,'""')}",${d.jumlah},"${fmtTgl(d.tanggal)}","${(d.ket||'').replace(/"/g,'""')}","${d.status}","${d.nowa||''}"\n`;
+    csv += `"${(d.nama||'').replace(/"/g,'""')}",${d.jumlah},"${fmtTgl(d.tanggal)}","${(d.ket||'').replace(/"/g,'""')}","${d.status}"\n`;
   });
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const a = document.createElement('a');
