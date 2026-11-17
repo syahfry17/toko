@@ -17,6 +17,7 @@ h1{font-size:21px;margin:0 0 2px}
 label{display:block;font-size:13px;font-weight:600;margin:10px 0 4px}
 input,select{width:100%;padding:11px;border:1px solid #d1d5db;border-radius:10px;font-size:15px;background:#fff}
 input:focus,select:focus{outline:none;border-color:#111}
+input::-webkit-calendar-picker-indicator{display:none !important;opacity:0}
 button{border:0;border-radius:10px;padding:11px 14px;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .15s}
 button:disabled{opacity:.55;cursor:not-allowed}
 .btn{background:#111;color:#fff;width:100%;font-size:15px}
@@ -37,8 +38,6 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .aging{font-size:11px;padding:2px 7px;border-radius:99px;background:#f3f4f6;color:#4b5563;margin-left:4px;font-weight:600}
 .aging.late{background:#fee2e2;color:#991b1b}
 .miniBtn{padding:6px 9px;font-size:12px;border-radius:8px;margin-left:3px}
-pre{white-space:pre-wrap;background:#0f172a;color:#e2e8f0;padding:12px;border-radius:10px;font-size:11px;overflow:auto;line-height:1.45}
-.small{font-size:12px;color:#6b7280;line-height:1.55}
 #fab{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:20;background:#111;color:#fff;padding:15px 24px;font-size:16px;border-radius:99px;box-shadow:0 6px 20px rgba(0,0,0,.25);width:auto;max-width:calc(100% - 32px)}
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:30;align-items:flex-end;justify-content:center}
 .sheet{background:#fff;width:100%;max-width:560px;border-radius:20px 20px 0 0;padding:18px 16px 28px;max-height:90vh;overflow:auto}
@@ -46,6 +45,11 @@ pre{white-space:pre-wrap;background:#0f172a;color:#e2e8f0;padding:12px;border-ra
 .syncDot.busy{background:#f59e0b}
 .topTools{display:flex;gap:6px;margin-top:10px}
 .topTools button{flex:1;padding:8px 10px;font-size:12px}
+.suggestBox{position:relative}
+.suggestList{display:none;position:absolute;left:0;right:0;top:100%;margin-top:4px;background:#fff;border:1px solid #d1d5db;border-radius:10px;box-shadow:0 8px 20px rgba(0,0,0,.1);z-index:50;max-height:160px;overflow:auto}
+.suggestItem{padding:10px 12px;font-size:14px;cursor:pointer;border-bottom:1px solid #f3f4f6}
+.suggestItem:last-child{border-bottom:0}
+.suggestItem:active,.suggestItem:hover{background:#f3f4f6}
 </style>
 </head>
 <body>
@@ -76,18 +80,6 @@ pre{white-space:pre-wrap;background:#0f172a;color:#e2e8f0;padding:12px;border-ra
     <div class="muted" style="margin:10px 0 4px">Ketuk nama untuk rincian, cicilan, edit, atau tagih WA.</div>
     <div id="list"></div>
   </div>
-
-  <div class="card">
-    <details>
-      <summary><b>Pengaturan & Kode Google Sheet (v6)</b></summary>
-      <p class="small">Tempel URL Web App dari Google Apps Script (Deploy &gt; Web app &gt; Execute as: Me &gt; Who has access: Anyone).</p>
-      <input id="url" placeholder="https://script.google.com/macros/s/.../exec">
-      <button class="btn2" onclick="simpanUrl()" style="margin-top:8px;width:100%">Simpan URL & Muat dari Sheet</button>
-      <p class="small" style="margin-top:10px"><b>Header Baris 1 Sheet "Hutang":</b><br>Nama | Jumlah | Tanggal | Keterangan | Status | NoWA</p>
-      <pre id="kode"></pre>
-      <button class="btn2" onclick="copyKode()" style="width:100%">Copy Kode Apps Script Baru</button>
-    </details>
-  </div>
 </div>
 
 <button id="fab" onclick="bukaPopup()">+ Tambah Hutang</button>
@@ -100,10 +92,10 @@ pre{white-space:pre-wrap;background:#0f172a;color:#e2e8f0;padding:12px;border-ra
       <button class="btn3" onclick="tutupPopup()" style="width:40px;padding:8px">✕</button>
     </div>
     <div class="row">
-      <div style="flex:1.3">
+      <div style="flex:1.3" class="suggestBox">
         <label>Nama Pelanggan</label>
-        <input id="nama" placeholder="Misal: Bilal" list="daftarNama" oninput="isiAutoWA()">
-        <datalist id="daftarNama"></datalist>
+        <input id="nama" autocomplete="off" placeholder="Misal: Bilal" oninput="onInputNama()" onfocus="onInputNama()" onblur="setTimeout(tutupSuggest,150)">
+        <div id="suggestList" class="suggestList"></div>
       </div>
       <div style="flex:1">
         <label>No. WA (Opsional)</label>
@@ -160,50 +152,8 @@ pre{white-space:pre-wrap;background:#0f172a;color:#e2e8f0;padding:12px;border-ra
 </div>
 
 <script>
-const KODE = `const SHEET_ID = "1CPXrWgkie3-ERuQNdF5Oe6WxRbZowTDRovNNmYj1GI8";
-const TAB_NAME = "Hutang";
-
-function doGet(){
-  const s = SpreadsheetApp.openById(SHEET_ID).getSheetByName(TAB_NAME);
-  const v = s.getDataRange().getValues();
-  const out = [];
-  for(let i = 1; i < v.length; i++){
-    if(!v[i][0]) continue;
-    out.push({
-      id: i,
-      nama: v[i][0],
-      jumlah: Number(v[i][1]) || 0,
-      tanggal: v[i][2],
-      ket: v[i][3],
-      status: v[i][4] || "Belum Lunas",
-      nowa: v[i][5] ? String(v[i][5]) : ""
-    });
-  }
-  return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
-}
-
-function doPost(e){
-  const d = JSON.parse(e.postData.contents);
-  const s = SpreadsheetApp.openById(SHEET_ID).getSheetByName(TAB_NAME);
-  if(d.action === "add"){
-    s.appendRow([d.nama, d.jumlah, d.tanggal, d.ket, d.status, d.nowa || ""]);
-  }
-  if(d.action === "delete"){
-    s.deleteRow(Number(d.id) + 1);
-  }
-  if(d.action === "toggle"){
-    s.getRange(Number(d.id) + 1, 5).setValue(d.status);
-  }
-  if(d.action === "edit"){
-    const r = Number(d.id) + 1;
-    s.getRange(r, 2).setValue(d.jumlah);
-    s.getRange(r, 3).setValue(d.tanggal);
-    s.getRange(r, 4).setValue(d.ket);
-  }
-  return ContentService.createTextOutput("OK");
-}`;
-
-document.getElementById('kode').textContent = KODE;
+// TEMPEL URL WEB APP GOOGLE APPS SCRIPT KAMU DI BAWAH INI:
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbybsnPaGji-cfqsfvAaaCfWaxUDbt0xjozB5RfQDXFszWtF2hg-1pl_t9ApK2_Scmfi/exec";
 
 let data = JSON.parse(localStorage.getItem('hutang') || '[]');
 let terbuka = {};
@@ -213,7 +163,10 @@ let targetCicilSisa = 0;
 let targetEditIdx = -1;
 
 document.getElementById('tanggal').valueAsDate = new Date();
-document.getElementById('url').value = localStorage.getItem('sheetUrl') || '';
+
+function getSheetUrl() {
+  return SHEET_URL || localStorage.getItem('sheetUrl') || '';
+}
 
 function setStatus(teks, busy = false) {
   document.getElementById('syncStatus').innerHTML = `<span class="syncDot ${busy ? 'busy' : ''}"></span>${teks}`;
@@ -232,7 +185,7 @@ function fmtTgl(t) {
 }
 
 function titleCase(str) {
-  return str.trim().replace(/\s+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  return str.trim().replace(/\s+/g, ' ').replace(/\w/g, c => c.toUpperCase());
 }
 
 function formatWA(no) {
@@ -253,7 +206,7 @@ function hitungHari(tglStr) {
 }
 
 async function sync() {
-  const u = localStorage.getItem('sheetUrl');
+  const u = getSheetUrl();
   if (!u) return;
   setStatus('Sinkron...', true);
   try {
@@ -272,7 +225,7 @@ async function syncManual() {
 }
 
 async function kirim(body) {
-  const u = localStorage.getItem('sheetUrl');
+  const u = getSheetUrl();
   if (!u) return false;
   setStatus('Menyimpan...', true);
   try {
@@ -331,12 +284,43 @@ function isiAutoWA() {
   }
 }
 
+// AUTOCOMPLETE CUSTOM TANPA PANAH BAWAAN BROWSER
+function onInputNama() {
+  isiAutoWA();
+  const q = document.getElementById('nama').value.trim().toLowerCase();
+  const box = document.getElementById('suggestList');
+  if (!q) {
+    box.style.display = 'none';
+    return;
+  }
+  const namaUnik = [...new Set(data.map(d => titleCase(d.nama)))].sort();
+  const cocok = namaUnik.filter(n => n.toLowerCase().includes(q) && n.toLowerCase() !== q);
+  if (cocok.length === 0) {
+    box.style.display = 'none';
+    return;
+  }
+  box.innerHTML = cocok.map(n => `<div class="suggestItem" onmousedown="pilihNama('${n.replace(/'/g, "\'")}')">${n}</div>`).join('');
+  box.style.display = 'block';
+}
+
+function pilihNama(n) {
+  document.getElementById('nama').value = n;
+  isiAutoWA();
+  tutupSuggest();
+}
+
+function tutupSuggest() {
+  const box = document.getElementById('suggestList');
+  if (box) box.style.display = 'none';
+}
+
 function resetPopup(presetNama = '') {
   barangRows = [{ ket: '', jumlah: '' }, { ket: '', jumlah: '' }];
   document.getElementById('nama').value = presetNama;
   document.getElementById('nowa').value = '';
   document.getElementById('tanggal').valueAsDate = new Date();
   document.getElementById('status').value = 'Belum Lunas';
+  tutupSuggest();
   if (presetNama) isiAutoWA();
   renderBarang();
 }
@@ -535,17 +519,6 @@ function tutupPopup() {
   document.getElementById('popup').style.display = 'none';
 }
 
-function simpanUrl() {
-  const u = document.getElementById('url').value.trim();
-  localStorage.setItem('sheetUrl', u);
-  alert('URL tersimpan');
-  sync().then(render);
-}
-
-function copyKode() {
-  navigator.clipboard.writeText(KODE).then(() => alert('Kode Apps Script v6 tercopy!'));
-}
-
 function tagihWA(nama, items) {
   const belum = items.filter(x => x.status !== 'Lunas');
   const total = belum.reduce((a, b) => a + Number(b.jumlah), 0);
@@ -593,7 +566,6 @@ function render() {
 
   const namaUnik = [...new Set(data.map(d => titleCase(d.nama)))].sort();
   document.getElementById('ringkas').textContent = `Lunas: ${rp(ln)} • ${namaUnik.length} orang • ${data.length} catatan`;
-  document.getElementById('daftarNama').innerHTML = namaUnik.map(n => `<option value="${n}">`).join('');
 
   let groups = {};
   data.forEach((d, idx) => {
@@ -613,7 +585,6 @@ function render() {
     const totalSemua = groups[nama].reduce((a, b) => a + Number(b.jumlah), 0);
     const jmlBelum = belumItems.length;
 
-    // Hitung umur hutang terlama yang belum lunas
     let maxHari = 0;
     belumItems.forEach(it => {
       if (Number(it.jumlah) > 0) {
