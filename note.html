@@ -50,16 +50,36 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .suggestItem{padding:10px 12px;font-size:14px;cursor:pointer;border-bottom:1px solid #f3f4f6}
 .suggestItem:last-child{border-bottom:0}
 .suggestItem:active,.suggestItem:hover{background:#f3f4f6}
+.butuh-login{display:none !important}
+#gateNote{position:fixed;inset:0;background:#f3f4f6;z-index:9998;display:flex;align-items:center;justify-content:center;padding:20px}
+#gateNote .box{background:#fff;border-radius:16px;padding:24px;max-width:360px;width:100%;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.1)}
 </style>
 </head>
 <body>
-<div class="wrap">
+<div id="gateNote">
+  <div class="box">
+    <div id="gateChecking">
+      <div style="font-size:36px;margin-bottom:8px">🔒</div>
+      <b style="font-size:16px;color:#166534">Memeriksa Sesi Admin...</b>
+      <p class="muted" style="margin:6px 0 0">Mohon tunggu sebentar</p>
+    </div>
+    <div id="gateForm" style="display:none;text-align:left">
+      <p style="font-weight:800;text-align:center;margin:0 0 4px;font-size:18px;color:#166534">🔑 Login Admin</p>
+      <p class="muted" style="text-align:center;margin:0 0 14px">Catatan Hutang khusus pemilik UD. BILAL</p>
+      <input id="gateEmail" type="email" placeholder="Email Admin" autocomplete="username" style="margin-bottom:10px">
+      <input id="gatePass" type="password" placeholder="Password" autocomplete="current-password" style="margin-bottom:12px" onkeydown="if(event.key==='Enter')gateMasuk()">
+      <button id="btnGateLogin" onclick="gateMasuk()" style="width:100%;background:#16a34a;color:#fff;padding:12px;font-size:15px">MASUK</button>
+      <a href="./index.html" style="display:block;text-align:center;margin-top:12px;font-size:12px;color:#6b7280;text-decoration:none">← Kembali ke Toko</a>
+    </div>
+  </div>
+</div>
+
+<div class="wrap butuh-login">
   <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-      <a href="./admin.html" style="display:inline-flex;align-items:center;gap:4px;background:#f3f4f6;color:#111;padding:6px 11px;border-radius:9px;font-size:12px;font-weight:700;text-decoration:none">← Admin</a>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h1>Catatan Hutang</h1>
       <span class="muted" id="syncStatus"><span class="syncDot"></span>Siap</span>
     </div>
-    <h1>Catatan Hutang</h1>
     <div class="muted">Total Belum Lunas</div>
     <div class="big" id="total">Rp 0</div>
     <div class="muted" id="ringkas" style="margin-top:6px"></div>
@@ -83,7 +103,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
   </div>
 </div>
 
-<button id="fab" onclick="bukaPopup()">+ Tambah Hutang</button>
+<button id="fab" class="butuh-login" onclick="bukaPopup()">+ Tambah Hutang</button>
 
 <!-- POPUP TAMBAH HUTANG -->
 <div id="popup" class="overlay" onclick="if(event.target===this) tutupPopup()">
@@ -651,8 +671,74 @@ function render() {
 }
 
 barangRows = [{ ket: '', jumlah: '' }];
-sync().then(render);
 render();
+
+// KUNCI SESI FIREBASE AUTH (SAMA DENGAN ADMIN.HTML)
+const firebaseConfig = {
+  apiKey: "AIzaSyAhce1AyhPGe1cDkIzcBcgAFFOXC2Isxx0",
+  authDomain: "toko-bilal.firebaseapp.com",
+  projectId: "toko-bilal",
+  storageBucket: "toko-bilal.firebasestorage.app",
+  messagingSenderId: "50715519256",
+  appId: "1:50715519256:web:39185c267b272b5672948d"
+};
+const ADMIN_UID = "spaWNW7l2YSqBvhC7hkK6Sd3d7A3";
+let fbAuthObj = null, fbSignIn = null, fbSignOut = null;
+
+function setAksesNote(boleh) {
+  document.querySelector('.wrap')?.classList.toggle('butuh-login', !boleh);
+  document.getElementById('fab')?.classList.toggle('butuh-login', !boleh);
+  document.getElementById('gateNote').style.display = boleh ? 'none' : 'flex';
+}
+
+window.gateMasuk = async function() {
+  const email = document.getElementById('gateEmail').value.trim();
+  const pass = document.getElementById('gatePass').value;
+  if (!email || !pass) return alert('Isi Email & Password Admin dulu!');
+  const btn = document.getElementById('btnGateLogin');
+  btn.disabled = true;
+  btn.textContent = 'MEMPROSES...';
+  try {
+    const res = await fbSignIn(fbAuthObj, email, pass);
+    if (res.user.uid !== ADMIN_UID) {
+      await fbSignOut(fbAuthObj);
+      alert('Akun ini bukan Admin UD. BILAL!');
+    }
+  } catch (e) {
+    alert('Email atau password salah, atau koneksi bermasalah.');
+  } finally {
+    document.getElementById('gatePass').value = '';
+    btn.disabled = false;
+    btn.textContent = 'MASUK';
+  }
+};
+
+(async () => {
+  try {
+    const [appMod, authMod] = await Promise.all([
+      import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"),
+      import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js")
+    ]);
+    const app = appMod.getApps().length ? appMod.getApp() : appMod.initializeApp(firebaseConfig);
+    fbAuthObj = authMod.getAuth(app);
+    fbSignIn = authMod.signInWithEmailAndPassword;
+    fbSignOut = authMod.signOut;
+
+    authMod.onAuthStateChanged(fbAuthObj, (user) => {
+      const valid = !!user && user.uid === ADMIN_UID;
+      if (valid) {
+        setAksesNote(true);
+        sync().then(render);
+      } else {
+        setAksesNote(false);
+        document.getElementById('gateChecking').style.display = 'none';
+        document.getElementById('gateForm').style.display = 'block';
+      }
+    });
+  } catch (e) {
+    document.getElementById('gateChecking').innerHTML = '<b style="color:#ef4444">Gagal memuat sistem keamanan. Periksa koneksi internet.</b>';
+  }
+})();
 </script>
 </body>
 </html>
