@@ -1,146 +1,686 @@
-<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Catatan Hutang</title><style>
-*{box-sizing:border-box}body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:0;background:#f6f7f9;color:#111;padding-bottom:90px}
-.wrap{max-width:560px;margin:0 auto;padding:16px}.card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:12px}
-h1{font-size:22px;margin:0 0 4px}.muted{color:#666;font-size:13px}.big{font-size:32px;font-weight:800;margin:6px 0 0}
-.row{display:flex;gap:8px}.row>*{flex:1}label{display:block;font-size:13px;font-weight:600;margin:10px 0 4px}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Catatan Hutang - UD. BILAL</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:0;background:#f6f7f9;color:#111;padding-bottom:96px}
+.wrap{max-width:560px;margin:0 auto;padding:16px}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+h1{font-size:21px;margin:0 0 2px}
+.muted{color:#6b7280;font-size:13px}
+.big{font-size:32px;font-weight:800;margin:4px 0 0;letter-spacing:-0.5px}
+.row{display:flex;gap:8px}
+.row>*{flex:1}
+label{display:block;font-size:13px;font-weight:600;margin:10px 0 4px}
 input,select{width:100%;padding:11px;border:1px solid #d1d5db;border-radius:10px;font-size:15px;background:#fff}
-button{border:0;border-radius:10px;padding:11px 14px;font-size:15px;font-weight:700;cursor:pointer}
-.btn{background:#111;color:#fff;width:100%}.btn2{background:#eef2ff}.btn3{background:#fee2e2}.btnWA{background:#dcfce7;width:100%;margin-top:8px}
-.person{border-top:1px solid #eee;padding:12px 0}.person-head{display:flex;justify-content:space-between;gap:10px;cursor:pointer}
-.detail{background:#f9fafb;border-radius:10px;padding:10px;margin-top:10px}.drow{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px dashed #e5e7eb}
-.badge{font-size:12px;padding:4px 8px;border-radius:99px;background:#fef3c7}.ok{background:#dcfce7}
-pre{white-space:pre-wrap;background:#0f172a;color:#e2e8f0;padding:12px;border-radius:10px;font-size:12px;overflow:auto}
-.small{font-size:12px;color:#666;line-height:1.6}
-#fab{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:20;background:#111;color:#fff;padding:15px 22px;font-size:16px;border-radius:99px;box-shadow:0 6px 20px rgba(0,0,0,.25);width:auto;max-width:calc(100% - 32px)}
-.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:30;align-items:flex-end;justify-content:center}
-.sheet{background:#fff;width:100%;max-width:560px;border-radius:20px 20px 0 0;padding:18px 16px 28px;max-height:88vh;overflow:auto}
-</style></head><body><div class="wrap">
-<div class="card"><h1>Catatan Hutang</h1><div class="muted">Total Belum Lunas</div><div class="big" id="total">Rp 0</div><div class="muted" id="ringkas" style="margin-top:8px"></div></div>
-<div class="card"><div class="row"><input id="cari" placeholder="Cari nama..." oninput="render()"><select id="filter" onchange="render()"><option>Semua</option><option>Belum Lunas</option><option>Lunas</option></select></div>
-<div class="muted" style="margin:10px 0 4px">Ketuk nama untuk lihat rincian. Ketuk tombol + di bawah untuk tambah.</div><div id="list"></div></div>
-<div class="card"><details><summary><b>Pengaturan Google Sheet</b></summary><p class="small">Tempel URL Web App dari Google Apps Script.</p><input id="url" placeholder="https://script.google.com/macros/s/.../exec"><button class="btn2" onclick="simpanUrl()" style="margin-top:8px;width:100%">Simpan URL & Muat dari Sheet</button><p class="small">Setup: Sheet baris 1: Nama | Jumlah | Tanggal | Keterangan | Status, lalu Extensions &gt; Apps Script, Deploy &gt; Web app, Me, Anyone.</p><pre id="kode"></pre><button class="btn2" onclick="copyKode()">Copy Kode Apps Script</button></details></div>
+input:focus,select:focus{outline:none;border-color:#111}
+button{border:0;border-radius:10px;padding:11px 14px;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .15s}
+button:disabled{opacity:.55;cursor:not-allowed}
+.btn{background:#111;color:#fff;width:100%;font-size:15px}
+.btn2{background:#eef2ff;color:#1e3a8a}
+.btn3{background:#fee2e2;color:#991b1b}
+.btnCicil{background:#fef3c7;color:#92400e;width:100%;margin-top:8px}
+.btnWA{background:#dcfce7;color:#166534;width:100%;margin-top:8px}
+.btnLunas{background:#16a34a;color:#fff;width:100%;margin-top:8px}
+.person{border-top:1px solid #eee;padding:13px 0}
+.person:first-child{border-top:0;padding-top:4px}
+.person-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;cursor:pointer}
+.detail{background:#f9fafb;border:1px solid #eef2f6;border-radius:12px;padding:11px;margin-top:10px}
+.drow{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px dashed #e5e7eb}
+.drow:last-of-type{border-bottom:0}
+.badge{font-size:11px;font-weight:600;padding:3px 8px;border-radius:99px;background:#fef3c7;color:#92400e;display:inline-block}
+.ok{background:#dcfce7;color:#166534}
+.cicilBadge{background:#e0e7ff;color:#3730a3}
+.aging{font-size:11px;padding:2px 7px;border-radius:99px;background:#f3f4f6;color:#4b5563;margin-left:4px;font-weight:600}
+.aging.late{background:#fee2e2;color:#991b1b}
+.miniBtn{padding:6px 9px;font-size:12px;border-radius:8px;margin-left:3px}
+pre{white-space:pre-wrap;background:#0f172a;color:#e2e8f0;padding:12px;border-radius:10px;font-size:11px;overflow:auto;line-height:1.45}
+.small{font-size:12px;color:#6b7280;line-height:1.55}
+#fab{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:20;background:#111;color:#fff;padding:15px 24px;font-size:16px;border-radius:99px;box-shadow:0 6px 20px rgba(0,0,0,.25);width:auto;max-width:calc(100% - 32px)}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:30;align-items:flex-end;justify-content:center}
+.sheet{background:#fff;width:100%;max-width:560px;border-radius:20px 20px 0 0;padding:18px 16px 28px;max-height:90vh;overflow:auto}
+.syncDot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#16a34a;margin-right:5px}
+.syncDot.busy{background:#f59e0b}
+.topTools{display:flex;gap:6px;margin-top:10px}
+.topTools button{flex:1;padding:8px 10px;font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h1>Catatan Hutang</h1>
+      <span class="muted" id="syncStatus"><span class="syncDot"></span>Siap</span>
+    </div>
+    <div class="muted">Total Belum Lunas</div>
+    <div class="big" id="total">Rp 0</div>
+    <div class="muted" id="ringkas" style="margin-top:6px"></div>
+    <div class="topTools">
+      <button class="btn2" onclick="syncManual()">↻ Sinkron Sheet</button>
+      <button class="btn2" onclick="exportCSV()">⬇ Export CSV</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <input id="cari" placeholder="Cari nama..." oninput="render()">
+      <select id="filter" onchange="render()">
+        <option>Semua</option>
+        <option>Belum Lunas</option>
+        <option>Lunas</option>
+      </select>
+    </div>
+    <div class="muted" style="margin:10px 0 4px">Ketuk nama untuk rincian, cicilan, edit, atau tagih WA.</div>
+    <div id="list"></div>
+  </div>
+
+  <div class="card">
+    <details>
+      <summary><b>Pengaturan & Kode Google Sheet (v6)</b></summary>
+      <p class="small">Tempel URL Web App dari Google Apps Script (Deploy &gt; Web app &gt; Execute as: Me &gt; Who has access: Anyone).</p>
+      <input id="url" placeholder="https://script.google.com/macros/s/.../exec">
+      <button class="btn2" onclick="simpanUrl()" style="margin-top:8px;width:100%">Simpan URL & Muat dari Sheet</button>
+      <p class="small" style="margin-top:10px"><b>Header Baris 1 Sheet "Hutang":</b><br>Nama | Jumlah | Tanggal | Keterangan | Status | NoWA</p>
+      <pre id="kode"></pre>
+      <button class="btn2" onclick="copyKode()" style="width:100%">Copy Kode Apps Script Baru</button>
+    </details>
+  </div>
 </div>
+
 <button id="fab" onclick="bukaPopup()">+ Tambah Hutang</button>
-<div id="popup" class="overlay" onclick="if(event.target===this) tutupPopup()"><div class="sheet"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:18px">Tambah Hutang</b><button class="btn3" onclick="tutupPopup()" style="width:40px">✕</button></div>
-<label>Nama</label><input id="nama" placeholder="Nama orang, misal: Kak Imur" list="daftarNama"><datalist id="daftarNama"></datalist>
-<div class="row"><div><label>Tanggal</label><input id="tanggal" type="date"></div><div><label>Status</label><select id="status"><option>Belum Lunas</option><option>Lunas</option></select></div></div>
-<label>Daftar Barang — isi 1 atau banyak sekaligus</label>
-<div id="barangList"></div>
-<button class="btn2" onclick="tambahBaris()" style="width:100%;margin-top:8px">+ Tambah Barang Lagi</button>
-<div style="display:flex;justify-content:space-between;margin-top:14px;font-size:17px"><b>Total</b><b id="totalPopup">Rp 0</b></div>
-<button class="btn" onclick="simpan()" style="margin-top:10px">Simpan Semua Barang</button>
-<div class="muted" style="margin-top:8px">Contoh: Kak Imur ambil 5 barang, isi 5 baris, sekali Simpan langsung masuk semua.</div>
-</div></div>
+
+<!-- POPUP TAMBAH HUTANG -->
+<div id="popup" class="overlay" onclick="if(event.target===this) tutupPopup()">
+  <div class="sheet">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <b style="font-size:18px">Tambah Hutang</b>
+      <button class="btn3" onclick="tutupPopup()" style="width:40px;padding:8px">✕</button>
+    </div>
+    <div class="row">
+      <div style="flex:1.3">
+        <label>Nama Pelanggan</label>
+        <input id="nama" placeholder="Misal: Kak Imur" list="daftarNama" oninput="isiAutoWA()">
+        <datalist id="daftarNama"></datalist>
+      </div>
+      <div style="flex:1">
+        <label>No. WA (Opsional)</label>
+        <input id="nowa" type="tel" inputmode="tel" placeholder="0812...">
+      </div>
+    </div>
+    <div class="row">
+      <div><label>Tanggal</label><input id="tanggal" type="date"></div>
+      <div><label>Status</label><select id="status"><option>Belum Lunas</option><option>Lunas</option></select></div>
+    </div>
+    <label>Daftar Barang — isi 1 atau banyak sekaligus</label>
+    <div id="barangList"></div>
+    <button class="btn2" onclick="tambahBaris()" style="width:100%;margin-top:6px">+ Tambah Baris Barang</button>
+    <div style="display:flex;justify-content:space-between;margin-top:14px;font-size:17px">
+      <b>Total</b><b id="totalPopup">Rp 0</b>
+    </div>
+    <button class="btn" id="btnSimpan" onclick="simpan()" style="margin-top:10px">Simpan Semua Barang</button>
+  </div>
+</div>
+
+<!-- POPUP CICIL / BAYAR SEBAGIAN -->
+<div id="popupCicil" class="overlay" onclick="if(event.target===this) tutupCicil()">
+  <div class="sheet">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <b style="font-size:18px">Bayar / Cicil Hutang</b>
+      <button class="btn3" onclick="tutupCicil()" style="width:40px;padding:8px">✕</button>
+    </div>
+    <p class="muted" id="cicilInfo" style="margin:8px 0"></p>
+    <label>Nominal Bayar (Rp)</label>
+    <input id="cicilNominal" type="number" inputmode="numeric" placeholder="Misal: 50000">
+    <label>Catatan Pembayaran</label>
+    <input id="cicilKet" value="Cicilan / Bayar Sebagian">
+    <label>Tanggal Bayar</label>
+    <input id="cicilTgl" type="date">
+    <button class="btn" id="btnSimpanCicil" onclick="simpanCicil()" style="margin-top:14px">Simpan Pembayaran</button>
+  </div>
+</div>
+
+<!-- POPUP EDIT ITEM -->
+<div id="popupEdit" class="overlay" onclick="if(event.target===this) tutupEdit()">
+  <div class="sheet">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <b style="font-size:18px">Edit Catatan</b>
+      <button class="btn3" onclick="tutupEdit()" style="width:40px;padding:8px">✕</button>
+    </div>
+    <label>Keterangan Barang</label>
+    <input id="editKet">
+    <label>Jumlah / Harga (Rp)</label>
+    <input id="editJml" type="number" inputmode="numeric">
+    <label>Tanggal</label>
+    <input id="editTgl" type="date">
+    <button class="btn" id="btnSimpanEdit" onclick="simpanEdit()" style="margin-top:14px">Simpan Perubahan</button>
+  </div>
+</div>
+
 <script>
-const KODE=`function doGet(){const s=SpreadsheetApp.openById("1CPXrWgkie3-ERuQNdF5Oe6WxRbZowTDRovNNmYj1GI8").getSheetByName("Hutang");const v=s.getDataRange().getValues();const out=[];for(let i=1;i<v.length;i++){if(!v[i][0])continue;out.push({id:i,nama:v[i][0],jumlah:v[i][1],tanggal:v[i][2],ket:v[i][3],status:v[i][4]})}return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON)}
-function doPost(e){const d=JSON.parse(e.postData.contents);const s=SpreadsheetApp.openById("1CPXrWgkie3-ERuQNdF5Oe6WxRbZowTDRovNNmYj1GI8").getSheetByName("Hutang");if(d.action==="add"){s.appendRow([d.nama,d.jumlah,d.tanggal,d.ket,d.status])}if(d.action==="delete"){s.deleteRow(d.id+1)}if(d.action==="toggle"){s.getRange(d.id+1,5).setValue(d.status)}return ContentService.createTextOutput("OK")}`;
-document.getElementById('kode').textContent=KODE;
-let data=JSON.parse(localStorage.getItem('hutang')||'[]');
-let terbuka={};
-document.getElementById('tanggal').valueAsDate=new Date();
-document.getElementById('url').value=localStorage.getItem('sheetUrl')||'';
-function rp(n){return 'Rp '+(Number(n)||0).toLocaleString('id-ID')}
-function fmtTgl(t){ if(!t) return ''; if(String(t).includes('T')) return String(t).slice(0,10); return String(t); }
-async function sync(){const u=localStorage.getItem('sheetUrl');if(!u)return;try{const r=await fetch(u);data=await r.json();localStorage.setItem('hutang',JSON.stringify(data));}catch(e){}}
-async function kirim(body){const u=localStorage.getItem('sheetUrl');if(!u)return false;try{await fetch(u,{method:'POST',body:JSON.stringify(body)});return true}catch(e){return false}}
-let barangRows = [];
-function barangHTML(i){
-  return `<div class="brow" data-i="${i}" style="display:flex;gap:6px;margin-bottom:8px"><input class="bket" placeholder="Barang ${i+1} — misal: Beras 3kg" style="flex:2"><input class="bjml" type="number" inputmode="numeric" placeholder="Harga" style="flex:1" oninput="hitungTotalPopup()"><button type="button" class="btn3" onclick="hapusBaris(${i})" style="width:38px;padding:8px">✕</button></div>`;
+const KODE = `const SHEET_ID = "1CPXrWgkie3-ERuQNdF5Oe6WxRbZowTDRovNNmYj1GI8";
+const TAB_NAME = "Hutang";
+
+function doGet(){
+  const s = SpreadsheetApp.openById(SHEET_ID).getSheetByName(TAB_NAME);
+  const v = s.getDataRange().getValues();
+  const out = [];
+  for(let i = 1; i < v.length; i++){
+    if(!v[i][0]) continue;
+    out.push({
+      id: i,
+      nama: v[i][0],
+      jumlah: Number(v[i][1]) || 0,
+      tanggal: v[i][2],
+      ket: v[i][3],
+      status: v[i][4] || "Belum Lunas",
+      nowa: v[i][5] ? String(v[i][5]) : ""
+    });
+  }
+  return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
 }
-function renderBarang(){
-  document.getElementById('barangList').innerHTML = barangRows.map((_,i)=>barangHTML(i)).join('');
-  // restore values
-  document.querySelectorAll('.brow').forEach((el,idx)=>{ el.querySelector('.bket').value=barangRows[idx].ket||''; el.querySelector('.bjml').value=barangRows[idx].jumlah||''; });
+
+function doPost(e){
+  const d = JSON.parse(e.postData.contents);
+  const s = SpreadsheetApp.openById(SHEET_ID).getSheetByName(TAB_NAME);
+  if(d.action === "add"){
+    s.appendRow([d.nama, d.jumlah, d.tanggal, d.ket, d.status, d.nowa || ""]);
+  }
+  if(d.action === "delete"){
+    s.deleteRow(Number(d.id) + 1);
+  }
+  if(d.action === "toggle"){
+    s.getRange(Number(d.id) + 1, 5).setValue(d.status);
+  }
+  if(d.action === "edit"){
+    const r = Number(d.id) + 1;
+    s.getRange(r, 2).setValue(d.jumlah);
+    s.getRange(r, 3).setValue(d.tanggal);
+    s.getRange(r, 4).setValue(d.ket);
+  }
+  return ContentService.createTextOutput("OK");
+}`;
+
+document.getElementById('kode').textContent = KODE;
+
+let data = JSON.parse(localStorage.getItem('hutang') || '[]');
+let terbuka = {};
+let barangRows = [];
+let targetCicilNama = '';
+let targetCicilSisa = 0;
+let targetEditIdx = -1;
+
+document.getElementById('tanggal').valueAsDate = new Date();
+document.getElementById('url').value = localStorage.getItem('sheetUrl') || '';
+
+function setStatus(teks, busy = false) {
+  document.getElementById('syncStatus').innerHTML = `<span class="syncDot ${busy ? 'busy' : ''}"></span>${teks}`;
+}
+
+function rp(n) {
+  const num = Number(n) || 0;
+  const prefix = num < 0 ? '-Rp ' : 'Rp ';
+  return prefix + Math.abs(num).toLocaleString('id-ID');
+}
+
+function fmtTgl(t) {
+  if (!t) return '';
+  if (String(t).includes('T')) return String(t).slice(0, 10);
+  return String(t);
+}
+
+function titleCase(str) {
+  return str.trim().replace(/\s+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function formatWA(no) {
+  let clean = String(no || '').replace(/[^0-9]/g, '');
+  if (!clean) return '';
+  if (clean.startsWith('0')) clean = '62' + clean.slice(1);
+  else if (clean.startsWith('8')) clean = '62' + clean;
+  return clean;
+}
+
+function hitungHari(tglStr) {
+  const t = fmtTgl(tglStr);
+  if (!t) return 0;
+  const d1 = new Date(t);
+  const d2 = new Date();
+  if (isNaN(d1)) return 0;
+  return Math.floor((d2 - d1) / (1000 * 60 * 60 * 24));
+}
+
+async function sync() {
+  const u = localStorage.getItem('sheetUrl');
+  if (!u) return;
+  setStatus('Sinkron...', true);
+  try {
+    const r = await fetch(u);
+    data = await r.json();
+    localStorage.setItem('hutang', JSON.stringify(data));
+    setStatus('Tersinkron');
+  } catch (e) {
+    setStatus('Mode Offline');
+  }
+}
+
+async function syncManual() {
+  await sync();
+  render();
+}
+
+async function kirim(body) {
+  const u = localStorage.getItem('sheetUrl');
+  if (!u) return false;
+  setStatus('Menyimpan...', true);
+  try {
+    await fetch(u, { method: 'POST', body: JSON.stringify(body) });
+    return true;
+  } catch (e) {
+    setStatus('Gagal kirim');
+    return false;
+  }
+}
+
+function barangHTML(i) {
+  return `<div class="brow" data-i="${i}" style="display:flex;gap:6px;margin-bottom:8px">
+    <input class="bket" placeholder="Barang ${i + 1} (misal: Beras 3kg)" style="flex:2">
+    <input class="bjml" type="number" inputmode="numeric" placeholder="Harga" style="flex:1" oninput="hitungTotalPopup()">
+    <button type="button" class="btn3" onclick="hapusBaris(${i})" style="width:38px;padding:8px">✕</button>
+  </div>`;
+}
+
+function renderBarang() {
+  document.getElementById('barangList').innerHTML = barangRows.map((_, i) => barangHTML(i)).join('');
+  document.querySelectorAll('.brow').forEach((el, idx) => {
+    el.querySelector('.bket').value = barangRows[idx].ket || '';
+    el.querySelector('.bjml').value = barangRows[idx].jumlah || '';
+  });
   hitungTotalPopup();
 }
-function tambahBaris(ket='', jumlah=''){ barangRows.push({ket, jumlah}); renderBarang(); }
-function hapusBaris(i){ if(barangRows.length<=1) return alert('Minimal 1 barang'); barangRows.splice(i,1); renderBarang(); }
-function hitungTotalPopup(){
-  // sync from inputs
-  document.querySelectorAll('.brow').forEach((el,idx)=>{ barangRows[idx]={ket:el.querySelector('.bket').value, jumlah:el.querySelector('.bjml').value}; });
-  let t = barangRows.reduce((a,b)=>a+(Number(b.jumlah)||0),0);
-  document.getElementById('totalPopup').textContent = rp(t);
-}
-function resetPopup(){
-  barangRows=[{ket:'',jumlah:''},{ket:'',jumlah:''}];
-  document.getElementById('nama').value=''; document.getElementById('ket') && (document.getElementById('ket').value='');
+
+function tambahBaris(ket = '', jumlah = '') {
+  barangRows.push({ ket, jumlah });
   renderBarang();
 }
-async function simpan(){
-  hitungTotalPopup();
-  const nama=document.getElementById('nama').value.trim();
-  const items=barangRows.filter(b=>b.ket.trim() && Number(b.jumlah)>0);
-  if(!nama) return alert('Isi nama dulu');
-  if(items.length===0) return alert('Isi minimal 1 barang + harganya');
-  const tanggal=document.getElementById('tanggal').value;
-  const status=document.getElementById('status').value;
-  for(const it of items){
-    const item={id:Date.now()+Math.floor(Math.random()*1000), nama, jumlah:Number(it.jumlah), tanggal, ket:it.ket.trim(), status};
-    data.unshift(item); localStorage.setItem('hutang',JSON.stringify(data)); await kirim({action:'add',...item});
-  }
-  alert(items.length+' barang tersimpan untuk '+nama);
-  tutupPopup(); resetPopup(); render();
+
+function hapusBaris(i) {
+  if (barangRows.length <= 1) return alert('Minimal 1 barang');
+  barangRows.splice(i, 1);
+  renderBarang();
 }
-async function hapus(idx){if(!confirm('Hapus item ini?'))return;const it=data[idx];data.splice(idx,1);localStorage.setItem('hutang',JSON.stringify(data));await kirim({action:'delete',id:it.id});render()}
-async function lunasSemua(nama){
-  if(!confirm('Tandai SEMUA hutang '+nama+' jadi Lunas?')) return;
-  let items = data.filter(d=>d.nama===nama && d.status!=='Lunas');
-  for(const it of items){ it.status='Lunas'; await kirim({action:'toggle', id:it.id, status:'Lunas'}); }
-  localStorage.setItem('hutang',JSON.stringify(data)); render();
-}
-async function hapusOrang(nama){
-  let items = data.filter(d=>d.nama===nama);
-  if(items.length===0) return;
-  if(!confirm('Hapus SEMUA ('+items.length+' barang) milik '+nama+'? Ini tidak bisa dibatalkan.')) return;
-  // Hapus dari bawah ke atas supaya nomor baris Sheet tidak geser
-  let sorted = [...items].sort((a,b)=>b.id-a.id);
-  for(const it of sorted){ await kirim({action:'delete', id:it.id}); }
-  data = data.filter(d=>d.nama!==nama);
-  localStorage.setItem('hutang',JSON.stringify(data)); render();
-}
-async function toggle(idx){data[idx].status=data[idx].status==='Lunas'?'Belum Lunas':'Lunas';localStorage.setItem('hutang',JSON.stringify(data));await kirim({action:'toggle',id:data[idx].id,status:data[idx].status});render()}
-function bukaPopup(){ if(barangRows.length===0) resetPopup(); else renderBarang(); document.getElementById('popup').style.display='flex';setTimeout(()=>document.getElementById('nama').focus(),100);} function tutupPopup(){document.getElementById('popup').style.display='none';} function simpanUrl(){const u=document.getElementById('url').value.trim();localStorage.setItem('sheetUrl',u);alert('URL tersimpan');sync().then(render)}
-function copyKode(){navigator.clipboard.writeText(KODE).then(()=>alert('Kode tercopy'))}
-function tagihWA(nama, items){
-  let total=items.filter(x=>x.status!=='Lunas').reduce((a,b)=>a+Number(b.jumlah),0);
-  let pesan=`Halo ${nama}, total hutangmu di toko ${rp(total)} ya:%0A`;
-  items.filter(x=>x.status!=='Lunas').forEach(x=>{ pesan+=`- ${x.ket||'Hutang'} ${rp(x.jumlah)}%0A`; });
-  pesan+=`Terima kasih 🙏`;
-  window.open('https://wa.me/?text='+pesan,'_blank');
-}
-function toggleOrang(nama){ terbuka[nama]=!terbuka[nama]; render(); }
-function render(){
-  const q=(document.getElementById('cari').value||'').toLowerCase(); const f=document.getElementById('filter').value;
-  let bl=0, ln=0; data.forEach(d=>{ if(d.status==='Lunas') ln+=Number(d.jumlah); else bl+=Number(d.jumlah); });
-  document.getElementById('total').textContent=rp(bl);
-  // hitung orang unik
-  let orangUnik=new Set(data.map(d=>d.nama)).size;
-  document.getElementById('ringkas').textContent=`Total Lunas: ${rp(ln)} • ${orangUnik} orang • ${data.length} barang`;
-  document.getElementById('daftarNama').innerHTML=[...new Set(data.map(d=>d.nama))].map(n=>`<option value="${n}">`).join('');
-  // GROUP BY NAMA
-  let groups={};
-  data.forEach((d,idx)=>{ if(!groups[d.nama]) groups[d.nama]=[]; groups[d.nama].push({...d, _idx:idx}); });
-  let h='';
-  Object.keys(groups).sort().forEach(nama=>{
-    if(q && !nama.toLowerCase().includes(q)) return;
-    let items=groups[nama].filter(d=> f==='Semua' || d.status===f);
-    if(items.length===0) return;
-    let totalBelum=groups[nama].filter(d=>d.status!=='Lunas').reduce((a,b)=>a+Number(b.jumlah),0);
-    let totalSemua=groups[nama].reduce((a,b)=>a+Number(b.jumlah),0);
-    let jmlBelum=groups[nama].filter(d=>d.status!=='Lunas').length;
-    h+=`<div class="person"><div class="person-head" onclick="toggleOrang('${nama.replace(/'/g,"")}')"><div><b style="font-size:18px">${nama}</b> <span class="muted">${terbuka[nama]?'▲':'▼'} ${groups[nama].length} barang</span><div class="muted">${jmlBelum>0? jmlBelum+' belum lunas':'Semua lunas'}</div></div><div style="text-align:right"><b style="font-size:18px">${rp(totalBelum)}</b><div class="muted">dari ${rp(totalSemua)}</div></div></div>`;
-    if(terbuka[nama]){
-      h+=`<div class="detail">`;
-      items.forEach(d=>{ h+=`<div class="drow"><div><b>${d.ket||'(tanpa keterangan)'}</b> <span class="badge ${d.status==='Lunas'?'ok':''}">${d.status}</span><div class="muted">${fmtTgl(d.tanggal)}</div></div><div style="text-align:right"><b>${rp(d.jumlah)}</b><div><button class="btn2" onclick="toggle(${d._idx})">✓</button> <button class="btn3" onclick="hapus(${d._idx})">✕</button></div></div></div>`; });
-      if(totalBelum>0) h+=`<button class="btnWA" onclick='tagihWA("${nama}", ${JSON.stringify(groups[nama]).replace(/'/g,"")})'>Tagih via WhatsApp</button>`;
-      if(totalBelum>0) h+=`<button onclick="lunasSemua('${nama.replace(/'/g,"")}')" style="width:100%;margin-top:8px;background:#dcfce7">✓ Lunaskan Semua (${rp(totalBelum)})</button>`;
-      h+=`<button onclick="hapusOrang('${nama.replace(/'/g,"")}')" style="width:100%;margin-top:8px;background:#fee2e2">🗑 Hapus Semua Milik ${nama}</button>`;
-      h+=`</div>`;
-    }
-    h+=`</div>`;
+
+function hitungTotalPopup() {
+  document.querySelectorAll('.brow').forEach((el, idx) => {
+    barangRows[idx] = {
+      ket: el.querySelector('.bket').value,
+      jumlah: el.querySelector('.bjml').value
+    };
   });
-  document.getElementById('list').innerHTML=h||'<p class="muted">Belum ada catatan.</p>';
+  const t = barangRows.reduce((a, b) => a + (Number(b.jumlah) || 0), 0);
+  document.getElementById('totalPopup').textContent = rp(t);
 }
-barangRows=[{ket:'',jumlah:''}]; sync().then(render); render();
-</script></body></html>
+
+function isiAutoWA() {
+  const namaInput = titleCase(document.getElementById('nama').value);
+  const found = data.find(d => titleCase(d.nama) === namaInput && d.nowa);
+  if (found && !document.getElementById('nowa').value) {
+    document.getElementById('nowa').value = found.nowa;
+  }
+}
+
+function resetPopup(presetNama = '') {
+  barangRows = [{ ket: '', jumlah: '' }, { ket: '', jumlah: '' }];
+  document.getElementById('nama').value = presetNama;
+  document.getElementById('nowa').value = '';
+  document.getElementById('tanggal').valueAsDate = new Date();
+  document.getElementById('status').value = 'Belum Lunas';
+  if (presetNama) isiAutoWA();
+  renderBarang();
+}
+
+async function simpan() {
+  hitungTotalPopup();
+  const nama = titleCase(document.getElementById('nama').value);
+  const nowa = document.getElementById('nowa').value.trim();
+  const items = barangRows.filter(b => b.ket.trim() && Number(b.jumlah) > 0);
+  if (!nama) return alert('Isi nama pelanggan dulu');
+  if (items.length === 0) return alert('Isi minimal 1 barang + harganya');
+
+  const btn = document.getElementById('btnSimpan');
+  btn.disabled = true;
+  btn.textContent = 'Menyimpan...';
+
+  const tanggal = document.getElementById('tanggal').value;
+  const status = document.getElementById('status').value;
+
+  for (const it of items) {
+    const item = {
+      id: Date.now() + Math.floor(Math.random() * 1000),
+      nama,
+      jumlah: Number(it.jumlah),
+      tanggal,
+      ket: it.ket.trim(),
+      status,
+      nowa
+    };
+    data.unshift(item);
+    await kirim({ action: 'add', ...item });
+  }
+  localStorage.setItem('hutang', JSON.stringify(data));
+  await sync();
+
+  btn.disabled = false;
+  btn.textContent = 'Simpan Semua Barang';
+  tutupPopup();
+  resetPopup();
+  terbuka[nama] = true;
+  render();
+}
+
+// FITUR CICIL / BAYAR SEBAGIAN
+function bukaCicil(nama, sisa) {
+  targetCicilNama = nama;
+  targetCicilSisa = sisa;
+  document.getElementById('cicilInfo').innerHTML = `Pelanggan: <b>${nama}</b> • Sisa hutang saat ini: <b>${rp(sisa)}</b>`;
+  document.getElementById('cicilNominal').value = '';
+  document.getElementById('cicilKet').value = 'Cicilan / Bayar Sebagian';
+  document.getElementById('cicilTgl').valueAsDate = new Date();
+  document.getElementById('popupCicil').style.display = 'flex';
+  setTimeout(() => document.getElementById('cicilNominal').focus(), 100);
+}
+
+function tutupCicil() {
+  document.getElementById('popupCicil').style.display = 'none';
+}
+
+async function simpanCicil() {
+  const nominal = Number(document.getElementById('cicilNominal').value);
+  const ket = document.getElementById('cicilKet').value.trim() || 'Cicilan / Bayar Sebagian';
+  const tanggal = document.getElementById('cicilTgl').value;
+
+  if (!nominal || nominal <= 0) return alert('Masukkan nominal pembayaran yang valid');
+  if (nominal >= targetCicilSisa) {
+    if (confirm(`Nominal ${rp(nominal)} sudah melunasi seluruh sisa hutang (${rp(targetCicilSisa)}). Tandai semua hutang ${targetCicilNama} sebagai Lunas?`)) {
+      tutupCicil();
+      return lunasSemua(targetCicilNama);
+    }
+    return;
+  }
+
+  const btn = document.getElementById('btnSimpanCicil');
+  btn.disabled = true;
+  btn.textContent = 'Menyimpan...';
+
+  const foundWA = (data.find(d => titleCase(d.nama) === targetCicilNama && d.nowa) || {}).nowa || '';
+  const item = {
+    id: Date.now(),
+    nama: targetCicilNama,
+    jumlah: -Math.abs(nominal),
+    tanggal,
+    ket: `Bayar: ${ket}`,
+    status: 'Belum Lunas',
+    nowa: foundWA
+  };
+
+  data.unshift(item);
+  localStorage.setItem('hutang', JSON.stringify(data));
+  await kirim({ action: 'add', ...item });
+  await sync();
+
+  btn.disabled = false;
+  btn.textContent = 'Simpan Pembayaran';
+  tutupCicil();
+  render();
+}
+
+// FITUR EDIT ITEM
+function bukaEdit(idx) {
+  targetEditIdx = idx;
+  const it = data[idx];
+  document.getElementById('editKet').value = it.ket || '';
+  document.getElementById('editJml').value = it.jumlah || 0;
+  document.getElementById('editTgl').value = fmtTgl(it.tanggal);
+  document.getElementById('popupEdit').style.display = 'flex';
+}
+
+function tutupEdit() {
+  document.getElementById('popupEdit').style.display = 'none';
+}
+
+async function simpanEdit() {
+  if (targetEditIdx < 0) return;
+  const ket = document.getElementById('editKet').value.trim();
+  const jumlah = Number(document.getElementById('editJml').value);
+  const tanggal = document.getElementById('editTgl').value;
+  if (!ket) return alert('Keterangan tidak boleh kosong');
+
+  const btn = document.getElementById('btnSimpanEdit');
+  btn.disabled = true;
+  btn.textContent = 'Menyimpan...';
+
+  const it = data[targetEditIdx];
+  it.ket = ket;
+  it.jumlah = jumlah;
+  it.tanggal = tanggal;
+  localStorage.setItem('hutang', JSON.stringify(data));
+
+  await kirim({ action: 'edit', id: it.id, jumlah, tanggal, ket });
+  await sync();
+
+  btn.disabled = false;
+  btn.textContent = 'Simpan Perubahan';
+  tutupEdit();
+  render();
+}
+
+async function hapus(idx) {
+  if (!confirm('Hapus item ini?')) return;
+  const it = data[idx];
+  data.splice(idx, 1);
+  localStorage.setItem('hutang', JSON.stringify(data));
+  render();
+  await kirim({ action: 'delete', id: it.id });
+  await sync();
+  render();
+}
+
+async function lunasSemua(nama) {
+  if (!confirm(`Tandai SEMUA hutang ${nama} jadi Lunas?`)) return;
+  const items = data.filter(d => titleCase(d.nama) === nama && d.status !== 'Lunas');
+  for (const it of items) {
+    it.status = 'Lunas';
+    await kirim({ action: 'toggle', id: it.id, status: 'Lunas' });
+  }
+  localStorage.setItem('hutang', JSON.stringify(data));
+  await sync();
+  render();
+}
+
+async function hapusOrang(nama) {
+  const items = data.filter(d => titleCase(d.nama) === nama);
+  if (items.length === 0) return;
+  if (!confirm(`Hapus SEMUA (${items.length} catatan) milik ${nama}? Ini tidak bisa dibatalkan.`)) return;
+  const sorted = [...items].sort((a, b) => b.id - a.id);
+  for (const it of sorted) {
+    await kirim({ action: 'delete', id: it.id });
+  }
+  data = data.filter(d => titleCase(d.nama) !== nama);
+  localStorage.setItem('hutang', JSON.stringify(data));
+  await sync();
+  render();
+}
+
+async function toggle(idx) {
+  data[idx].status = data[idx].status === 'Lunas' ? 'Belum Lunas' : 'Lunas';
+  localStorage.setItem('hutang', JSON.stringify(data));
+  render();
+  await kirim({ action: 'toggle', id: data[idx].id, status: data[idx].status });
+  await sync();
+  render();
+}
+
+function bukaPopup(presetNama = '') {
+  resetPopup(presetNama);
+  document.getElementById('popup').style.display = 'flex';
+  setTimeout(() => {
+    if (presetNama) document.querySelector('.bket')?.focus();
+    else document.getElementById('nama').focus();
+  }, 100);
+}
+
+function tutupPopup() {
+  document.getElementById('popup').style.display = 'none';
+}
+
+function simpanUrl() {
+  const u = document.getElementById('url').value.trim();
+  localStorage.setItem('sheetUrl', u);
+  alert('URL tersimpan');
+  sync().then(render);
+}
+
+function copyKode() {
+  navigator.clipboard.writeText(KODE).then(() => alert('Kode Apps Script v6 tercopy!'));
+}
+
+function tagihWA(nama, items) {
+  const belum = items.filter(x => x.status !== 'Lunas');
+  const total = belum.reduce((a, b) => a + Number(b.jumlah), 0);
+  const nowaObj = items.find(x => x.nowa);
+  const waNum = nowaObj ? formatWA(nowaObj.nowa) : '';
+
+  let pesan = `Halo ${nama}, rincian catatan di *UD. BILAL* saat ini totalnya *${rp(total)}* ya:%0A`;
+  belum.forEach(x => {
+    pesan += `- ${x.ket || 'Hutang'} (${fmtTgl(x.tanggal)}): ${rp(x.jumlah)}%0A`;
+  });
+  pesan += `%0ATerima kasih 🙏`;
+
+  const url = waNum ? `https://wa.me/${waNum}?text=${pesan}` : `https://wa.me/?text=${pesan}`;
+  window.open(url, '_blank');
+}
+
+function exportCSV() {
+  if (data.length === 0) return alert('Belum ada data untuk di-export');
+  let csv = 'Nama,Jumlah,Tanggal,Keterangan,Status,NoWA\n';
+  data.forEach(d => {
+    csv += `"${(d.nama||'').replace(/"/g,'""')}",${d.jumlah},"${fmtTgl(d.tanggal)}","${(d.ket||'').replace(/"/g,'""')}","${d.status}","${d.nowa||''}"\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `Catatan_Hutang_UDBILAL_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+function toggleOrang(nama) {
+  terbuka[nama] = !terbuka[nama];
+  render();
+}
+
+function render() {
+  const q = (document.getElementById('cari').value || '').toLowerCase();
+  const f = document.getElementById('filter').value;
+
+  let bl = 0, ln = 0;
+  data.forEach(d => {
+    if (d.status === 'Lunas') ln += Number(d.jumlah);
+    else bl += Number(d.jumlah);
+  });
+  document.getElementById('total').textContent = rp(bl);
+
+  const namaUnik = [...new Set(data.map(d => titleCase(d.nama)))].sort();
+  document.getElementById('ringkas').textContent = `Lunas: ${rp(ln)} • ${namaUnik.length} orang • ${data.length} catatan`;
+  document.getElementById('daftarNama').innerHTML = namaUnik.map(n => `<option value="${n}">`).join('');
+
+  let groups = {};
+  data.forEach((d, idx) => {
+    const key = titleCase(d.nama);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push({ ...d, nama: key, _idx: idx });
+  });
+
+  let h = '';
+  Object.keys(groups).sort().forEach(nama => {
+    if (q && !nama.toLowerCase().includes(q)) return;
+    const items = groups[nama].filter(d => f === 'Semua' || d.status === f);
+    if (items.length === 0) return;
+
+    const belumItems = groups[nama].filter(d => d.status !== 'Lunas');
+    const totalBelum = belumItems.reduce((a, b) => a + Number(b.jumlah), 0);
+    const totalSemua = groups[nama].reduce((a, b) => a + Number(b.jumlah), 0);
+    const jmlBelum = belumItems.length;
+
+    // Hitung umur hutang terlama yang belum lunas
+    let maxHari = 0;
+    belumItems.forEach(it => {
+      if (Number(it.jumlah) > 0) {
+        const hr = hitungHari(it.tanggal);
+        if (hr > maxHari) maxHari = hr;
+      }
+    });
+    const agingBadge = (totalBelum > 0 && maxHari >= 7)
+      ? `<span class="aging ${maxHari >= 30 ? 'late' : ''}">${maxHari} hr</span>`
+      : '';
+
+    const safeNama = nama.replace(/'/g, "\\'");
+
+    h += `<div class="person">
+      <div class="person-head" onclick="toggleOrang('${safeNama}')">
+        <div>
+          <b style="font-size:17px">${nama}</b> ${agingBadge}
+          <span class="muted">${terbuka[nama] ? '▲' : '▼'}</span>
+          <div class="muted">${jmlBelum > 0 ? jmlBelum + ' catatan aktif' : 'Semua lunas'}</div>
+        </div>
+        <div style="text-align:right">
+          <b style="font-size:17px;color:${totalBelum > 0 ? '#111' : '#16a34a'}">${rp(totalBelum)}</b>
+          <div class="muted">total ${rp(totalSemua)}</div>
+        </div>
+      </div>`;
+
+    if (terbuka[nama]) {
+      h += `<div class="detail">`;
+      items.forEach(d => {
+        const isCicil = Number(d.jumlah) < 0;
+        const badgeClass = d.status === 'Lunas' ? 'ok' : (isCicil ? 'cicilBadge' : '');
+        const badgeText = isCicil ? 'Cicilan' : d.status;
+        h += `<div class="drow">
+          <div style="flex:1">
+            <b>${d.ket || '(tanpa keterangan)'}</b>
+            <span class="badge ${badgeClass}">${badgeText}</span>
+            <div class="muted">${fmtTgl(d.tanggal)}</div>
+          </div>
+          <div style="text-align:right">
+            <b style="color:${isCicil ? '#16a34a' : '#111'}">${rp(d.jumlah)}</b>
+            <div style="margin-top:4px">
+              <button class="btn2 miniBtn" title="Edit" onclick="bukaEdit(${d._idx})">✎</button>
+              <button class="btn2 miniBtn" title="Tandai Lunas/Belum" onclick="toggle(${d._idx})">✓</button>
+              <button class="btn3 miniBtn" title="Hapus" onclick="hapus(${d._idx})">✕</button>
+            </div>
+          </div>
+        </div>`;
+      });
+
+      h += `<button class="btn2" onclick="bukaPopup('${safeNama}')" style="width:100%;margin-top:10px">+ Tambah Hutang ${nama}</button>`;
+      if (totalBelum > 0) {
+        h += `<button class="btnCicil" onclick="bukaCicil('${safeNama}', ${totalBelum})">💰 Bayar Sebagian / Cicil</button>`;
+        h += `<button class="btnWA" onclick='tagihWA("${safeNama}", ${JSON.stringify(groups[nama]).replace(/'/g, "")})'>📲 Tagih via WhatsApp</button>`;
+        h += `<button class="btnLunas" onclick="lunasSemua('${safeNama}')">✓ Lunaskan Semua (${rp(totalBelum)})</button>`;
+      }
+      h += `<button onclick="hapusOrang('${safeNama}')" style="width:100%;margin-top:8px;background:#fee2e2;color:#991b1b">🗑 Hapus Semua Milik ${nama}</button>`;
+      h += `</div>`;
+    }
+    h += `</div>`;
+  });
+
+  document.getElementById('list').innerHTML = h || '<p class="muted">Belum ada catatan.</p>';
+}
+
+barangRows = [{ ket: '', jumlah: '' }];
+sync().then(render);
+render();
+</script>
+</body>
+</html>
