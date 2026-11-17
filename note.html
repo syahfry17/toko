@@ -7,38 +7,78 @@ h1{font-size:22px;margin:0 0 4px}.muted{color:#666;font-size:13px}.big{font-size
 .row{display:flex;gap:8px}.row>*{flex:1}label{display:block;font-size:13px;font-weight:600;margin:10px 0 4px}
 input,select{width:100%;padding:11px;border:1px solid #d1d5db;border-radius:10px;font-size:15px;background:#fff}
 button{border:0;border-radius:10px;padding:11px 14px;font-size:15px;font-weight:700;cursor:pointer}
-.btn{background:#111;color:#fff;width:100%}.btn2{background:#eef2ff}.btn3{background:#fee2e2}
-.item{border-top:1px solid #eee;padding:12px 0;display:flex;gap:10px;justify-content:space-between}
+.btn{background:#111;color:#fff;width:100%}.btn2{background:#eef2ff}.btn3{background:#fee2e2}.btnWA{background:#dcfce7;width:100%;margin-top:8px}
+.person{border-top:1px solid #eee;padding:12px 0}.person-head{display:flex;justify-content:space-between;gap:10px;cursor:pointer}
+.detail{background:#f9fafb;border-radius:10px;padding:10px;margin-top:10px}.drow{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px dashed #e5e7eb}
 .badge{font-size:12px;padding:4px 8px;border-radius:99px;background:#fef3c7}.ok{background:#dcfce7}
 pre{white-space:pre-wrap;background:#0f172a;color:#e2e8f0;padding:12px;border-radius:10px;font-size:12px;overflow:auto}
-details{margin-top:10px}.small{font-size:12px;color:#666;line-height:1.6}
+.small{font-size:12px;color:#666;line-height:1.6}
 </style></head><body><div class="wrap">
-<div class="card"><h1>Catatan Hutang</h1><div class="muted">Total Belum Lunas</div><div class="big" id="total">Rp 0</div>
-<div class="muted" id="ringkas" style="margin-top:8px"></div></div>
-<div class="card"><label>Nama</label><input id="nama" placeholder="Nama orang">
+<div class="card"><h1>Catatan Hutang</h1><div class="muted">Total Belum Lunas</div><div class="big" id="total">Rp 0</div><div class="muted" id="ringkas" style="margin-top:8px"></div></div>
+<div class="card"><label>Nama</label><input id="nama" placeholder="Nama orang" list="daftarNama"><datalist id="daftarNama"></datalist>
 <label>Jumlah (Rp)</label><input id="jumlah" type="number" inputmode="numeric" placeholder="0">
 <div class="row"><div><label>Tanggal</label><input id="tanggal" type="date"></div><div><label>Status</label><select id="status"><option>Belum Lunas</option><option>Lunas</option></select></div></div>
-<label>Keterangan (opsional)</label><input id="ket" placeholder="Misal: pinjam untuk...">
+<label>Keterangan (opsional)</label><input id="ket" placeholder="Misal: Minyak kita">
 <button class="btn" onclick="simpan()" style="margin-top:14px">Simpan</button></div>
-<div class="card"><div class="row"><input id="cari" placeholder="Cari nama..." oninput="render()"><select id="filter" onchange="render()"><option>Semua</option><option>Belum Lunas</option><option>Lunas</option></select></div><div id="list"></div></div>
+<div class="card"><div class="row"><input id="cari" placeholder="Cari nama..." oninput="render()"><select id="filter" onchange="render()"><option>Semua</option><option>Belum Lunas</option><option>Lunas</option></select></div>
+<div class="muted" style="margin:10px 0 4px">Daftar digabung per orang. Ketuk nama untuk lihat rinciannya.</div><div id="list"></div></div>
 <div class="card"><b>Pengaturan Google Sheet</b><p class="small">Tempel URL Web App dari Google Apps Script. Kalau kosong, data disimpan di HP/browser ini saja.</p>
 <input id="url" placeholder="https://script.google.com/macros/s/.../exec"><button class="btn2" onclick="simpanUrl()" style="margin-top:8px;width:100%">Simpan URL & Muat dari Sheet</button>
-<details><summary><b>Cara setup Google Sheet (3 langkah)</b></summary><p class="small">1. Buat Sheet baru, baris 1 isi: Nama | Jumlah | Tanggal | Keterangan | Status<br>2. Extensions &gt; Apps Script, paste kode di bawah, Save.<br>3. Deploy &gt; New deployment &gt; Web app, Execute as: Me, Who has access: Anyone, Deploy. Copy URL-nya ke atas.</p><pre id="kode"></pre><button class="btn2" onclick="copyKode()">Copy Kode Apps Script</button></details></div>
+<details><summary><b>Cara setup Google Sheet (3 langkah)</b></summary><p class="small">1. Buat Sheet baru, baris 1 isi: Nama | Jumlah | Tanggal | Keterangan | Status<br>2. Extensions &gt; Apps Script, paste kode, Save.<br>3. Deploy &gt; Web app, Execute as: Me, Who has access: Anyone, Deploy. Copy URL-nya ke atas.</p><pre id="kode"></pre><button class="btn2" onclick="copyKode()">Copy Kode Apps Script</button></details></div>
 </div><script>
-const KODE=`function doGet(){const s=SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Hutang");const v=s.getDataRange().getValues();const out=[];for(let i=1;i<v.length;i++){out.push({id:i,nama:v[i][0],jumlah:v[i][1],tanggal:v[i][2],ket:v[i][3],status:v[i][4]})}return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON)}
-function doPost(e){const d=JSON.parse(e.postData.contents);const s=SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Hutang");if(d.action==="add"){s.appendRow([d.nama,d.jumlah,d.tanggal,d.ket,d.status])}if(d.action==="delete"){s.deleteRow(d.id+1)}if(d.action==="toggle"){s.getRange(d.id+1,5).setValue(d.status)}return ContentService.createTextOutput("OK")}`;
+const KODE=`function doGet(){const s=SpreadsheetApp.openById("1CPXrWgkie3-ERuQNdF5Oe6WxRbZowTDRovNNmYj1GI8").getSheetByName("Hutang");const v=s.getDataRange().getValues();const out=[];for(let i=1;i<v.length;i++){if(!v[i][0])continue;out.push({id:i,nama:v[i][0],jumlah:v[i][1],tanggal:v[i][2],ket:v[i][3],status:v[i][4]})}return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON)}
+function doPost(e){const d=JSON.parse(e.postData.contents);const s=SpreadsheetApp.openById("1CPXrWgkie3-ERuQNdF5Oe6WxRbZowTDRovNNmYj1GI8").getSheetByName("Hutang");if(d.action==="add"){s.appendRow([d.nama,d.jumlah,d.tanggal,d.ket,d.status])}if(d.action==="delete"){s.deleteRow(d.id+1)}if(d.action==="toggle"){s.getRange(d.id+1,5).setValue(d.status)}return ContentService.createTextOutput("OK")}`;
 document.getElementById('kode').textContent=KODE;
 let data=JSON.parse(localStorage.getItem('hutang')||'[]');
+let terbuka={};
 document.getElementById('tanggal').valueAsDate=new Date();
 document.getElementById('url').value=localStorage.getItem('sheetUrl')||'';
 function rp(n){return 'Rp '+(Number(n)||0).toLocaleString('id-ID')}
+function fmtTgl(t){ if(!t) return ''; if(String(t).includes('T')) return String(t).slice(0,10); return String(t); }
 async function sync(){const u=localStorage.getItem('sheetUrl');if(!u)return;try{const r=await fetch(u);data=await r.json();localStorage.setItem('hutang',JSON.stringify(data));}catch(e){}}
 async function kirim(body){const u=localStorage.getItem('sheetUrl');if(!u)return false;try{await fetch(u,{method:'POST',body:JSON.stringify(body)});return true}catch(e){return false}}
 async function simpan(){const nama=document.getElementById('nama').value.trim();const jumlah=document.getElementById('jumlah').value;if(!nama||!jumlah)return alert('Isi nama & jumlah');const item={id:Date.now(),nama,jumlah:Number(jumlah),tanggal:document.getElementById('tanggal').value,ket:document.getElementById('ket').value,status:document.getElementById('status').value};data.unshift(item);localStorage.setItem('hutang',JSON.stringify(data));await kirim({action:'add',...item});document.getElementById('nama').value='';document.getElementById('jumlah').value='';document.getElementById('ket').value='';render()}
-async function hapus(i){if(!confirm('Hapus?'))return;const it=data[i];data.splice(i,1);localStorage.setItem('hutang',JSON.stringify(data));await kirim({action:'delete',id:it.id});render()}
-async function toggle(i){data[i].status=data[i].status==='Lunas'?'Belum Lunas':'Lunas';localStorage.setItem('hutang',JSON.stringify(data));await kirim({action:'toggle',id:data[i].id,status:data[i].status});render()}
+async function hapus(idx){if(!confirm('Hapus item ini?'))return;const it=data[idx];data.splice(idx,1);localStorage.setItem('hutang',JSON.stringify(data));await kirim({action:'delete',id:it.id});render()}
+async function toggle(idx){data[idx].status=data[idx].status==='Lunas'?'Belum Lunas':'Lunas';localStorage.setItem('hutang',JSON.stringify(data));await kirim({action:'toggle',id:data[idx].id,status:data[idx].status});render()}
 function simpanUrl(){const u=document.getElementById('url').value.trim();localStorage.setItem('sheetUrl',u);alert('URL tersimpan');sync().then(render)}
 function copyKode(){navigator.clipboard.writeText(KODE).then(()=>alert('Kode tercopy'))}
-function render(){const q=(document.getElementById('cari').value||'').toLowerCase();const f=document.getElementById('filter').value;let bl=0,ln=0;data.forEach(d=>{if(d.status==='Lunas')ln+=Number(d.jumlah);else bl+=Number(d.jumlah)});document.getElementById('total').textContent=rp(bl);document.getElementById('ringkas').textContent=`Total Lunas: ${rp(ln)} • ${data.length} catatan`;let h='';data.forEach((d,i)=>{if(f!=='Semua'&&d.status!==f)return;if(q&&!d.nama.toLowerCase().includes(q))return;h+=`<div class="item"><div><b>${d.nama}</b> <span class="badge ${d.status==='Lunas'?'ok':''}">${d.status}</span><div class="muted">${d.tanggal||''} ${d.ket? '• '+d.ket:''}</div></div><div style="text-align:right"><b>${rp(d.jumlah)}</b><div><button class="btn2" onclick="toggle(${i})">✓</button> <button class="btn3" onclick="hapus(${i})">✕</button></div></div></div>`});document.getElementById('list').innerHTML=h||'<p class="muted">Belum ada catatan.</p>'}
-sync().then(render);render();
+function tagihWA(nama, items){
+  let total=items.filter(x=>x.status!=='Lunas').reduce((a,b)=>a+Number(b.jumlah),0);
+  let pesan=`Halo ${nama}, total hutangmu di toko ${rp(total)} ya:%0A`;
+  items.filter(x=>x.status!=='Lunas').forEach(x=>{ pesan+=`- ${x.ket||'Hutang'} ${rp(x.jumlah)}%0A`; });
+  pesan+=`Terima kasih 🙏`;
+  window.open('https://wa.me/?text='+pesan,'_blank');
+}
+function toggleOrang(nama){ terbuka[nama]=!terbuka[nama]; render(); }
+function render(){
+  const q=(document.getElementById('cari').value||'').toLowerCase(); const f=document.getElementById('filter').value;
+  let bl=0, ln=0; data.forEach(d=>{ if(d.status==='Lunas') ln+=Number(d.jumlah); else bl+=Number(d.jumlah); });
+  document.getElementById('total').textContent=rp(bl);
+  // hitung orang unik
+  let orangUnik=new Set(data.map(d=>d.nama)).size;
+  document.getElementById('ringkas').textContent=`Total Lunas: ${rp(ln)} • ${orangUnik} orang • ${data.length} barang`;
+  document.getElementById('daftarNama').innerHTML=[...new Set(data.map(d=>d.nama))].map(n=>`<option value="${n}">`).join('');
+  // GROUP BY NAMA
+  let groups={};
+  data.forEach((d,idx)=>{ if(!groups[d.nama]) groups[d.nama]=[]; groups[d.nama].push({...d, _idx:idx}); });
+  let h='';
+  Object.keys(groups).sort().forEach(nama=>{
+    if(q && !nama.toLowerCase().includes(q)) return;
+    let items=groups[nama].filter(d=> f==='Semua' || d.status===f);
+    if(items.length===0) return;
+    let totalBelum=groups[nama].filter(d=>d.status!=='Lunas').reduce((a,b)=>a+Number(b.jumlah),0);
+    let totalSemua=groups[nama].reduce((a,b)=>a+Number(b.jumlah),0);
+    let jmlBelum=groups[nama].filter(d=>d.status!=='Lunas').length;
+    h+=`<div class="person"><div class="person-head" onclick="toggleOrang('${nama.replace(/'/g,"")}')"><div><b style="font-size:18px">${nama}</b> <span class="muted">${terbuka[nama]?'▲':'▼'} ${groups[nama].length} barang</span><div class="muted">${jmlBelum>0? jmlBelum+' belum lunas':'Semua lunas'}</div></div><div style="text-align:right"><b style="font-size:18px">${rp(totalBelum)}</b><div class="muted">dari ${rp(totalSemua)}</div></div></div>`;
+    if(terbuka[nama]){
+      h+=`<div class="detail">`;
+      items.forEach(d=>{ h+=`<div class="drow"><div><b>${d.ket||'(tanpa keterangan)'}</b> <span class="badge ${d.status==='Lunas'?'ok':''}">${d.status}</span><div class="muted">${fmtTgl(d.tanggal)}</div></div><div style="text-align:right"><b>${rp(d.jumlah)}</b><div><button class="btn2" onclick="toggle(${d._idx})">✓</button> <button class="btn3" onclick="hapus(${d._idx})">✕</button></div></div></div>`; });
+      if(totalBelum>0) h+=`<button class="btnWA" onclick='tagihWA("${nama}", ${JSON.stringify(groups[nama]).replace(/'/g,"")})'>Tagih via WhatsApp</button>`;
+      h+=`</div>`;
+    }
+    h+=`</div>`;
+  });
+  document.getElementById('list').innerHTML=h||'<p class="muted">Belum ada catatan.</p>';
+}
+sync().then(render); render();
 </script></body></html>
