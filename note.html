@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Catatan Hutang - UD. BILAL</title>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://script.google.com" crossorigin>
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js">
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js">
 <style>
 *{box-sizing:border-box}
 body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:0;background:#f6f7f9;color:#111;padding-bottom:96px}
@@ -44,8 +48,6 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .sheet{background:#fff;width:100%;max-width:560px;border-radius:20px 20px 0 0;padding:18px 16px 28px;max-height:90vh;overflow:auto}
 .syncDot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#16a34a;margin-right:5px}
 .syncDot.busy{background:#f59e0b}
-.topTools{display:flex;gap:6px;margin-top:10px}
-.topTools button{flex:1;padding:8px 10px;font-size:12px}
 .suggestBox{position:relative}
 .suggestList{display:none;position:absolute;left:0;right:0;top:100%;margin-top:4px;background:#fff;border:1px solid #d1d5db;border-radius:10px;box-shadow:0 8px 20px rgba(0,0,0,.1);z-index:50;max-height:160px;overflow:auto}
 .suggestItem{padding:10px 12px;font-size:14px;cursor:pointer;border-bottom:1px solid #f3f4f6}
@@ -85,10 +87,6 @@ button:disabled{opacity:.55;cursor:not-allowed}
     <div class="muted">Total Belum Lunas</div>
     <div class="big" id="total">Rp 0</div>
     <div class="muted" id="ringkas" style="margin-top:6px"></div>
-    <div class="topTools">
-      <button class="btn2" onclick="syncManual()">↻ Sinkron Sheet</button>
-      <button class="btn2" onclick="exportCSV()">⬇ Export CSV</button>
-    </div>
   </div>
 
   <div class="card">
@@ -170,6 +168,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 
 <script>
 const SHEET_URL = "https://script.google.com/macros/s/AKfycbybsnPaGji-cfqsfvAaaCfWaxUDbt0xjozB5RfQDXFszWtF2hg-1pl_t9ApK2_Scmfi/exec";
+const ADMIN_UID = "spaWNW7l2YSqBvhC7hkK6Sd3d7A3";
 
 let data = JSON.parse(localStorage.getItem('hutang') || '[]');
 let terbuka = {};
@@ -177,6 +176,8 @@ let barangRows = [];
 let targetCicilNama = '';
 let targetCicilSisa = 0;
 let targetEditIdx = -1;
+let antreanKirim = Promise.resolve();
+let jumlahAntrean = 0;
 
 document.getElementById('tanggal').valueAsDate = new Date();
 
@@ -215,34 +216,36 @@ function hitungHari(tglStr) {
 
 async function sync() {
   const u = getSheetUrl();
-  if (!u) return;
+  if (!u || jumlahAntrean > 0) return;
   setStatus('Sinkron...', true);
   try {
     const r = await fetch(u);
-    data = await r.json();
-    localStorage.setItem('hutang', JSON.stringify(data));
-    setStatus('Tersinkron');
+    const hasil = await r.json();
+    if (jumlahAntrean === 0) {
+      data = hasil;
+      localStorage.setItem('hutang', JSON.stringify(data));
+      setStatus('Tersinkron');
+    }
   } catch (e) {
     setStatus('Mode Offline');
   }
 }
 
-async function syncManual() {
-  await sync();
-  render();
-}
-
-async function kirim(body) {
+function kirimLatar(body) {
   const u = getSheetUrl();
-  if (!u) return false;
+  if (!u) return;
+  jumlahAntrean++;
   setStatus('Menyimpan...', true);
-  try {
-    await fetch(u, { method: 'POST', body: JSON.stringify(body) });
-    return true;
-  } catch (e) {
-    setStatus('Gagal kirim');
-    return false;
-  }
+  antreanKirim = antreanKirim.then(async () => {
+    try {
+      await fetch(u, { method: 'POST', body: JSON.stringify(body) });
+      jumlahAntrean = Math.max(0, jumlahAntrean - 1);
+      if (jumlahAntrean === 0) setStatus('Tersinkron');
+    } catch (e) {
+      jumlahAntrean = Math.max(0, jumlahAntrean - 1);
+      setStatus('Gagal sinkron');
+    }
+  });
 }
 
 function barangHTML(i) {
@@ -320,23 +323,20 @@ function resetPopup(presetNama = '') {
   renderBarang();
 }
 
-async function simpan() {
+function simpan() {
   hitungTotalPopup();
   const nama = titleCase(document.getElementById('nama').value);
   const items = barangRows.filter(b => b.ket.trim() && Number(b.jumlah) > 0);
   if (!nama) return alert('Isi nama pelanggan dulu');
   if (items.length === 0) return alert('Isi minimal 1 barang + harganya');
 
-  const btn = document.getElementById('btnSimpan');
-  btn.disabled = true;
-  btn.textContent = 'Menyimpan...';
-
   const tanggal = document.getElementById('tanggal').value;
   const status = document.getElementById('status').value;
+  const baseId = Date.now();
 
-  for (const it of items) {
+  items.forEach((it, idx) => {
     const item = {
-      id: Date.now() + Math.floor(Math.random() * 1000),
+      id: baseId + idx,
       nama,
       jumlah: Number(it.jumlah),
       tanggal,
@@ -344,13 +344,10 @@ async function simpan() {
       status
     };
     data.unshift(item);
-    await kirim({ action: 'add', ...item });
-  }
-  localStorage.setItem('hutang', JSON.stringify(data));
-  await sync();
+    kirimLatar({ action: 'add', ...item });
+  });
 
-  btn.disabled = false;
-  btn.textContent = 'Simpan Semua Barang';
+  localStorage.setItem('hutang', JSON.stringify(data));
   tutupPopup();
   resetPopup();
   terbuka[nama] = true;
@@ -365,14 +362,14 @@ function bukaCicil(nama, sisa) {
   document.getElementById('cicilKet').value = 'Cicilan / Bayar Sebagian';
   document.getElementById('cicilTgl').valueAsDate = new Date();
   document.getElementById('popupCicil').style.display = 'flex';
-  setTimeout(() => document.getElementById('cicilNominal').focus(), 100);
+  setTimeout(() => document.getElementById('cicilNominal').focus(), 60);
 }
 
 function tutupCicil() {
   document.getElementById('popupCicil').style.display = 'none';
 }
 
-async function simpanCicil() {
+function simpanCicil() {
   const nominal = Number(document.getElementById('cicilNominal').value);
   const ket = document.getElementById('cicilKet').value.trim() || 'Cicilan / Bayar Sebagian';
   const tanggal = document.getElementById('cicilTgl').value;
@@ -386,10 +383,6 @@ async function simpanCicil() {
     return;
   }
 
-  const btn = document.getElementById('btnSimpanCicil');
-  btn.disabled = true;
-  btn.textContent = 'Menyimpan...';
-
   const item = {
     id: Date.now(),
     nama: targetCicilNama,
@@ -401,11 +394,8 @@ async function simpanCicil() {
 
   data.unshift(item);
   localStorage.setItem('hutang', JSON.stringify(data));
-  await kirim({ action: 'add', ...item });
-  await sync();
+  kirimLatar({ action: 'add', ...item });
 
-  btn.disabled = false;
-  btn.textContent = 'Simpan Pembayaran';
   tutupCicil();
   render();
 }
@@ -423,16 +413,12 @@ function tutupEdit() {
   document.getElementById('popupEdit').style.display = 'none';
 }
 
-async function simpanEdit() {
+function simpanEdit() {
   if (targetEditIdx < 0) return;
   const ket = document.getElementById('editKet').value.trim();
   const jumlah = Number(document.getElementById('editJml').value);
   const tanggal = document.getElementById('editTgl').value;
   if (!ket) return alert('Keterangan tidak boleh kosong');
-
-  const btn = document.getElementById('btnSimpanEdit');
-  btn.disabled = true;
-  btn.textContent = 'Menyimpan...';
 
   const it = data[targetEditIdx];
   it.ket = ket;
@@ -440,59 +426,49 @@ async function simpanEdit() {
   it.tanggal = tanggal;
   localStorage.setItem('hutang', JSON.stringify(data));
 
-  await kirim({ action: 'edit', id: it.id, jumlah, tanggal, ket });
-  await sync();
-
-  btn.disabled = false;
-  btn.textContent = 'Simpan Perubahan';
+  kirimLatar({ action: 'edit', id: it.id, jumlah, tanggal, ket });
   tutupEdit();
   render();
 }
 
-async function hapus(idx) {
+function hapus(idx) {
   if (!confirm('Hapus item ini?')) return;
   const it = data[idx];
   data.splice(idx, 1);
   localStorage.setItem('hutang', JSON.stringify(data));
   render();
-  await kirim({ action: 'delete', id: it.id });
-  await sync();
-  render();
+  kirimLatar({ action: 'delete', id: it.id });
 }
 
-async function lunasSemua(nama) {
+function lunasSemua(nama) {
   if (!confirm(`Tandai SEMUA hutang ${nama} jadi Lunas?`)) return;
   const items = data.filter(d => titleCase(d.nama) === nama && d.status !== 'Lunas');
   for (const it of items) {
     it.status = 'Lunas';
-    await kirim({ action: 'toggle', id: it.id, status: 'Lunas' });
+    kirimLatar({ action: 'toggle', id: it.id, status: 'Lunas' });
   }
   localStorage.setItem('hutang', JSON.stringify(data));
-  await sync();
   render();
 }
 
-async function hapusOrang(nama) {
+function hapusOrang(nama) {
   const items = data.filter(d => titleCase(d.nama) === nama);
   if (items.length === 0) return;
   if (!confirm(`Hapus SEMUA (${items.length} catatan) milik ${nama}? Ini tidak bisa dibatalkan.`)) return;
   const sorted = [...items].sort((a, b) => b.id - a.id);
   for (const it of sorted) {
-    await kirim({ action: 'delete', id: it.id });
+    kirimLatar({ action: 'delete', id: it.id });
   }
   data = data.filter(d => titleCase(d.nama) !== nama);
   localStorage.setItem('hutang', JSON.stringify(data));
-  await sync();
   render();
 }
 
-async function toggle(idx) {
+function toggle(idx) {
   data[idx].status = data[idx].status === 'Lunas' ? 'Belum Lunas' : 'Lunas';
   localStorage.setItem('hutang', JSON.stringify(data));
   render();
-  await kirim({ action: 'toggle', id: data[idx].id, status: data[idx].status });
-  await sync();
-  render();
+  kirimLatar({ action: 'toggle', id: data[idx].id, status: data[idx].status });
 }
 
 function bukaPopup(presetNama = '') {
@@ -501,24 +477,11 @@ function bukaPopup(presetNama = '') {
   setTimeout(() => {
     if (presetNama) document.querySelector('.bket')?.focus();
     else document.getElementById('nama').focus();
-  }, 100);
+  }, 60);
 }
 
 function tutupPopup() {
   document.getElementById('popup').style.display = 'none';
-}
-
-function exportCSV() {
-  if (data.length === 0) return alert('Belum ada data untuk di-export');
-  let csv = 'Nama,Jumlah,Tanggal,Keterangan,Status\n';
-  data.forEach(d => {
-    csv += `"${(d.nama||'').replace(/"/g,'""')}",${d.jumlah},"${fmtTgl(d.tanggal)}","${(d.ket||'').replace(/"/g,'""')}","${d.status}"\n`;
-  });
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `Catatan_Hutang_UDBILAL_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
 }
 
 function toggleOrang(nama) {
@@ -624,7 +587,6 @@ function render() {
 barangRows = [{ ket: '', jumlah: '' }];
 render();
 
-// KUNCI SESI FIREBASE AUTH (SAMA DENGAN ADMIN.HTML)
 const firebaseConfig = {
   apiKey: "AIzaSyAhce1AyhPGe1cDkIzcBcgAFFOXC2Isxx0",
   authDomain: "toko-bilal.firebaseapp.com",
@@ -633,7 +595,6 @@ const firebaseConfig = {
   messagingSenderId: "50715519256",
   appId: "1:50715519256:web:39185c267b272b5672948d"
 };
-const ADMIN_UID = "spaWNW7l2YSqBvhC7hkK6Sd3d7A3";
 let fbAuthObj = null, fbSignIn = null, fbSignOut = null;
 
 function setAksesNote(boleh) {
@@ -641,6 +602,16 @@ function setAksesNote(boleh) {
   document.getElementById('fab')?.classList.toggle('butuh-login', !boleh);
   document.getElementById('gateNote').style.display = boleh ? 'none' : 'flex';
 }
+
+if (localStorage.getItem('udbilal_admin_uid') === ADMIN_UID) {
+  setAksesNote(true);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && localStorage.getItem('udbilal_admin_uid') === ADMIN_UID) {
+    sync().then(render);
+  }
+});
 
 window.gateMasuk = async function() {
   const email = document.getElementById('gateEmail').value.trim();
@@ -678,16 +649,20 @@ window.gateMasuk = async function() {
     authMod.onAuthStateChanged(fbAuthObj, (user) => {
       const valid = !!user && user.uid === ADMIN_UID;
       if (valid) {
+        localStorage.setItem('udbilal_admin_uid', ADMIN_UID);
         setAksesNote(true);
         sync().then(render);
       } else {
+        localStorage.removeItem('udbilal_admin_uid');
         setAksesNote(false);
         document.getElementById('gateChecking').style.display = 'none';
         document.getElementById('gateForm').style.display = 'block';
       }
     });
   } catch (e) {
-    document.getElementById('gateChecking').innerHTML = '<b style="color:#ef4444">Gagal memuat sistem keamanan. Periksa koneksi internet.</b>';
+    if (localStorage.getItem('udbilal_admin_uid') !== ADMIN_UID) {
+      document.getElementById('gateChecking').innerHTML = '<b style="color:#ef4444">Gagal memuat sistem keamanan. Periksa koneksi internet.</b>';
+    }
   }
 })();
 </script>
