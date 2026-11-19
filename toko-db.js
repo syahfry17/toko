@@ -1,4 +1,12 @@
 const endpoint = 'https://dtnnmyhqajjonrdroilp.supabase.co';
+// MUBAZIR 2 DIBENERIN: cache hasil cek admin 10 detik, biar nggak manggil RPC 2x berturut-turut pas login
+let _adminCache = null, _adminCacheAt = 0;
+async function cekAdmin(){
+  if (_adminCache !== null && Date.now() - _adminCacheAt < 10000) return _adminCache;
+  _adminCache = await hasil(db.rpc('admin_toko'));
+  _adminCacheAt = Date.now();
+  return _adminCache;
+}
 const publishableKey = 'sb_publishable_oXJDmTUAiNoNpVh8R31ZUQ_FykFUQUS';
 const db = supabase.createClient(endpoint, publishableKey);
 
@@ -20,7 +28,7 @@ async function semua(table, order) {
 
 async function masuk(email, password) {
   await hasil(db.auth.signInWithPassword({email, password}));
-  if (!await hasil(db.rpc('admin_toko'))) {
+  if (!await cekAdmin()) {
     await db.auth.signOut();
     throw new Error('Akun ini belum memiliki akses admin toko.');
   }
@@ -31,12 +39,13 @@ function pantauAdmin(onChange, onError) {
   let current;
   db.auth.onAuthStateChange((event, session) => {
     const id = session?.user.id ?? null;
+    if (!id) { _adminCache = null; _adminCacheAt = 0; }
     if (id === current && event !== 'INITIAL_SESSION') return;
     current = id;
     const ticket = ++version;
     setTimeout(async () => {
       try {
-        const allowed = id ? await hasil(db.rpc('admin_toko')) : false;
+        const allowed = id ? await cekAdmin() : false;
         if (ticket === version) await onChange(allowed);
       } catch (err) {
         if (ticket === version) { current = undefined; await onChange(false); onError(err); }
