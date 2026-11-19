@@ -1,6 +1,7 @@
 const endpoint = 'https://dtnnmyhqajjonrdroilp.supabase.co';
 const publishableKey = 'sb_publishable_oXJDmTUAiNoNpVh8R31ZUQ_FykFUQUS';
-const db = supabase.createClient(endpoint, publishableKey);
+// BENERIN: pakai window.db, bukan const db. Kalau pakai const, script.js yang jalan duluan kena 'Cannot access db before initialization'.
+window.db = supabase.createClient(endpoint, publishableKey);
 
 async function hasil(request) {
   const {data, error} = await request;
@@ -11,7 +12,7 @@ async function hasil(request) {
 async function semua(table, order) {
   const rows = [];
   for (;;) {
-    const page = await hasil(db.from(table).select('*').order(order)
+    const page = await hasil(window.db.from(table).select('*').order(order)
       .range(rows.length, rows.length + 99));
     rows.push(...page);
     if (!page.length) return rows;
@@ -19,9 +20,9 @@ async function semua(table, order) {
 }
 
 async function masuk(email, password) {
-  await hasil(db.auth.signInWithPassword({email, password}));
-  if (!await hasil(db.rpc('admin_toko'))) {
-    await db.auth.signOut();
+  await hasil(window.db.auth.signInWithPassword({email, password}));
+  if (!await hasil(window.db.rpc('admin_toko'))) {
+    await window.db.auth.signOut();
     throw new Error('Akun ini belum memiliki akses admin toko.');
   }
 }
@@ -29,14 +30,14 @@ async function masuk(email, password) {
 function pantauAdmin(onChange, onError) {
   let version = 0;
   let current;
-  db.auth.onAuthStateChange((event, session) => {
+  window.db.auth.onAuthStateChange((event, session) => {
     const id = session?.user.id ?? null;
     if (id === current && event !== 'INITIAL_SESSION') return;
     current = id;
     const ticket = ++version;
     setTimeout(async () => {
       try {
-        const allowed = id ? await hasil(db.rpc('admin_toko')) : false;
+        const allowed = id ? await hasil(window.db.rpc('admin_toko')) : false;
         if (ticket === version) await onChange(allowed);
       } catch (err) {
         if (ticket === version) { current = undefined; await onChange(false); onError(err); }
@@ -52,7 +53,7 @@ function pantauAdmin(onChange, onError) {
 async function uploadFoto(file, namaFile) {
   // file = foto dari input, sudah dikompres jadi kecil
   // namaFile = contoh: 'beras-171234567890.jpg'
-  const { error } = await db.storage
+  const { error } = await window.db.storage
     .from('foto-produk')
     .upload(namaFile, file, {
       cacheControl: '3600',
@@ -60,7 +61,7 @@ async function uploadFoto(file, namaFile) {
     });
   if (error) throw new Error(error.message);
 
-  const { data } = db.storage
+  const { data } = window.db.storage
     .from('foto-produk')
     .getPublicUrl(namaFile);
 
@@ -76,5 +77,5 @@ async function hapusFoto(urlFoto) {
   if (!urlFoto || !urlFoto.includes('/foto-produk/')) return;
   const namaFile = urlFoto.split('/foto-produk/').pop().split('?')[0];
   if (!namaFile) return;
-  await db.storage.from('foto-produk').remove([namaFile]);
+  await window.db.storage.from('foto-produk').remove([namaFile]);
 }
