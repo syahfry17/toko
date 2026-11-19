@@ -114,7 +114,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
       <div id="suggestList" class="suggestList"></div>
     </div>
     <div class="row">
-      <div><label>Tanggal</label><input id="tanggal" type="date"></div>
+      <div><label>Tanggal</label><input id="tanggal" type="date"><small class="muted" id="tanggalHari"></small><label for="tanggalJam">Jam (WIB)</label><input id="tanggalJam" type="time"></div>
       <div><label>Status</label><select id="status"><option>Belum Lunas</option><option>Lunas</option></select></div>
     </div>
     <label>Daftar Barang — isi 1 atau banyak sekaligus</label>
@@ -140,7 +140,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
     <label>Catatan Pembayaran</label>
     <input id="cicilKet" value="Cicilan / Bayar Sebagian">
     <label>Tanggal Bayar</label>
-    <input id="cicilTgl" type="date">
+    <input id="cicilTgl" type="date"><small class="muted" id="cicilTglHari"></small><label for="cicilTglJam">Jam (WIB)</label><input id="cicilTglJam" type="time">
     <button class="btn" id="btnSimpanCicil" onclick="simpanCicil()" style="margin-top:14px">Simpan Pembayaran</button>
   </div>
 </div>
@@ -157,7 +157,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
     <label>Jumlah / Harga (Rp)</label>
     <input id="editJml" type="number" inputmode="numeric">
     <label>Tanggal</label>
-    <input id="editTgl" type="date">
+    <input id="editTgl" type="date"><small class="muted" id="editTglHari"></small><label for="editTglJam">Jam (WIB)</label><input id="editTglJam" type="time">
     <button class="btn" id="btnSimpanEdit" onclick="simpanEdit()" style="margin-top:14px">Simpan Perubahan</button>
   </div>
 </div>
@@ -174,7 +174,7 @@ let targetCicilSisa = 0;
 let targetEditIdx = -1;
 
 
-document.getElementById('tanggal').valueAsDate = new Date();
+isiWaktu('tanggal');
 
 function setStatus(teks, busy = false) {
   document.getElementById('syncStatus').innerHTML = `<span class="syncDot ${busy ? 'busy' : ''}"></span>${teks}`;
@@ -192,6 +192,36 @@ function fmtTgl(t) {
   return String(t);
 }
 
+function sekarangWIB(waktu = new Date()) {
+  const bagian = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+  }).formatToParts(waktu);
+  const p = Object.fromEntries(bagian.map(b => [b.type, b.value]));
+  return { tanggal: p.year + '-' + p.month + '-' + p.day, jam: p.hour + ':' + p.minute };
+}
+
+function labelTanggal(tanggal, jam) {
+  const t = new Date(fmtTgl(tanggal) + 'T00:00:00Z');
+  if (Number.isNaN(t.getTime())) return '';
+  const hari = t.toLocaleDateString('id-ID', { weekday: 'long', timeZone: 'UTC' });
+  const [tahun, bulan, tanggalBulan] = fmtTgl(tanggal).split('-');
+  const label = hari + ', ' + tanggalBulan + '/' + bulan + '/' + tahun;
+  return jam ? label + ' · ' + jam.slice(0, 5).replace(':', '.') + ' WIB' : label;
+}
+
+function tampilHari(id) {
+  document.getElementById(id + 'Hari').textContent = labelTanggal(document.getElementById(id).value);
+}
+function isiWaktu(id, waktu = sekarangWIB()) {
+  document.getElementById(id).value = waktu.tanggal;
+  document.getElementById(id + 'Jam').value = (waktu.jam || '').slice(0, 5);
+  tampilHari(id);
+}
+for (const id of ['tanggal', 'cicilTgl', 'editTgl']) {
+  document.getElementById(id).addEventListener('input', () => tampilHari(id));
+}
+
 function titleCase(str) {
   return str.trim().toLowerCase().replace(/\s+/g, ' ').replace(/(^|\s)\S/g, c => c.toUpperCase());
 }
@@ -200,7 +230,7 @@ function hitungHari(tglStr) {
   const t = fmtTgl(tglStr);
   if (!t) return 0;
   const d1 = new Date(t);
-  const d2 = new Date();
+  const d2 = new Date(sekarangWIB().tanggal);
   if (isNaN(d1)) return 0;
   return Math.floor((d2 - d1) / (1000 * 60 * 60 * 24));
 }
@@ -300,7 +330,7 @@ function tutupSuggest() {
 function resetPopup(presetNama = '') {
   barangRows = [{ ket: '', jumlah: '' }, { ket: '', jumlah: '' }];
   document.getElementById('nama').value = presetNama;
-  document.getElementById('tanggal').valueAsDate = new Date();
+  isiWaktu('tanggal');
   document.getElementById('status').value = 'Belum Lunas';
   tutupSuggest();
   renderBarang();
@@ -327,8 +357,10 @@ function simpan() {
   if (items.length === 0) return alert('Isi minimal 1 barang + harganya');
 
   const tanggal = document.getElementById('tanggal').value;
+  const jam = document.getElementById('tanggalJam').value || null;
+  if (!tanggal || !jam) return alert('Isi tanggal dan jam terlebih dahulu.');
   const status = document.getElementById('status').value;
-  const rows=items.map(it=>({nama,jumlah:Number(it.jumlah),tanggal,ket:it.ket.trim(),status}));
+  const rows=items.map(it=>({nama,jumlah:Number(it.jumlah),tanggal,jam,ket:it.ket.trim(),status}));
   simpanPerubahan(db.from('catatan_hutang').insert(rows),()=>{
     tutupPopup(); resetPopup(); terbuka[nama]=true;
   });
@@ -340,7 +372,7 @@ function bukaCicil(nama, sisa) {
   document.getElementById('cicilInfo').innerHTML = `Pelanggan: <b>${aman(nama)}</b> • Sisa hutang saat ini: <b>${rp(sisa)}</b>`;
   document.getElementById('cicilNominal').value = '';
   document.getElementById('cicilKet').value = 'Cicilan / Bayar Sebagian';
-  document.getElementById('cicilTgl').valueAsDate = new Date();
+  isiWaktu('cicilTgl');
   document.getElementById('popupCicil').style.display = 'flex';
   setTimeout(() => document.getElementById('cicilNominal').focus(), 60);
 }
@@ -353,6 +385,8 @@ function simpanCicil() {
   const nominal = Number(document.getElementById('cicilNominal').value);
   const ket = document.getElementById('cicilKet').value.trim() || 'Cicilan / Bayar Sebagian';
   const tanggal = document.getElementById('cicilTgl').value;
+  const jam = document.getElementById('cicilTglJam').value || null;
+  if (!tanggal || !jam) return alert('Isi tanggal dan jam terlebih dahulu.');
 
   if (!nominal || nominal <= 0) return alert('Masukkan nominal pembayaran yang valid');
   if (nominal >= targetCicilSisa) {
@@ -366,7 +400,7 @@ function simpanCicil() {
   const item = {
     nama: targetCicilNama,
     jumlah: -Math.abs(nominal),
-    tanggal,
+    tanggal, jam,
     ket: `Bayar: ${ket}`,
     status: 'Belum Lunas'
   };
@@ -379,7 +413,7 @@ function bukaEdit(idx) {
   const it = data[idx];
   document.getElementById('editKet').value = it.ket || '';
   document.getElementById('editJml').value = Math.abs(Number(it.jumlah)) || '';
-  document.getElementById('editTgl').value = fmtTgl(it.tanggal);
+  isiWaktu('editTgl', {tanggal: fmtTgl(it.tanggal), jam: it.jam});
   document.getElementById('popupEdit').style.display = 'flex';
 }
 
@@ -401,9 +435,11 @@ function simpanEdit() {
   if (!asli) return alert('Catatan sudah berubah. Buka kembali daftar catatan.');
   const jumlah = Number(asli.jumlah) < 0 ? -nilai : nilai;
   const tanggal = document.getElementById('editTgl').value;
+  const jam = document.getElementById('editTglJam').value || null;
+  if (!tanggal) return alert('Isi tanggal catatan.');
   if (!ket) return alert('Keterangan tidak boleh kosong');
 
-  const request=db.from('catatan_hutang').update({ket,jumlah,tanggal}).eq('id',targetEditIdx).select('id').single();
+  const request=db.from('catatan_hutang').update({ket,jumlah,tanggal,jam}).eq('id',targetEditIdx).select('id').single();
   simpanPerubahan(request,tutupEdit);
 }
 
@@ -513,7 +549,7 @@ function render() {
           <div style="flex:1">
             <b>${aman(d.ket || '(tanpa keterangan)')}</b>
             <span class="badge ${badgeClass}">${badgeText}</span>
-            <div class="muted">${fmtTgl(d.tanggal)}</div>
+            <div class="muted">${aman(labelTanggal(d.tanggal, d.jam))}</div>
           </div>
           <div style="text-align:right">
             <b style="color:${isCicil ? '#16a34a' : '#111'}">${rp(d.jumlah)}</b>
