@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Catatan Hutang - UD. BILAL</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:0;background:#f6f7f9;color:#111;padding-bottom:96px}
+.wrap{max-width:560px;margin:0 auto;padding:16px}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+h1{font-size:21px;margin:0 0 2px}
+.muted{color:#6b7280;font-size:13px}
+.big{font-size:32px;font-weight:800;margin:4px 0 0;letter-spacing:-0.5px}
+.row{display:flex;gap:8px}
+.row>*{flex:1}
+label{display:block;font-size:13px;font-weight:600;margin:10px 0 4px}
+input,select{width:100%;padding:11px;border:1px solid #d1d5db;border-radius:10px;font-size:15px;background:#fff}
+input:focus,select:focus{outline:none;border-color:#111}
+input::-webkit-calendar-picker-indicator{display:none !important;opacity:0}
+button{border:0;border-radius:10px;padding:11px 14px;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .15s}
+button:disabled{opacity:.55;cursor:not-allowed}
+.btn{background:#111;color:#fff;width:100%;font-size:15px}
+.btn2{background:#eef2ff;color:#1e3a8a}
+.btn3{background:#fee2e2;color:#991b1b}
+.btnCicil{background:#fef3c7;color:#92400e}
+.btnLunas{background:#16a34a;color:#fff}
+.actionGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.actionGrid button{width:100%;padding:10px 8px;font-size:13px;line-height:1.25}
+.person{border-top:1px solid #eee;padding:13px 0}
+.person:first-child{border-top:0;padding-top:4px}
+.person-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;cursor:pointer}
+.detail{background:#f9fafb;border:1px solid #eef2f6;border-radius:12px;padding:11px;margin-top:10px}
+.drow{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px dashed #e5e7eb}
+.drow:last-of-type{border-bottom:0}
+.badge{font-size:11px;font-weight:600;padding:3px 8px;border-radius:99px;background:#fef3c7;color:#92400e;display:inline-block}
+.ok{background:#dcfce7;color:#166534}
+.cicilBadge{background:#e0e7ff;color:#3730a3}
+.aging{font-size:11px;padding:2px 7px;border-radius:99px;background:#f3f4f6;color:#4b5563;margin-left:4px;font-weight:600}
+.aging.late{background:#fee2e2;color:#991b1b}
+.miniBtn{padding:6px 9px;font-size:12px;border-radius:8px;margin-left:3px}
+#fab{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:20;background:#111;color:#fff;padding:15px 24px;font-size:16px;border-radius:99px;box-shadow:0 6px 20px rgba(0,0,0,.25);width:auto;max-width:calc(100% - 32px)}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:30;align-items:flex-end;justify-content:center}
+.sheet{background:#fff;width:100%;max-width:560px;border-radius:20px 20px 0 0;padding:18px 16px 28px;max-height:90vh;overflow:auto}
+.syncDot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#16a34a;margin-right:5px}
+.syncDot.busy{background:#f59e0b}
+.suggestBox{position:relative}
+.suggestList{display:none;position:absolute;left:0;right:0;top:100%;margin-top:4px;background:#fff;border:1px solid #d1d5db;border-radius:10px;box-shadow:0 8px 20px rgba(0,0,0,.1);z-index:50;max-height:160px;overflow:auto}
+.suggestItem{padding:10px 12px;font-size:14px;cursor:pointer;border-bottom:1px solid #f3f4f6}
+.suggestItem:last-child{border-bottom:0}
+.suggestItem:active,.suggestItem:hover{background:#f3f4f6}
+.butuh-login{display:none !important}
+#gateNote{position:fixed;inset:0;background:#f3f4f6;z-index:9998;display:flex;align-items:center;justify-content:center;padding:20px}
+#gateNote .box{background:#fff;border-radius:16px;padding:24px;max-width:360px;width:100%;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.1)}
+</style>
+</head>
+<body>
+<div id="gateNote">
+  <div class="box">
+    <div id="gateChecking">
+      <div style="font-size:36px;margin-bottom:8px">🔒</div>
+      <b style="font-size:16px;color:#166534">Memeriksa Sesi Admin...</b>
+      <p class="muted" style="margin:6px 0 0">Mohon tunggu sebentar</p>
+    </div>
+    <div id="gateForm" style="display:none;text-align:left">
+      <p style="font-weight:800;text-align:center;margin:0 0 4px;font-size:18px;color:#166534">🔑 Login Admin</p>
+      <p class="muted" style="text-align:center;margin:0 0 14px">Catatan Hutang khusus pemilik UD. BILAL</p>
+      <input id="gateEmail" type="email" placeholder="Email Admin" autocomplete="username" style="margin-bottom:10px">
+      <input id="gatePass" type="password" placeholder="Password" autocomplete="current-password" style="margin-bottom:12px" onkeydown="if(event.key==='Enter')gateMasuk()">
+      <button id="btnGateLogin" onclick="gateMasuk()" style="width:100%;background:#16a34a;color:#fff;padding:12px;font-size:15px">MASUK</button>
+      <a href="./index.html" style="display:block;text-align:center;margin-top:12px;font-size:12px;color:#6b7280;text-decoration:none">← Kembali ke Toko</a>
+    </div>
+  </div>
+</div>
+
+<div class="wrap butuh-login">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <a href="./admin.html" style="display:inline-flex;align-items:center;gap:4px;background:#f3f4f6;color:#111;padding:6px 11px;border-radius:9px;font-size:12px;font-weight:700;text-decoration:none">← Admin</a>
+      <span class="muted" id="syncStatus"><span class="syncDot"></span>Siap</span>
+    </div>
+    <h1>Catatan Hutang</h1>
+    <div class="muted">Total Belum Lunas</div>
+    <div class="big" id="total">Rp 0</div>
+    <div class="muted" id="ringkas" style="margin-top:6px"></div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <input id="cari" placeholder="Cari nama..." oninput="render()">
+      <select id="filter" onchange="render()">
+        <option>Semua</option>
+        <option>Belum Lunas</option>
+        <option>Lunas</option>
+      </select>
+    </div>
+    <div class="muted" style="margin:10px 0 4px">Ketuk nama untuk rincian, cicilan, edit, atau pelunasan.</div>
+    <div id="list"></div>
+  </div>
+</div>
+
+<button id="fab" class="butuh-login" onclick="bukaPopup()">+ Tambah Hutang</button>
+
+<!-- POPUP TAMBAH HUTANG -->
+<div id="popup" class="overlay" onclick="if(event.target===this) tutupPopup()">
+  <div class="sheet">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <b style="font-size:18px">Tambah Hutang</b>
+      <button class="btn3" onclick="tutupPopup()" style="width:40px;padding:8px">✕</button>
+    </div>
+    <div class="suggestBox">
+      <label>Nama Pelanggan</label>
+      <input id="nama" autocomplete="off" placeholder="Misal: Bilal" oninput="onInputNama()" onfocus="onInputNama()" onblur="setTimeout(tutupSuggest,150)">
+      <div id="suggestList" class="suggestList"></div>
+    </div>
+    <div class="row">
+      <div><label>Tanggal</label><input id="tanggal" type="date"></div>
+      <div><label>Status</label><select id="status"><option>Belum Lunas</option><option>Lunas</option></select></div>
+    </div>
+    <label>Daftar Barang — isi 1 atau banyak sekaligus</label>
+    <div id="barangList"></div>
+    <button class="btn2" onclick="tambahBaris()" style="width:100%;margin-top:6px">+ Tambah Baris Barang</button>
+    <div style="display:flex;justify-content:space-between;margin-top:14px;font-size:17px">
+      <b>Total</b><b id="totalPopup">Rp 0</b>
+    </div>
+    <button class="btn" id="btnSimpan" onclick="simpan()" style="margin-top:10px">Simpan Semua Barang</button>
+  </div>
+</div>
+
+<!-- POPUP CICIL / BAYAR SEBAGIAN -->
+<div id="popupCicil" class="overlay" onclick="if(event.target===this) tutupCicil()">
+  <div class="sheet">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <b style="font-size:18px">Bayar / Cicil Hutang</b>
+      <button class="btn3" onclick="tutupCicil()" style="width:40px;padding:8px">✕</button>
+    </div>
+    <p class="muted" id="cicilInfo" style="margin:8px 0"></p>
+    <label>Nominal Bayar (Rp)</label>
+    <input id="cicilNominal" type="number" inputmode="numeric" placeholder="Misal: 50000">
+    <label>Catatan Pembayaran</label>
+    <input id="cicilKet" value="Cicilan / Bayar Sebagian">
+    <label>Tanggal Bayar</label>
+    <input id="cicilTgl" type="date">
+    <button class="btn" id="btnSimpanCicil" onclick="simpanCicil()" style="margin-top:14px">Simpan Pembayaran</button>
+  </div>
+</div>
+
+<!-- POPUP EDIT ITEM -->
+<div id="popupEdit" class="overlay" onclick="if(event.target===this) tutupEdit()">
+  <div class="sheet">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <b style="font-size:18px">Edit Catatan</b>
+      <button class="btn3" onclick="tutupEdit()" style="width:40px;padding:8px">✕</button>
+    </div>
+    <label>Keterangan Barang</label>
+    <input id="editKet">
+    <label>Jumlah / Harga (Rp)</label>
+    <input id="editJml" type="number" inputmode="numeric">
+    <label>Tanggal</label>
+    <input id="editTgl" type="date">
+    <button class="btn" id="btnSimpanEdit" onclick="simpanEdit()" style="margin-top:14px">Simpan Perubahan</button>
+  </div>
+</div>
+
+<script src="supabase.min.js"></script>
+<script src="toko-db.js"></script>
+<script>
+let data = [];
+let terbuka = Object.create(null);
+let boleh = false, busy = false, version = 0;
+let barangRows = [];
+let targetCicilNama = '';
+let targetCicilSisa = 0;
+let targetEditIdx = -1;
+
+
+document.getElementById('tanggal').valueAsDate = new Date();
+
+function setStatus(teks, busy = false) {
+  document.getElementById('syncStatus').innerHTML = `<span class="syncDot ${busy ? 'busy' : ''}"></span>${teks}`;
+}
+
+function rp(n) {
+  const num = Number(n) || 0;
+  const prefix = num < 0 ? '-Rp ' : 'Rp ';
+  return prefix + Math.abs(num).toLocaleString('id-ID');
+}
+
+function fmtTgl(t) {
+  if (!t) return '';
+  if (String(t).includes('T')) return String(t).slice(0, 10);
+  return String(t);
+}
+
+function titleCase(str) {
+  return str.trim().replace(/\s+/g, ' ').replace(/ \w/g, c => c.toUpperCase());
+}
+
+function hitungHari(tglStr) {
+  const t = fmtTgl(tglStr);
+  if (!t) return 0;
+  const d1 = new Date(t);
+  const d2 = new Date();
+  if (isNaN(d1)) return 0;
+  return Math.floor((d2 - d1) / (1000 * 60 * 60 * 24));
+}
+
+function aman(teks){
+  return String(teks ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
+}
+async function sync(){
+  if(!boleh)return;
+  const ticket=++version;
+  const rows=await semua('catatan_hutang','id');
+  if(!boleh || version!==ticket)return;
+  data=rows.reverse();
+  render(); setStatus('Tersinkron');
+}
+async function simpanPerubahan(request, onSuccess){
+  if(busy || !boleh)return;
+  busy=true; setStatus('Menyimpan...',true);
+  try{
+    await hasil(request);
+    if(onSuccess)onSuccess();
+    await sync();
+  }catch(e){
+    setStatus('Periksa data');
+    alert(e.message+' · Muat ulang untuk memeriksa hasil sebelum mencoba lagi.');
+  }finally{busy=false;}
+}
+function barangHTML(i) {
+  return `<div class="brow" data-i="${i}" style="display:flex;gap:6px;margin-bottom:8px">
+    <input class="bket" placeholder="Barang ${i + 1} (misal: Beras 3kg)" style="flex:2">
+    <input class="bjml" type="number" inputmode="numeric" placeholder="Harga" style="flex:1" oninput="hitungTotalPopup()">
+    <button type="button" class="btn3" onclick="hapusBaris(${i})" style="width:38px;padding:8px">✕</button>
+  </div>`;
+}
+
+function renderBarang() {
+  document.getElementById('barangList').innerHTML = barangRows.map((_, i) => barangHTML(i)).join('');
+  document.querySelectorAll('.brow').forEach((el, idx) => {
+    el.querySelector('.bket').value = barangRows[idx].ket || '';
+    el.querySelector('.bjml').value = barangRows[idx].jumlah || '';
+  });
+  hitungTotalPopup();
+}
+
+function tambahBaris(ket = '', jumlah = '') {
+  barangRows.push({ ket, jumlah });
+  renderBarang();
+}
+
+function hapusBaris(i) {
+  if (barangRows.length <= 1) return alert('Minimal 1 barang');
+  barangRows.splice(i, 1);
+  renderBarang();
+}
+
+function hitungTotalPopup() {
+  document.querySelectorAll('.brow').forEach((el, idx) => {
+    barangRows[idx] = {
+      ket: el.querySelector('.bket').value,
+      jumlah: el.querySelector('.bjml').value
+    };
+  });
+  const t = barangRows.reduce((a, b) => a + (Number(b.jumlah) || 0), 0);
+  document.getElementById('totalPopup').textContent = rp(t);
+}
+
+function onInputNama() {
+  const q = document.getElementById('nama').value.trim().toLowerCase();
+  const box = document.getElementById('suggestList');
+  if (!q) {
+    box.style.display = 'none';
+    return;
+  }
+  const namaUnik = [...new Set(data.map(d => titleCase(d.nama)))].sort();
+  const cocok = namaUnik.filter(n => n.toLowerCase().includes(q) && n.toLowerCase() !== q);
+  if (cocok.length === 0) {
+    box.style.display = 'none';
+    return;
+  }
+  box.replaceChildren(...cocok.map(n=>{
+    const item=document.createElement('div');item.className='suggestItem';
+    item.textContent=n;item.onmousedown=()=>pilihNama(n);return item;
+  }));
+  box.style.display = 'block';
+}
+
+function pilihNama(n) {
+  document.getElementById('nama').value = n;
+  tutupSuggest();
+}
+
+function tutupSuggest() {
+  const box = document.getElementById('suggestList');
+  if (box) box.style.display = 'none';
+}
+
+function resetPopup(presetNama = '') {
+  barangRows = [{ ket: '', jumlah: '' }, { ket: '', jumlah: '' }];
+  document.getElementById('nama').value = presetNama;
+  document.getElementById('tanggal').valueAsDate = new Date();
+  document.getElementById('status').value = 'Belum Lunas';
+  tutupSuggest();
+  renderBarang();
+}
+
+function simpan() {
+  hitungTotalPopup();
+  const nama = titleCase(document.getElementById('nama').value);
+  const items = barangRows.filter(b => b.ket.trim() && Number(b.jumlah) > 0);
+  if (!nama) return alert('Isi nama pelanggan dulu');
+  if (items.length === 0) return alert('Isi minimal 1 barang + harganya');
+
+  const tanggal = document.getElementById('tanggal').value;
+  const status = document.getElementById('status').value;
+  const rows=items.map(it=>({nama,jumlah:Number(it.jumlah),tanggal,ket:it.ket.trim(),status}));
+  simpanPerubahan(db.from('catatan_hutang').insert(rows),()=>{
+    tutupPopup(); resetPopup(); terbuka[nama]=true;
+  });
+}
+
+function bukaCicil(nama, sisa) {
+  targetCicilNama = nama;
+  targetCicilSisa = sisa;
+  document.getElementById('cicilInfo').innerHTML = `Pelanggan: <b>${aman(nama)}</b> • Sisa hutang saat ini: <b>${rp(sisa)}</b>`;
+  document.getElementById('cicilNominal').value = '';
+  document.getElementById('cicilKet').value = 'Cicilan / Bayar Sebagian';
+  document.getElementById('cicilTgl').valueAsDate = new Date();
+  document.getElementById('popupCicil').style.display = 'flex';
+  setTimeout(() => document.getElementById('cicilNominal').focus(), 60);
+}
+
+function tutupCicil() {
+  document.getElementById('popupCicil').style.display = 'none';
+}
+
+function simpanCicil() {
+  const nominal = Number(document.getElementById('cicilNominal').value);
+  const ket = document.getElementById('cicilKet').value.trim() || 'Cicilan / Bayar Sebagian';
+  const tanggal = document.getElementById('cicilTgl').value;
+
+  if (!nominal || nominal <= 0) return alert('Masukkan nominal pembayaran yang valid');
+  if (nominal >= targetCicilSisa) {
+    if (confirm(`Nominal ${rp(nominal)} sudah melunasi seluruh sisa hutang (${rp(targetCicilSisa)}). Tandai semua hutang ${targetCicilNama} sebagai Lunas?`)) {
+      tutupCicil();
+      return lunasSemua(targetCicilNama);
+    }
+    return;
+  }
+
+  const item = {
+    nama: targetCicilNama,
+    jumlah: -Math.abs(nominal),
+    tanggal,
+    ket: `Bayar: ${ket}`,
+    status: 'Belum Lunas'
+  };
+
+  simpanPerubahan(db.from('catatan_hutang').insert(item),tutupCicil);
+}
+
+function bukaEdit(idx) {
+  targetEditIdx = data[idx].id;
+  const it = data[idx];
+  document.getElementById('editKet').value = it.ket || '';
+  document.getElementById('editJml').value = it.jumlah || 0;
+  document.getElementById('editTgl').value = fmtTgl(it.tanggal);
+  document.getElementById('popupEdit').style.display = 'flex';
+}
+
+function tutupEdit() {
+  document.getElementById('popupEdit').style.display = 'none';
+}
+
+function simpanEdit() {
+  if (targetEditIdx < 0) return;
+  const ket = document.getElementById('editKet').value.trim();
+  const jumlah = Number(document.getElementById('editJml').value);
+  const tanggal = document.getElementById('editTgl').value;
+  if (!ket) return alert('Keterangan tidak boleh kosong');
+
+  const request=db.from('catatan_hutang').update({ket,jumlah,tanggal}).eq('id',targetEditIdx).select('id').single();
+  simpanPerubahan(request,tutupEdit);
+}
+
+function hapus(idx){
+  if(confirm('Hapus item ini?')) simpanPerubahan(db.from('catatan_hutang').delete().eq('id',data[idx].id).select('id').single());
+}
+function lunasSemua(nama){
+  if(confirm('Tandai semua hutang '+nama+' jadi Lunas?')){
+    const names=[...new Set(data.filter(d=>titleCase(d.nama)===nama).map(d=>d.nama))];
+    simpanPerubahan(db.from('catatan_hutang').update({status:'Lunas'}).in('nama',names));
+  }
+}
+function hapusOrang(nama){
+  if(confirm('Hapus semua catatan milik '+nama+'?')){
+    const names=[...new Set(data.filter(d=>titleCase(d.nama)===nama).map(d=>d.nama))];
+    simpanPerubahan(db.from('catatan_hutang').delete().in('nama',names));
+  }
+}
+function toggle(idx){
+  const row=data[idx];
+  simpanPerubahan(db.from('catatan_hutang').update({status:row.status==='Lunas'?'Belum Lunas':'Lunas'}).eq('id',row.id).select('id').single());
+}
+
+function bukaPopup(presetNama = '') {
+  resetPopup(presetNama);
+  document.getElementById('popup').style.display = 'flex';
+  setTimeout(() => {
+    if (presetNama) document.querySelector('.bket')?.focus();
+    else document.getElementById('nama').focus();
+  }, 60);
+}
+
+function tutupPopup() {
+  document.getElementById('popup').style.display = 'none';
+}
+
+function toggleOrang(nama) {
+  terbuka[nama] = !terbuka[nama];
+  render();
+}
+
+function render() {
+  const q = (document.getElementById('cari').value || '').toLowerCase();
+  const f = document.getElementById('filter').value;
+
+  let bl = 0, ln = 0;
+  data.forEach(d => {
+    if (d.status === 'Lunas') ln += Number(d.jumlah);
+    else bl += Number(d.jumlah);
+  });
+  document.getElementById('total').textContent = rp(bl);
+
+  const namaUnik = [...new Set(data.map(d => titleCase(d.nama)))].sort();
+  document.getElementById('ringkas').textContent = `Lunas: ${rp(ln)} • ${namaUnik.length} orang • ${data.length} catatan`;
+
+  let groups = Object.create(null);
+  data.forEach((d, idx) => {
+    const key = titleCase(d.nama);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push({ ...d, nama: key, _idx: idx });
+  });
+
+  let h = '';
+  Object.keys(groups).sort().forEach(nama => {
+    if (q && !nama.toLowerCase().includes(q)) return;
+    const items = groups[nama].filter(d => f === 'Semua' || d.status === f);
+    if (items.length === 0) return;
+
+    const belumItems = groups[nama].filter(d => d.status !== 'Lunas');
+    const totalBelum = belumItems.reduce((a, b) => a + Number(b.jumlah), 0);
+    const totalSemua = groups[nama].reduce((a, b) => a + Number(b.jumlah), 0);
+    const jmlBelum = belumItems.length;
+
+    let maxHari = 0;
+    belumItems.forEach(it => {
+      if (Number(it.jumlah) > 0) {
+        const hr = hitungHari(it.tanggal);
+        if (hr > maxHari) maxHari = hr;
+      }
+    });
+    const agingBadge = (totalBelum > 0 && maxHari >= 7)
+      ? `<span class="aging ${maxHari >= 30 ? 'late' : ''}">${maxHari} hr</span>`
+      : '';
+
+    const safeNama = aman(JSON.stringify(nama));
+
+    h += `<div class="person">
+      <div class="person-head" onclick="toggleOrang(${safeNama})">
+        <div>
+          <b style="font-size:17px">${aman(nama)}</b> ${agingBadge}
+          <span class="muted">${terbuka[nama] ? '▲' : '▼'}</span>
+          <div class="muted">${jmlBelum > 0 ? jmlBelum + ' catatan aktif' : 'Semua lunas'}</div>
+        </div>
+        <div style="text-align:right">
+          <b style="font-size:17px;color:${totalBelum > 0 ? '#111' : '#16a34a'}">${rp(totalBelum)}</b>
+          <div class="muted">total ${rp(totalSemua)}</div>
+        </div>
+      </div>`;
+
+    if (terbuka[nama]) {
+      h += `<div class="detail">`;
+      items.forEach(d => {
+        const isCicil = Number(d.jumlah) < 0;
+        const badgeClass = d.status === 'Lunas' ? 'ok' : (isCicil ? 'cicilBadge' : '');
+        const badgeText = isCicil ? 'Cicilan' : d.status;
+        h += `<div class="drow">
+          <div style="flex:1">
+            <b>${aman(d.ket || '(tanpa keterangan)')}</b>
+            <span class="badge ${badgeClass}">${badgeText}</span>
+            <div class="muted">${fmtTgl(d.tanggal)}</div>
+          </div>
+          <div style="text-align:right">
+            <b style="color:${isCicil ? '#16a34a' : '#111'}">${rp(d.jumlah)}</b>
+            <div style="margin-top:4px">
+              <button class="btn2 miniBtn" title="Edit" onclick="bukaEdit(${d._idx})">✎</button>
+              <button class="btn2 miniBtn" title="Tandai Lunas/Belum" onclick="toggle(${d._idx})">✓</button>
+              <button class="btn3 miniBtn" title="Hapus" onclick="hapus(${d._idx})">✕</button>
+            </div>
+          </div>
+        </div>`;
+      });
+
+      h += `<div class="actionGrid">
+        <button class="btn2" onclick="bukaPopup(${safeNama})">+ Tambah Hutang</button>
+        ${totalBelum > 0 ? `<button class="btnCicil" onclick="bukaCicil(${safeNama}, ${totalBelum})">💰 Bayar Sebagian</button>` : ''}
+        <button class="btn3" onclick="hapusOrang(${safeNama})">🗑 Hapus Semua (${aman(nama)})</button>
+        ${totalBelum > 0 ? `<button class="btnLunas" onclick="lunasSemua(${safeNama})">✓ Lunaskan Semua</button>` : ''}
+      </div>`;
+      h += `</div>`;
+    }
+    h += `</div>`;
+  });
+
+  document.getElementById('list').innerHTML = h || '<p class="muted">Belum ada catatan.</p>';
+}
+
+barangRows = [{ ket: '', jumlah: '' }];
+render();
+
+function setAksesNote(boleh) {
+  document.querySelector('.wrap')?.classList.toggle('butuh-login', !boleh);
+  document.getElementById('fab')?.classList.toggle('butuh-login', !boleh);
+  document.getElementById('gateNote').style.display = boleh ? 'none' : 'flex';
+}
+
+async function gateMasuk(){
+ const btn=document.getElementById('btnGateLogin'),pass=document.getElementById('gatePass');
+ btn.disabled=true;
+ try{await masuk(document.getElementById('gateEmail').value.trim(),pass.value);}
+ catch(e){alert(e.message);}
+ finally{btn.disabled=false;pass.value='';}
+}
+pantauAdmin(async allowed=>{
+ boleh=allowed;version++;data=[];render();setAksesNote(allowed);
+ document.getElementById('gateChecking').style.display='none';
+ document.getElementById('gateForm').style.display='block';
+ if(allowed)await sync();
+ else document.querySelectorAll('.overlay').forEach(node=>node.style.display='none');
+},e=>alert(e.message));
+document.addEventListener('visibilitychange',()=>{
+ if(!document.hidden && boleh && !busy) sync().catch(e=>{setStatus('Gagal membaca');alert(e.message);});
+});
+</script></body></html>
