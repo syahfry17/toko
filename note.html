@@ -230,7 +230,7 @@ async function simpanPerubahan(request, onSuccess){
 }
 function barangHTML(i) {
   return `<div class="brow" data-i="${i}" style="display:flex;gap:6px;margin-bottom:8px">
-    <input class="bket" placeholder="Barang ${i + 1} (misal: Beras 3kg)" style="flex:2">
+    <input class="bket" oninput="hitungTotalPopup()" placeholder="Barang ${i + 1} (misal: Beras 3kg)" style="flex:2">
     <input class="bjml" type="number" inputmode="numeric" placeholder="Harga" style="flex:1" oninput="hitungTotalPopup()">
     <button type="button" class="btn3" onclick="hapusBaris(${i})" style="width:38px;padding:8px">✕</button>
   </div>`;
