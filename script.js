@@ -386,5 +386,5 @@ if(IS_ADMIN_PAGE){
     await muat();
   },e=>toastError(pesanError(e)));
 } else refresh();
+// MUBAZIR 1 DIBENERIN: setInterval 60 detik dihapus, cukup visibilitychange aja biar nggak narik data terus.
 document.addEventListener('visibilitychange',()=>{if(!document.hidden) refresh();});
-setInterval(()=>{if(!document.hidden && !writeBusy)refresh();},60000);
