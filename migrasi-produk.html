@@ -1,0 +1,108 @@
+<!doctype html><html lang="id"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Salin produk UD BILAL</title>
+<style>*{box-sizing:border-box}body{max-width:34rem;margin:2rem auto;padding:0 1rem;font:16px/1.5 system-ui;color:#173923}label,input,button,select{display:block;width:100%;margin:.6rem 0}input,button,select{padding:.8rem;border:1px solid #a8b8ad;border-radius:.55rem;font:inherit}button{background:#166534;color:white;font-weight:650}button:disabled{opacity:.55}p{overflow-wrap:anywhere}</style>
+<h1>Salin produk UD BILAL</h1>
+<p>Masuk dengan akun admin Firebase lama untuk membaca produk, foto, dan modal. Data akan disiapkan di HP sebagai SQL untuk proyek Supabase data-sembako.</p>
+<form id="form"><label>Email admin Firebase<input id="email" type="email" required autocomplete="username"></label><label>Sandi Firebase<input id="pass" type="password" required autocomplete="current-password"></label><button id="load">Baca produk dari Firebase</button></form>
+<p id="status" role="status"></p><section id="output" hidden><h2>Salin ke Supabase</h2><p>Untuk setiap bagian, salin SQL lalu tempel ke SQL Editor → New query di proyek data-sembako dan tekan Run. SQL berisi harga modal. Simpan hanya di dashboard pribadimu.</p>
+<select id="parts" aria-label="Bagian SQL"></select><button id="copy">Salin SQL bagian ini</button><p id="notice" role="status"></p><textarea id="manual" hidden readonly aria-label="SQL untuk disalin manual"></textarea>
+<p>Setelah semua bagian berhasil, muat ulang katalog uji dan cocokkan jumlah produk. Jika terjadi kesalahan, catat pesan error tanpa menyalin isi SQL.</p></section>
+<script type="module">
+const firebaseConfig = {
+  apiKey: "AIzaSyAhce1AyhPGe1cDkIzcBcgAFFOXC2Isxx0",
+  authDomain: "toko-bilal.firebaseapp.com",
+  projectId: "toko-bilal",
+  storageBucket: "toko-bilal.firebasestorage.app",
+  messagingSenderId: "507155195256",
+  appId: "1:507155195256:web:39185c267b272b5672948d"
+};
+const ADMIN_UID = "spaWNW7l2YSqBvhC7hkK6Sd3d7A3";
+
+const el = id => document.getElementById(id);
+let batches = [];
+function tanggal(value) {
+  if (value == null || value === '') return null;
+  if (typeof value.toDate === 'function') return value.toDate().toLocaleDateString('sv-SE',{timeZone:'Asia/Jakarta'});
+  const raw = String(value).trim().toLowerCase();
+  if (/^\d{4}-\d\d-\d\d$/.test(raw)) return raw;
+  const m = /^(\d{1,2})[\s/.-]+([a-z]+|\d{1,2})[\s/.-]+(\d{4})$/.exec(raw);
+  if (m) {
+    const months = ['jan','feb','mar','apr','mei','jun','jul','agu','sep','okt','nov','des'];
+    const month = Number(m[2]) || months.indexOf(m[2].slice(0,3))+1;
+    if (month>=1 && month<=12) return m[3]+'-'+String(month).padStart(2,'0')+'-'+m[1].padStart(2,'0');
+  }
+  throw new Error('Format tanggal belum dikenali: '+value);
+}
+function uang(x) {
+  if (!['number','string'].includes(typeof x) || String(x).trim()==='' || !Number.isFinite(Number(x)) || Number(x)<0) throw new Error('Harga atau modal tidak valid.');
+  return Number(x);
+}
+function sqlValue(v) {
+  if (v === null) return 'NULL';
+  if (typeof v==='number') return String(v);
+  if (String(v).includes('\0')) throw new Error('Teks mengandung karakter kosong yang tidak didukung.');
+  return "'"+String(v).replaceAll("'","''")+"'";
+}
+function safeStatement(table,row) {
+  let delimiter='$bilal$';
+  const raw=JSON.stringify(row);
+  while(raw.includes(delimiter)) delimiter=delimiter.slice(0,-1)+'x$';
+  const cols=Object.keys(row);
+  const values=Object.values(row).map(sqlValue).join(',');
+  return 'insert into public.'+table+' ('+cols.join(',')+') values ('+values+') on conflict (id) do nothing;\n'
+    +'do '+delimiter+' begin if not exists (select 1 from public.'+table+' where '
+    +cols.map(c=>c+' is not distinct from '+sqlValue(row[c])).join(' and ')
+    +") then raise exception 'Isi tujuan berbeda. Bagian dibatalkan.'; end if; end "+delimiter+";\n";
+}
+function groups(rows) {
+  let list=[],chunk='',count=0;
+  for(const r of rows) {
+    if(chunk && chunk.length+r.length>500000){list.push({chunk,count});chunk='';count=0;}
+    chunk+=r;count++;
+  }
+  if(chunk) list.push({chunk,count});
+  return list.map(({chunk,count},i)=>"begin;\nset local standard_conforming_strings = on;\n"+chunk+"commit;\nselect "+(i+1)+" as bagian, "+count+" as produk_dicocokkan;");
+}
+el('form').onsubmit=async event=>{
+  event.preventDefault();el('load').disabled=true;el('output').hidden=true;batches=[];
+  el('status').textContent='Membaca data dari server Firebase…';
+  let auth;
+  try{
+    const base='https://www.gstatic.com/firebasejs/10.12.2/firebase-';
+    const [appLib,authLib,fs]=await Promise.all(['app','auth','firestore'].map(n=>import(base+n+'.js')));
+    const app=appLib.getApps()[0] || appLib.initializeApp(firebaseConfig);
+    auth=authLib.getAuth(app);
+    await authLib.setPersistence(auth,authLib.inMemoryPersistence);
+    const result=await authLib.signInWithEmailAndPassword(auth,el('email').value.trim(),el('pass').value);
+    if(result.user.uid!==ADMIN_UID) throw new Error('Gunakan akun admin Firebase milik toko.');
+    const db=fs.getFirestore(app);
+    const read=name=>fs.getDocsFromServer(fs.collection(db,name));
+    const [pub,priv]=await Promise.all([read('barang_public'),read('barang_private')]);
+    const publicIds=new Set(pub.docs.map(d=>d.id));
+    if(priv.docs.some(d=>!publicIds.has(d.id))) throw new Error('Ada modal tanpa produk pasangan. Periksa data sumber sebelum melanjutkan.');
+    const modal=new Map(priv.docs.map(d=>[d.id,d.data().modal]));
+    let fotos=0;
+    const rows=pub.docs.map(doc=>{
+      const p=doc.data(),id=doc.id;
+      try{
+        if(typeof p.nama!=='string'||!p.nama.trim()) throw new Error('Nama produk kosong.');
+        if(p.foto!=null && typeof p.foto!=='string') throw new Error('Format foto belum dikenali.');
+        if(p.foto) fotos++;
+        let cmd=safeStatement('barang_public',{id,nama:p.nama,jual:uang(p.jual??p.harga),stok:p.stok==null?null:String(p.stok),keterangan:p.keterangan??null,foto:p.foto??null,tanggal_update:tanggal(p.tanggalUpdate)});
+        if(modal.has(id)) cmd+=safeStatement('barang_private',{id,modal:uang(modal.get(id))});
+        return cmd;
+      } catch(e){throw new Error((p.nama||id)+': '+e.message);}
+    });
+    batches=groups(rows);
+    el('parts').replaceChildren(...batches.map((_,i)=>new Option('Bagian '+(i+1)+' dari '+batches.length,String(i))));
+    el('status').textContent='Terbaca: '+rows.length+' produk, '+fotos+' foto, '+priv.size+' catatan modal. '+batches.length+' bagian SQL siap.';
+    el('output').hidden=!rows.length;
+  }catch(e){el('status').textContent='Gagal membaca: '+e.message;}
+  finally{el('pass').value='';try{if(auth)await auth.signOut();}finally{el('load').disabled=false;}}
+};
+el('parts').onchange=()=>{el('manual').hidden=true;el('manual').value='';el('notice').textContent='';};
+el('copy').onclick=async()=>{
+  const sql=batches[Number(el('parts').value)];
+  try{await navigator.clipboard.writeText(sql);el('notice').textContent='Bagian terpilih sudah disalin.';}
+  catch{el('manual').hidden=false;el('manual').value=sql;el('manual').select();el('notice').textContent='Tekan lama teks SQL lalu pilih Salin.';}
+};
+</script></html>
