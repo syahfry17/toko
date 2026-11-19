@@ -170,7 +170,7 @@ function updateUI() {
 
 window.toggleLogin = async () => {
   if (!IS_ADMIN_PAGE || loginBusy || writeBusy) return;
-  try { if (isLogin) { await hasil(db.auth.signOut()); toast('Berhasil Logout'); } else updateUI(); }
+  try { if (isLogin) { await hasil(window.db.auth.signOut()); toast('Berhasil Logout'); } else updateUI(); }
   catch(e){ toastError(pesanError(e)); }
 };
 
@@ -299,7 +299,7 @@ window.simpan = async () => {
       window._idProdukSimpan = idProduk;
     }
     const idProduk = window._idProdukSimpan || editId || crypto.randomUUID();
-    await hasil(db.rpc('simpan_produk',{
+    await hasil(window.db.rpc('simpan_produk',{
       p_id: idProduk, p_baru: !editId, p_nama: nama,
       p_jual: jual, p_modal: modal, p_stok: stok, p_keterangan: keterangan,
       p_foto: fotoUntukDisimpan, p_tanggal: getTanggalHariIni()
@@ -348,7 +348,7 @@ window.hapus = async (id) => {
   writeBusy = true;
   try {
     const target = barang.find(x => x.id === id);
-    await hasil(db.rpc('hapus_produk', { p_id: id }));
+    await hasil(window.db.rpc('hapus_produk', { p_id: id }));
     // BARU (Langkah 2): hapus juga fotonya dari Storage
     if (target?.foto) await hapusFoto(target.foto);
     await muat(); toast('Barang dihapus');
