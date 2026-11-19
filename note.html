@@ -309,8 +309,21 @@ function resetPopup(presetNama = '') {
 function simpan() {
   hitungTotalPopup();
   const nama = titleCase(document.getElementById('nama').value);
-  const items = barangRows.filter(b => b.ket.trim() && Number(b.jumlah) > 0);
   if (!nama) return alert('Isi nama pelanggan dulu');
+  const items = [];
+  const barisForm = document.querySelectorAll('.brow');
+  for (const [i, item] of barangRows.entries()) {
+    const ket = item.ket.trim();
+    const harga = barisForm[i].querySelector('.bjml');
+    if (!ket && !item.jumlah && !harga.validity.badInput) continue;
+    const jumlah = Number(item.jumlah);
+    if (!ket || harga.validity.badInput || !Number.isFinite(jumlah) || jumlah <= 0) {
+      alert(!ket ? `Isi nama barang di baris ${i + 1}.` : `Isi harga lebih dari nol di baris ${i + 1}.`);
+      barisForm[i].querySelector(ket ? '.bjml' : '.bket').focus();
+      return;
+    }
+    items.push(item);
+  }
   if (items.length === 0) return alert('Isi minimal 1 barang + harganya');
 
   const tanggal = document.getElementById('tanggal').value;
