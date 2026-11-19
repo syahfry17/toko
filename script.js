@@ -133,7 +133,7 @@ function olahFoto(file){
   imgTemp.onerror = () => { URL.revokeObjectURL(url); toastError('Foto tidak dapat dibaca.'); };
   imgTemp.src = url;
 }
-window.previewFoto = function(input){ if(input.files[0]) olahFoto(input.files[0]); };
+// MUBAZIR 3 DIBENERIN: previewFoto dihapus, udah ada addEventListener 'change' di bawah yang ngurus fotoInput. 1 aja cukup.
 document.addEventListener('change', (e)=>{ if(e.target && e.target.id === 'fotoInput'){ if(e.target.files[0]) olahFoto(e.target.files[0]); } });
 
 document.addEventListener('DOMContentLoaded', () => {
