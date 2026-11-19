@@ -378,7 +378,7 @@ function bukaEdit(idx) {
   targetEditIdx = data[idx].id;
   const it = data[idx];
   document.getElementById('editKet').value = it.ket || '';
-  document.getElementById('editJml').value = it.jumlah || 0;
+  document.getElementById('editJml').value = Math.abs(Number(it.jumlah)) || '';
   document.getElementById('editTgl').value = fmtTgl(it.tanggal);
   document.getElementById('popupEdit').style.display = 'flex';
 }
@@ -390,7 +390,16 @@ function tutupEdit() {
 function simpanEdit() {
   if (targetEditIdx < 0) return;
   const ket = document.getElementById('editKet').value.trim();
-  const jumlah = Number(document.getElementById('editJml').value);
+  const nominal = document.getElementById('editJml');
+  const nilai = Number(nominal.value);
+  if (!nominal.value.trim() || !Number.isFinite(nilai) || nilai <= 0) {
+    alert('Isi nominal lebih dari Rp0.');
+    nominal.focus();
+    return;
+  }
+  const asli = data.find(row => row.id === targetEditIdx);
+  if (!asli) return alert('Catatan sudah berubah. Buka kembali daftar catatan.');
+  const jumlah = Number(asli.jumlah) < 0 ? -nilai : nilai;
   const tanggal = document.getElementById('editTgl').value;
   if (!ket) return alert('Keterangan tidak boleh kosong');
 
