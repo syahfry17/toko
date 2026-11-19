@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UD. BILAL - Toko Sembako</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    #tabel { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .kartu { background: #fff; border: 1px solid #eee; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 1px 6px rgba(0,0,0,0.05); }
+    .kartu img.foto-produk { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; background: #f8f8f8; }
+    .badge-baru { font-size: 10px; background: #ff3b30; color: #fff; padding: 2px 6px; border-radius: 20px; font-weight: 700; }
+    .last-update { font-size: 10px; color: #999; }
+    /* --- HEADER HIJAU v122 - LOGO ORIGINAL --- */
+    .header-toko { display:flex; align-items:center; gap:12px; margin-bottom:12px; background:linear-gradient(135deg,#166534 0%,#16a34a 100%); padding:14px; border-radius:18px; box-shadow:0 4px 14px rgba(22,163,74,.35); }
+    .header-toko h1 { color:#fff; font-size:24px; font-weight:900; line-height:1; }
+    .header-toko h1 span { color:#fbbf24; }
+    .header-toko p { color:#fef3c7; font-size:13px; font-weight:600; margin-top:4px; }
+    .header-toko .garis { width:118px; height:3px; background:linear-gradient(90deg,#fff,#fbbf24); border-radius:99px; margin-top:6px; }
+    .search-toko { width:100%; border:2px solid #e5e7eb; padding:12px 14px; border-radius:14px; background:#fff; font-weight:600; font-size:14px; outline:none; margin-bottom:12px; }
+    .search-toko:focus { border-color:#16a34a; }
+  </style>
+</head>
+<body class="bg-gray-100 p-3">
+  <div class="header-toko">
+    <!-- LOGO ORIGINAL - SAMA PERSIS KAYAK DULU, GAK DIUBAH -->
+    <img src="logov2.png" class="w-14 h-14 object-cover" style="border-radius:50%;border:2px solid #fbbf24;background:#fff;flex-shrink:0;">
+    <div style="line-height:1.1;flex:1;">
+      <h1>UD. <span>BILAL</span></h1>
+      <p>Sembako Lengkap, Harga Bersahabat</p>
+      <div class="garis"></div>
+    </div>
+    <a href="admin.html" title="Khusus Admin" aria-label="Khusus Admin" style="align-self:flex-start;line-height:1;font-size:22px;text-decoration:none;padding:6px 6px;border-radius:8px;background:rgba(255,255,255,.18);">🔒</a>
+  </div>
+  <input id="inputCari" oninput="cariBarang(this.value)" type="text" placeholder="🔍 Cari barang... misal: Beras, Minyak, Gula" class="search-toko" autocomplete="off" data-lpignore="true">
+  <div class="bg-white p-3 rounded-xl shadow">
+    <div id="tabel"></div>
+    <div class="flex justify-between items-center mt-4">
+      <button onclick="gantiPage(-1)" class="bg-gray-200 px-4 py-2 rounded-lg font-bold text-sm">⬅ Prev</button>
+      <span id="infoPage" class="font-bold text-sm">Page 1 / 1</span>
+      <button onclick="gantiPage(1)" class="bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm">Next ➡</button>
+    </div>
+    <div class="footer text-center font-bold mt-3 text-sm border-t pt-3">Total Jenis Produk: 0</div>
+  </div>
+  <p class="text-center text-xs text-gray-400 mt-4">© UD. BILAL - Pesan via WhatsApp, Bayar di Tempat / Transfer</p>
+  <script type="module" src="script.js?v=129-square"></script>
+</body>
+</html>
