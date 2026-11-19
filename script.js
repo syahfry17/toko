@@ -12,7 +12,6 @@ let readVersion = 0;
 window.FOTO_BARU = null;
 window.FOTO_LAMA = null; // link foto lama, buat hapus kalau diganti
 const IS_ADMIN_PAGE = !!document.getElementById('gateAdmin');
-let sudahRenderPertama = false;
 let loginBusy = false, writeBusy = false, privateReady = false;
 const protectedElements = Array.from(document.querySelectorAll('.butuh-login'));
 
@@ -224,7 +223,7 @@ function filteredBarang(){
 }
 
 function render() {
-  sudahRenderPertama = true;
+  // MUBAZIR: sudahRenderPertama dihapus, nggak pernah dibaca di mana-mana
   updateUI();
   let totalUntung = 0;
   let stokMenipis = 0;
