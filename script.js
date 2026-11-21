@@ -83,6 +83,15 @@ window.batalCrop = () => {
   if(img){ img.onload = null; img.removeAttribute('src'); }
 };
 
+function dataURLkeBlob(dataURL) {
+  const [head, data] = dataURL.split(',');
+  const mime = (head.match(/:(.*?);/) || [])[1] || 'image/jpeg';
+  const bin = atob(data);
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+}
+
 window.potongFoto = () => {
   try {
     const img = el('cropImg');
