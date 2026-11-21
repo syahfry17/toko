@@ -67,20 +67,21 @@ window.addEventListener('resize', () => {
 });
 
 function bukaCrop(base64){
-  cropScale = 1; cropX = 0; cropY = 0; const img = el('cropImg'); if(!img) return;
-  img.onload = updateCropTransform;
+  cropScale = 1; cropX = 0; cropY = 0;
+  const img = el('cropImg'), sl = el('zoomSlider'), m = el('cropModal');
+  if(!img) return;
+  if(sl) sl.value = 100;
+  if(m) m.classList.remove('hidden');
+  img.onload = () => requestAnimationFrame(updateCropTransform);
   img.src = base64;
-  const sl = el('zoomSlider'); if(sl) sl.value = 100; const m=el('cropModal'); if(m) m.classList.remove('hidden');
+  if(img.complete && img.naturalWidth) requestAnimationFrame(updateCropTransform);
 }
-window.batalCrop = () => { const m=el('cropModal'); if(m) m.classList.add('hidden'); const inp=el('fotoInput'); if(inp) inp.value=''; };
-function dataURLkeBlob(dataURL){
-  const [head, data] = dataURL.split(',');
-  const mime = (head.match(/:(.*?);/) || [])[1] || 'image/jpeg';
-  const bin = atob(data);
-  const arr = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-  return new Blob([arr], { type: mime });
-}
+window.batalCrop = () => {
+  const m = el('cropModal'), inp = el('fotoInput'), img = el('cropImg');
+  if(m) m.classList.add('hidden');
+  if(inp) inp.value = '';
+  if(img){ img.onload = null; img.removeAttribute('src'); }
+};
 
 window.potongFoto = () => {
   const img = el('cropImg');
@@ -360,9 +361,14 @@ window.hapus = async (id) => {
   try {
     const target = barang.find(x => x.id === id);
     await hasil(db.rpc('hapus_produk', { p_id: id }));
-    // BARU (Langkah 2): hapus juga fotonya dari Storage
-    if (target?.foto) await hapusFoto(target.foto);
-    await muat(); toast('Barang dihapus');
+    let pesan = 'Barang dihapus';
+    const dipakaiProdukLain = target?.foto && barang.some(b => b.id !== id && b.foto === target.foto);
+    if (target?.foto && !dipakaiProdukLain) {
+      try { await hapusFoto(target.foto); }
+      catch(e) { pesan += ', tapi foto lama belum terhapus.'; }
+    }
+    await muat();
+    toast(pesan);
   } catch(e){ toastError(pesanError(e)); }
   finally { writeBusy = false; }
 };
