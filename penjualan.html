@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Catatan Penjualan - UD. BILAL</title>
+  <style>
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+    body { margin: 0; padding: 12px; background: #f4f6f8; color: #1f2937; }
+    .container { max-width: 600px; margin: 0 auto; }
+
+    /* Header */
+    .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 12px; }
+    .header h1 { font-size: 18px; margin: 0 0 6px 0; color: #111827; }
+    .tgl-wrap { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .tgl-wrap input[type="date"] { padding: 5px 8px; font-size: 13px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; color: #111827; width: auto; }
+    .hari-badge { background: #e0f2fe; color: #0369a1; font-size: 12px; font-weight: 700; padding: 5px 9px; border-radius: 6px; }
+    .btn-csv { background: #0f766e; color: #fff; border: none; padding: 9px 12px; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer; white-space: nowrap; }
+    .btn-csv:active { opacity: 0.85; }
+
+    /* Kartu Input 3 Kolom */
+    .card { background: #fff; padding: 14px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 12px; }
+    .input-group { margin-bottom: 10px; }
+    .row-2 { display: grid; grid-template-columns: 1fr 1.5fr; gap: 10px; }
+    label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 4px; }
+    input[type="text"], input[type="number"] { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 15px; }
+    input:focus { outline: none; border-color: #2563eb; }
+
+    .action-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
+    .subtotal-info { font-size: 14px; color: #4b5563; }
+    .subtotal-info strong { color: #111827; font-size: 16px; }
+    .btn-add { background: #2563eb; color: #fff; border: none; padding: 10px 18px; border-radius: 6px; font-weight: 600; font-size: 14px; cursor: pointer; }
+    .btn-add:disabled { background: #93c5fd; cursor: not-allowed; }
+
+    /* Ringkasan Harian */
+    .summary { display: flex; justify-content: space-between; background: #eff6ff; border: 1px solid #bfdbfe; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; color: #1e3a8a; }
+    .summary strong { display: block; font-size: 16px; color: #1e40af; margin-top: 2px; }
+
+    /* Status Loading / Info */
+    .status-bar { font-size: 12px; color: #6b7280; text-align: center; margin-bottom: 8px; min-height: 16px; }
+
+    /* Tabel Data */
+    .table-wrap { background: #fff; border-radius: 8px; border: 1px solid #e5e7eb; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { background: #f9fafb; text-align: left; padding: 10px 8px; border-bottom: 1px solid #e5e7eb; font-size: 12px; color: #4b5563; }
+    td { padding: 10px 8px; border-bottom: 1px solid #f3f4f6; }
+    .num { text-align: right; white-space: nowrap; }
+    .btn-del { background: none; border: none; color: #dc2626; font-weight: bold; font-size: 16px; cursor: pointer; padding: 2px 6px; }
+    .empty-msg { text-align: center; color: #9ca3af; padding: 20px; font-size: 13px; }
+
+    /* Baris Total Harian */
+    .total-row td { background: #ecfdf5; font-weight: 700; color: #065f46; border-top: 2px solid #a7f3d0; border-bottom: none; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <h1>Catatan Penjualan</h1>
+      <div class="tgl-wrap">
+        <input type="date" id="inputTanggal">
+        <span class="hari-badge" id="labelHari">-</span>
+      </div>
+    </div>
+    <button type="button" class="btn-csv" onclick="exportCSV()">Export CSV</button>
+  </div>
+
+  <!-- Form Input 3 Kolom -->
+  <form class="card" id="formPenjualan" onsubmit="tambahBarang(event)">
+    <div class="input-group">
+      <label for="namaBarang">Nama Barang</label>
+      <input type="text" id="namaBarang" placeholder="Contoh: Beras 5kg" required autocomplete="off">
+    </div>
+    <div class="row-2">
+      <div>
+        <label for="jumlahBarang">Jumlah</label>
+        <input type="number" id="jumlahBarang" placeholder="0" min="1" step="any" required oninput="hitungSubtotal()">
+      </div>
+      <div>
+        <label for="hargaSatuan">Harga Satuan (Rp)</label>
+        <input type="number" id="hargaSatuan" placeholder="0" min="0" step="any" required oninput="hitungSubtotal()">
+      </div>
+    </div>
+    <div class="action-bar">
+      <div class="subtotal-info">Subtotal: <strong id="textSubtotal">Rp 0</strong></div>
+      <button type="submit" class="btn-add" id="btnTambah">+ Tambah</button>
+    </div>
+  </form>
+
+  <!-- Ringkasan Hari Ini -->
+  <div class="summary">
+    <div>Total Barang Terjual<strong id="totalUnit">0 Unit</strong></div>
+    <div style="text-align: right;">Total Omzet Hari Ini<strong id="totalOmzet">Rp 0</strong></div>
+  </div>
+
+  <div class="status-bar" id="statusBar"></div>
+
+  <!-- Tabel Data + Total Harian -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Nama Barang</th>
+          <th class="num">Qty</th>
+          <th class="num">Harga</th>
+          <th class="num">Subtotal</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tabelBody">
+        <tr><td colspan="5" class="empty-msg">Memuat data...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxEm3AY2qe3BwkgE4QK5dJRd26a778aJRYNOokfiWZFy4O1-Wt2JIFjWLh1_xXbyecJBg/exec";
+
+  let dataHarian = [];
+
+  const elTanggal = document.getElementById("inputTanggal");
+  const elHari = document.getElementById("labelHari");
+  const elNama = document.getElementById("namaBarang");
+  const elJumlah = document.getElementById("jumlahBarang");
+  const elHarga = document.getElementById("hargaSatuan");
+  const elSubtotal = document.getElementById("textSubtotal");
+  const elBtnTambah = document.getElementById("btnTambah");
+  const elStatus = document.getElementById("statusBar");
+  const elTabelBody = document.getElementById("tabelBody");
+  const elTotalUnit = document.getElementById("totalUnit");
+  const elTotalOmzet = document.getElementById("totalOmzet");
+
+  function getTanggalLokal() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+
+  function formatAngka(num) {
+    return Number(num || 0).toLocaleString("id-ID");
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  function hitungSubtotal() {
+    const qty = Number(elJumlah.value) || 0;
+    const harga = Number(elHarga.value) || 0;
+    elSubtotal.textContent = "Rp " + formatAngka(qty * harga);
+  }
+
+  function renderTabel(items) {
+    dataHarian = items || [];
+    let sumQty = 0;
+    let sumOmzet = 0;
+
+    if (dataHarian.length === 0) {
+      elTabelBody.innerHTML = '<tr><td colspan="5" class="empty-msg">Belum ada barang terjual pada tanggal ini.</td></tr>';
+      elTotalUnit.textContent = "0 Unit";
+      elTotalOmzet.textContent = "Rp 0";
+      return;
+    }
+
+    let html = "";
+    dataHarian.forEach((item) => {
+      sumQty += Number(item.jumlah) || 0;
+      sumOmzet += Number(item.subtotal) || 0;
+      const namaAman = escapeHtml(item.nama_barang);
+      const namaJs = String(item.nama_barang).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+
+      html += `
+        <tr>
+          <td>${namaAman}</td>
+          <td class="num">${formatAngka(item.jumlah)}</td>
+          <td class="num">${formatAngka(item.harga_satuan)}</td>
+          <td class="num">${formatAngka(item.subtotal)}</td>
+          <td class="num">
+            <button type="button" class="btn-del" title="Hapus" onclick="hapusBarang(${item.rowIndex}, '${namaJs}')">×</button>
+          </td>
+        </tr>
+      `;
+    });
+
+    html += `
+      <tr class="total-row">
+        <td>TOTAL HARIAN</td>
+        <td class="num">${formatAngka(sumQty)}</td>
+        <td></td>
+        <td class="num">${formatAngka(sumOmzet)}</td>
+        <td></td>
+      </tr>
+    `;
+
+    elTabelBody.innerHTML = html;
+    elTotalUnit.textContent = formatAngka(sumQty) + " Unit";
+    elTotalOmzet.textContent = "Rp " + formatAngka(sumOmzet);
+  }
+
+  async function muatData() {
+    const tanggal = elTanggal.value;
+    elStatus.textContent = "Memuat data...";
+
+    try {
+      const res = await fetch(`${SCRIPT_URL}?tanggal=${encodeURIComponent(tanggal)}`);
+      const json = await res.json();
+      if (json.status === "success") {
+        elHari.textContent = "Tab: " + json.namaTab;
+        renderTabel(json.data);
+        elStatus.textContent = "";
+      } else {
+        elStatus.textContent = "Gagal memuat: " + (json.message || "Error");
+      }
+    } catch (err) {
+      elStatus.textContent = "Gagal terhubung ke server. Cek koneksi internet.";
+    }
+  }
+
+  async function tambahBarang(e) {
+    e.preventDefault();
+
+    const payload = {
+      action: "tambah",
+      tanggal: elTanggal.value,
+      nama_barang: elNama.value.trim(),
+      jumlah: Number(elJumlah.value),
+      harga_satuan: Number(elHarga.value)
+    };
+
+    elBtnTambah.disabled = true;
+    elBtnTambah.textContent = "Menyimpan...";
+    elStatus.textContent = "Menyimpan ke Google Sheets...";
+
+    try {
+      const res = await fetch(SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      });
+      const json = await res.json();
+
+      if (json.status === "success") {
+        elHari.textContent = "Tab: " + json.namaTab;
+        renderTabel(json.data);
+        elNama.value = "";
+        elJumlah.value = "";
+        elHarga.value = "";
+        elSubtotal.textContent = "Rp 0";
+        elStatus.textContent = "Tersimpan!";
+        elNama.focus();
+        setTimeout(() => { if (elStatus.textContent === "Tersimpan!") elStatus.textContent = ""; }, 2000);
+      } else {
+        alert("Gagal menyimpan: " + (json.message || "Error"));
+        elStatus.textContent = "";
+      }
+    } catch (err) {
+      alert("Gagal terhubung ke Google Sheets. Periksa koneksi internet.");
+      elStatus.textContent = "";
+    } finally {
+      elBtnTambah.disabled = false;
+      elBtnTambah.textContent = "+ Tambah";
+    }
+  }
+
+  async function hapusBarang(rowIndex, namaBarang) {
+    if (!confirm(`Hapus "${namaBarang}" dari catatan?`)) return;
+
+    elStatus.textContent = "Menghapus...";
+    try {
+      const res = await fetch(SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          action: "hapus",
+          tanggal: elTanggal.value,
+          rowIndex: rowIndex,
+          nama_barang: namaBarang
+        })
+      });
+      const json = await res.json();
+      if (json.status === "success") {
+        renderTabel(json.data);
+        elStatus.textContent = "";
+      } else {
+        alert("Gagal menghapus: " + (json.message || "Error"));
+        elStatus.textContent = "";
+      }
+    } catch (err) {
+      alert("Gagal terhubung ke Google Sheets.");
+      elStatus.textContent = "";
+    }
+  }
+
+  function exportCSV() {
+    if (!dataHarian || dataHarian.length === 0) {
+      alert("Belum ada data penjualan pada tanggal ini untuk di-export.");
+      return;
+    }
+
+    const tanggal = elTanggal.value;
+    const sep = ";";
+    const baris = [
+      ["Tanggal", "Nama Barang", "Jumlah", "Harga Satuan", "Subtotal"].join(sep)
+    ];
+
+    let totalQty = 0;
+    let totalOmzet = 0;
+
+    dataHarian.forEach((item) => {
+      const qty = Number(item.jumlah) || 0;
+      const harga = Number(item.harga_satuan) || 0;
+      const sub = Number(item.subtotal) || 0;
+      totalQty += qty;
+      totalOmzet += sub;
+
+      const namaClean = `"${String(item.nama_barang).replace(/"/g, '""')}"`;
+      baris.push([tanggal, namaClean, qty, harga, sub].join(sep));
+    });
+
+    baris.push([tanggal, "TOTAL HARIAN", totalQty, "", totalOmzet].join(sep));
+
+    const csvContent = "\uFEFF" + baris.join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Penjualan_UD_BILAL_${tanggal}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  elTanggal.value = getTanggalLokal();
+  elTanggal.addEventListener("change", muatData);
+  muatData();
+</script>
+
+</body>
+</html>
