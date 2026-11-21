@@ -1,1 +1,4 @@
+User-agent: *
+Allow: /
 
+Sitemap: https://syahfry17.github.io/toko/sitemap.xml
