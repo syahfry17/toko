@@ -22,7 +22,7 @@ async function semua(table, order) {
     const page = await hasil(db.from(table).select('*').order(order)
       .range(rows.length, rows.length + 99));
     rows.push(...page);
-    if (!page.length) return rows;
+    if (page.length < 100) return rows;
   }
 }
 
@@ -54,17 +54,12 @@ function pantauAdmin(onChange, onError) {
   });
 }
 
-// ===== BARU: LANGKAH 1 - UPLOAD FOTO KE STORAGE =====
-// Tugasnya cuma 1: terima file foto, upload ke bucket 'foto-produk',
-// lalu kembalikan LINK-nya. Link inilah yang nanti disimpan ke database.
-
 async function uploadFoto(file, namaFile) {
-  // file = foto dari input, sudah dikompres jadi kecil
-  // namaFile = contoh: 'beras-171234567890.jpg'
   const { error } = await db.storage
     .from('foto-produk')
     .upload(namaFile, file, {
       cacheControl: '3600',
+      contentType: file.type || 'image/jpeg',
       upsert: false
     });
   if (error) throw new Error(error.message);
@@ -76,14 +71,14 @@ async function uploadFoto(file, namaFile) {
   return data.publicUrl;
 }
 
-// ===== BARU: HAPUS FOTO LAMA DARI STORAGE =====
-// Dipakai pas produk dihapus / fotonya diganti, biar storage nggak penuh sampah.
-// Inputnya LINK foto lama, contoh: 'https://.../foto-produk/beras-123.jpg'
-// Kita ambil nama filenya aja: 'beras-123.jpg', lalu hapus.
-
 async function hapusFoto(urlFoto) {
   if (!urlFoto || !urlFoto.includes('/foto-produk/')) return;
-  const namaFile = urlFoto.split('/foto-produk/').pop().split('?')[0];
+  const rawNama = urlFoto.split('/foto-produk/').pop().split('?')[0].split('#')[0];
+  let namaFile = '';
+  try { namaFile = decodeURIComponent(rawNama); }
+  catch { namaFile = rawNama; }
   if (!namaFile) return;
-  await db.storage.from('foto-produk').remove([namaFile]);
+
+  const { error } = await db.storage.from('foto-produk').remove([namaFile]);
+  if (error) throw new Error(error.message);
 }
