@@ -281,44 +281,57 @@ window.simpan = async () => {
   button.disabled = true; 
   button.innerText = 'MENYIMPAN...';
 
-  // BENERIN Bug 2: taruh di luar try, biar kelihatan di catch
+  // Ambil keadaan form sekali; tidak bergantung pada global setelah await.
+  const idEdit = editId;
+  const idProduk = idEdit || crypto.randomUUID();
+  const fotoLama = window.FOTO_LAMA || null;
+  const fotoBaru = window.FOTO_BARU;
   let fotoBaruTerupload = null;
+  let tahap = 'upload';
 
   try {
-    // BARU (Langkah 2): kalau ada foto baru, upload dulu ke Storage,
-    // dapat LINK-nya, baru link itu yang disimpan ke database.
-    // Kalau nggak ada foto baru: edit -> pakai foto lama, tambah baru -> null.
-    let fotoUntukDisimpan = editId ? (window.FOTO_LAMA || null) : null;
-    if (window.FOTO_BARU) {
-      const idProduk = editId || crypto.randomUUID();
-      // Pakai idProduk yang sama untuk insert, biar nama file unik
-      fotoBaruTerupload = await uploadFoto(window.FOTO_BARU, `produk-${idProduk}-${Date.now()}.jpg`);
+    let fotoUntukDisimpan = idEdit ? fotoLama : null;
+    if (fotoBaru) {
+      fotoBaruTerupload = await uploadFoto(fotoBaru, `produk-${idProduk}-${crypto.randomUUID()}.jpg`);
       fotoUntukDisimpan = fotoBaruTerupload;
-      // Simpan idProduk-nya biar dipakai di bawah (jangan bikin UUID baru lagi)
-      window._idProdukSimpan = idProduk;
     }
-    const idProduk = window._idProdukSimpan || editId || crypto.randomUUID();
-    await hasil(db.rpc('simpan_produk',{
-      p_id: idProduk, p_baru: !editId, p_nama: nama,
+    tahap = 'database';
+    await hasil(db.rpc('simpan_produk', {
+      p_id: idProduk, p_baru: !idEdit, p_nama: nama,
       p_jual: jual, p_modal: modal, p_stok: stok, p_keterangan: keterangan,
       p_foto: fotoUntukDisimpan, p_tanggal: getTanggalHariIni()
     }));
-    // Kalau sukses & foto diganti, hapus foto lama dari Storage biar nggak jadi sampah
-    if (fotoBaruTerupload && window.FOTO_LAMA) await hapusFoto(window.FOTO_LAMA);
-    window._idProdukSimpan = null;
-    writeBusy = false; 
-    window.batalEdit(); 
-    toast('✅ Berhasil disimpan!');
-    await muat();
-  } catch(e){ 
-    // BENERIN Bug 2: kalau simpan gagal, hapus lagi foto yang barusan ke-upload
-    if (fotoBaruTerupload) { try { await hapusFoto(fotoBaruTerupload); } catch(err) {} }
-    window._idProdukSimpan = null;
-    toastError(e.message || pesanError(e)); 
-  } finally { 
-    writeBusy = false; 
-    button.disabled = false; 
-    button.innerText = editId ? 'UPDATE' : 'SIMPAN'; 
+  } catch(e) {
+    // Respons terputus belum tentu berarti server gagal menyimpan.
+    // Jangan hapus foto baru: database mungkin sudah memakai URL tersebut.
+    toastError(tahap === 'upload'
+      ? 'Upload foto gagal: ' + pesanError(e)
+      : 'Hasil penyimpanan belum terkonfirmasi: ' + pesanError(e) + '. Muat ulang dan periksa produk sebelum mencoba lagi.');
+    writeBusy = false;
+    button.disabled = false;
+    button.innerText = editId ? 'UPDATE' : 'SIMPAN';
+    return;
+  }
+
+  // Database sudah mengonfirmasi sukses. Kegagalan bersih-bersih atau
+  // pembacaan ulang tidak boleh membatalkan hasil maupun menghapus foto baru.
+  let pesan = '✅ Berhasil disimpan!';
+  try {
+    const dipakaiProdukLain = barang.some(b => b.id !== idProduk && b.foto === fotoLama);
+    if (fotoBaruTerupload && fotoLama && !dipakaiProdukLain) {
+      try { await hapusFoto(fotoLama); }
+      catch(e) { pesan += ' Foto lama belum dapat dibersihkan.'; }
+    }
+    writeBusy = false;
+    window.batalEdit();
+    writeBusy = true;
+    try { await muat(); }
+    catch(e) { pesan += ' Daftar belum diperbarui; muat ulang halaman.'; }
+    toast(pesan);
+  } finally {
+    writeBusy = false;
+    button.disabled = false;
+    button.innerText = editId ? 'UPDATE' : 'SIMPAN';
   }
 };
 
@@ -329,7 +342,6 @@ window.editBarang = (id) => {
   let b = barang.find(x => x.id === id); if (!b){ toastError("Barang gak ketemu!"); return; }
   window.FOTO_LAMA = b.foto || null; // ingat foto lama, buat dihapus kalau diganti
   el('nama').value = b.nama; el('modal').value = b.modal ?? ''; el('harga').value = b.jual ?? b.harga ?? 0; el('keterangan').value = bersihKet(b.keterangan); el('stok').value = b.stok; window.FOTO_BARU = null;
-window.FOTO_LAMA = null; // link foto lama, buat hapus kalau diganti
   const prev = el('fotoPreview'); const st = el('fotoStatus'); 
   if(prev){ 
     if(b.foto){ prev.src=b.foto; prev.classList.remove('hidden'); if(st) st.innerText='Foto lama aktif. Pilih foto baru jika ingin mengganti.'; } 
@@ -358,8 +370,7 @@ window.hapus = async (id) => {
 window.batalEdit = () => { 
   if(writeBusy) return; 
   editId = null; 
-  window.FOTO_BARU = null; window.FOTO_LAMA = null; window._idProdukSimpan = null;
-window.FOTO_LAMA = null; // link foto lama, buat hapus kalau diganti 
+  window.FOTO_BARU = null; window.FOTO_LAMA = null;
   const prev = el('fotoPreview'); if(prev){ prev.src=''; prev.classList.add('hidden'); } 
   const inpFoto = el('fotoInput'); if(inpFoto) inpFoto.value=''; 
   const st = el('fotoStatus'); if(st) st.innerText=''; 
