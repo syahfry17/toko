@@ -84,38 +84,51 @@ window.batalCrop = () => {
 };
 
 window.potongFoto = () => {
-  const img = el('cropImg');
-  if (!img || !img.complete || !img.naturalWidth) return;
-  updateCropTransform();
-  const frame = el('cropFrame').getBoundingClientRect();
-  const photo = img.getBoundingClientRect();
-  if (!frame.width || !photo.width) return;
-  const ratio = img.naturalWidth / photo.width;
-  const sx = (frame.left - photo.left) * ratio;
-  const sy = (frame.top - photo.top) * ratio;
-  const side = frame.width * ratio;
-  const canvas = document.createElement('canvas');
-  let hasil;
-  for (const size of [400, 320, 256, 192]) {
-    canvas.width = canvas.height = size;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, size, size);
-    ctx.drawImage(img, sx, sy, side, side, 0, 0, size, size);
-    for (const quality of [0.78, 0.68, 0.58, 0.48]) {
-      hasil = canvas.toDataURL('image/jpeg', quality);
-      if (hasil.length < 100000) break;
+  try {
+    const img = el('cropImg');
+    if (!img || !img.complete || !img.naturalWidth) {
+      return toastError('Foto belum siap, tunggu sebentar lalu coba lagi.');
     }
-    if (hasil.length < 100000) break;
+    updateCropTransform();
+    const frame = el('cropFrame')?.getBoundingClientRect();
+    const photo = img.getBoundingClientRect();
+    if (!frame?.width || !photo?.width) {
+      return toastError('Area crop belum siap, coba lagi.');
+    }
+
+    const ratio = img.naturalWidth / photo.width;
+    const side = Math.min(img.naturalWidth, img.naturalHeight, frame.width * ratio);
+    const sx = Math.max(0, Math.min(img.naturalWidth - side, (frame.left - photo.left) * ratio));
+    const sy = Math.max(0, Math.min(img.naturalHeight - side, (frame.top - photo.top) * ratio));
+
+    const canvas = document.createElement('canvas');
+    let hasil = '';
+    for (const [size, quality] of [[400, 0.8], [320, 0.68], [256, 0.55]]) {
+      canvas.width = canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, size, size);
+      ctx.drawImage(img, sx, sy, side, side, 0, 0, size, size);
+      hasil = canvas.toDataURL('image/jpeg', quality);
+      if (hasil.startsWith('data:image/') && hasil.length < 150000) break;
+    }
+
+    if (!hasil.startsWith('data:image/')) {
+      return toastError('Gagal memproses gambar di HP ini.');
+    }
+
+    const ukKB = (hasil.length / 1000).toFixed(1);
+    window.FOTO_BARU = dataURLkeBlob(hasil);
+    const prev = el('fotoPreview');
+    if (prev) { prev.src = hasil; prev.classList.remove('hidden'); }
+    const st = el('fotoStatus');
+    if (st) st.innerText = `✅ Foto otomatis dikompres jadi ${ukKB} KB, siap disimpan!`;
+    const m = el('cropModal');
+    if (m) m.classList.add('hidden');
+    toast(`✅ Foto siap (${ukKB} KB)`);
+  } catch (e) {
+    toastError('Gagal potong foto: ' + (e?.message || e));
   }
-  if (hasil.length >= 100000) return toastError('Foto masih terlalu besar untuk disimpan.');
-  const ukKB = (hasil.length / 1000).toFixed(1);
-  // BARU (Langkah 2): simpan sebagai FILE (Blob), bukan string Base64.
-  // File inilah yang nanti di-upload ke Storage di fungsi simpan().
-  window.FOTO_BARU = dataURLkeBlob(hasil);
-  const prev = el('fotoPreview'); if(prev){ prev.src = hasil; prev.classList.remove('hidden'); }
-  const st = el('fotoStatus'); if(st) st.innerText = `✅ Foto otomatis dikompres jadi ${ukKB} KB, siap disimpan!`;
-  const m=el('cropModal'); if(m) m.classList.add('hidden'); toast(`✅ Foto siap (${ukKB} KB)`);
 };
 
 function olahFoto(file){
