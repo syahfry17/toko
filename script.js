@@ -134,11 +134,14 @@ window.potongFoto = () => {
     if (st) st.innerText = `✅ Foto otomatis dikompres jadi ${ukKB} KB, siap disimpan!`;
     const m = el('cropModal');
     if (m) m.classList.add('hidden');
+    const inp = el('fotoInput');
+    if (inp) inp.value = '';
     toast(`✅ Foto siap (${ukKB} KB)`);
   } catch (e) {
     toastError('Gagal potong foto: ' + (e?.message || e));
   }
 };
+
 
 function olahFoto(file){
   if(!file) return;
